@@ -50,3 +50,25 @@ export const addVehicle = async (data) => {
         console.error(err);
     }
 }
+
+export const getPreSignedURL = async (fileName, fileType) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "getPreSignedURL",
+            'filename': fileName,
+			contentType: fileType
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+export const getAllVehicles = async () => {
+    try {
+        const response = await axios.get(url('get_vehicles'));
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}

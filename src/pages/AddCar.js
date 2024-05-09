@@ -54,6 +54,10 @@ const AddCar = () => {
 		licenseFront: '',
 		licenseBack: '',
 		registration: '',
+		insurance_1: '',
+		insurance_2: '',
+		frontDriversLicense: '',
+		backDriversLicense: '',
 	})
 
 	useEffect(() => {
@@ -61,7 +65,13 @@ const AddCar = () => {
 	}, []);
 
 	const handleNext = () => {
-		console.log(formValues);
+		const requiredFields = ['city', 'make', 'model', 'year', 'category', 'doors', 'fuelType', 'seats', 'color', 'transmission'];
+		for (let field of requiredFields) {
+			if (!formValues[field]) {
+				alert(`Please fill the ${field} field.`);
+				return;
+			}
+		}
 		if (tab < 2) {
 			setTab(tab + 1);
 		} else {
@@ -355,7 +365,22 @@ const AddCar = () => {
 							))}
 						</Select>
 					</FormControl>
-					<Button onClick={handleNext} sx={{ mt: 2 }}>
+					<Button
+						variant="contained"
+						onClick={handleNext}
+						sx={{ mt: 2 }}
+						disabled={
+							!formValues.model ||
+							!formValues.make ||
+							!formValues.year ||
+							!formValues.category ||
+							!formValues.doors ||
+							!formValues.fuelType ||
+							!formValues.color ||
+							!formValues.transmission ||
+							!formValues.city
+						}
+					>
 						Next
 					</Button>
 				</Box>
@@ -407,7 +432,7 @@ const AddCar = () => {
 					</Grid>
 
 					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-						License Plate
+						License Plate Number
 					</Typography>
 					<Typography variant="body2">
 						Front and Back License Plate
@@ -418,7 +443,7 @@ const AddCar = () => {
 								<Card>
 									<CardActionArea>
 										<input
-											accept="image/*"
+											accept="image/png, image/jpeg" 
 											type="file"
 											id={`license-${side}-upload`}
 											style={{ display: 'none' }}
@@ -451,7 +476,92 @@ const AddCar = () => {
 					</Grid>
 
 					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-						Registration Certificate
+						Driver's License
+					</Typography>
+					<Typography variant="body2">
+						Front and Back Driver's License
+					</Typography>
+					<Grid container spacing={2} sx={{ mt: 2 }}>
+						{['frontDriversLicense', 'backDriversLicense'].map((side) => (
+							<Grid item xs={6} sm={6} key={side}>
+								<Card>
+									<CardActionArea>
+										<input
+											accept="image/png, image/jpeg" 
+											type="file"
+											id={`${side}-upload`}
+											style={{ display: 'none' }}
+											onChange={(event) => handleImageChange(event, side)}
+										/>
+										<label htmlFor={`${side}-upload`}>
+											<IconButton component="span">
+												<CameraAltIcon />
+											</IconButton>
+										</label>
+										{images[side] ? (
+											<CardMedia
+												component="img"
+												height="140"
+												image={images[side]}
+												alt={`${side}`}
+											/>
+										) : (
+											<CardMedia
+												component="img"
+												height="140"
+												alt="Upload an image"
+												image=""
+											/>
+										)}
+									</CardActionArea>
+								</Card>
+							</Grid>
+						))}
+					</Grid>
+
+					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+						Insurance Card
+					</Typography>
+					<Typography variant="body2">
+						Insurance Card
+					</Typography>
+					<Grid container spacing={2} sx={{ mt: 2 }}>
+						<Grid item xs={12} sm={12}>
+							<Card>
+								<CardActionArea>
+									<input
+										accept="image/png, image/jpeg" 
+										type="file"
+										id="insurance-upload"
+										style={{ display: 'none' }}
+										onChange={(event) => handleImageChange(event, 'insurance')}
+									/>
+									<label htmlFor="insurance-upload">
+										<IconButton component="span">
+											<CameraAltIcon />
+										</IconButton>
+									</label>
+									{images['insurance'] ? (
+										<CardMedia
+											component="img"
+											height="140"
+											image={images['insurance']}
+											alt={'insurance of the vehicle'}
+										/>
+									) : (
+										<CardMedia
+											component="img"
+											height="140"
+											alt="Upload an image"
+											image=""
+										/>
+									)}
+								</CardActionArea>
+							</Card>
+						</Grid>
+					</Grid>
+					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+						Libre / Registration Certificate
 					</Typography>
 					<Typography variant="body2">
 						Original Copy of Vehicle Registration Certificate
@@ -461,7 +571,7 @@ const AddCar = () => {
 							<Card>
 								<CardActionArea>
 									<input
-										accept="image/*"
+										accept="image/png, image/jpeg" 
 										type="file"
 										id="registration-upload"
 										style={{ display: 'none' }}

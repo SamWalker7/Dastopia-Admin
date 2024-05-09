@@ -1,6 +1,6 @@
 export const carQueryAPI = 'https://www.carqueryapi.com/api/0.3/?callback=?&';
 export const dastopiaAPI = 'https://xo55y7ogyj.execute-api.us-east-1.amazonaws.com/prod/';
-export const cities = ['Addis Ababa', 'Awassa', 'Dire Dewa', 'Bahir Dar'];
+export const cities = ['Addis Ababa', 'Hawassa', 'Dire Dewa', 'Bahir Dar'];
 export const fuelType = ['Gasoline', 'Diseal', 'Hybrid', 'Electric'];
 export const transmissionType = ['Manual', 'Automatic'];
 export const yesOrNo = ['Yes', 'No'];
