@@ -43,12 +43,6 @@
             "make_country": "Germany"
         },
         {
-            "make_id": "alvis",
-            "make_display": "Alvis",
-            "make_is_common": "0",
-            "make_country": "UK"
-        },
-        {
             "make_id": "amc",
             "make_display": "AMC",
             "make_is_common": "0",

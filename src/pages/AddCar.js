@@ -16,18 +16,20 @@ import {
 	IconButton,
 	CardMedia,
 	FormHelperText,
-	CircularProgress
+	CircularProgress,
 } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import { getMakes, getModelByMake, addVehicle, getPreSignedURL } from "../api";
+import DeleteIcon from '@mui/icons-material/Delete';
+import { addVehicle, getPreSignedURL, uplaodVehicleImagesToS3 } from "../api";
 import carModel from '../api/models.json';
 import carMake from '../api/makes.json';
 import { cities, fuelType, categories, carColors, transmissionType } from '../config/constants';
+import { resizeImage } from "../config/helpers";
 import { v4 as uuidv4 } from 'uuid';
 
 const AddCar = () => {
 	const years = Array.from({ length: new Date().getFullYear() - 2001 + 1 }, (_, i) => 2001 + i);
-
+	const random = uuidv4();
 	const [tab, setTab] = useState(0);
 	const [modelList, setModelList] = useState([]);
 	const [makeList, setMakeList] = useState([]);
@@ -44,21 +46,35 @@ const AddCar = () => {
 		color: '',
 		transmission: '',
 		modelSpecification: '',
-		id: uuidv4()
+		id: random,
+		isPostedByOwner: '',
+		ownerId: '',
+		ownerGivenName: '',
+		ownerMiddleName: '',
+		ownerSurName: '',
+		ownerPhone: '',
+		ownerEmail: '',
+		representativeFirstName: '',
+		representativeLastName: '',
+		representativePhone: '',
+		representativeEmail: '',
 	});
-	const [images, setImages] = useState({
+	const [documents, setDocuments] = useState({
 		front: '',
 		back: '',
 		left: '',
 		right: '',
-		licenseFront: '',
-		licenseBack: '',
+		frontPlateNumber: '',
+		backPlateNumber: '',
 		registration: '',
 		insurance_1: '',
 		insurance_2: '',
 		frontDriversLicense: '',
 		backDriversLicense: '',
+		powerOfAttorney: ''
 	})
+	const [images, setImages] = useState([]);
+	const [isUploadingImages, setIsUploadingImages] = useState(false);
 
 	useEffect(() => {
 		setMakeList(carMake?.Makes.map(make => make.make_display));
@@ -110,12 +126,33 @@ const AddCar = () => {
 		}
 	}
 
-	const handleImageChange = (event, type) => {
+	const handleImageChange = async (e) => {
+		if (e.target.files.length > 25) {
+			alert('You can only upload up to 25 images.');
+			return;
+		}
+		setIsUploadingImages(true);
+		const files = Array.from(e.target.files);
+		const processedImages = [];
+
+		for (const file of files) {
+			const resizedImage = await resizeImage(file);
+			processedImages.push(resizedImage);
+		}
+		setImages([...images, ...processedImages]);
+		setIsUploadingImages(false);
+	};
+
+	const handleImageDelete = (index) => {
+		setImages(images.filter((_, i) => i !== index));
+	};
+
+	const handleDocumentImageChange = (event, type) => {
 		const file = event.target.files[0];
 		if (file && (file.type === "image/png" || file.type === "image/jpeg" || file.type === "image/jpg")) {
 			const reader = new FileReader();
 			reader.onloadend = () => {
-				setImages(prevImages => ({ ...prevImages, [type]: reader.result }));
+				setDocuments(prevImages => ({ ...prevImages, [type]: reader.result }));
 			};
 			reader.readAsDataURL(file);
 		} else {
@@ -135,39 +172,36 @@ const AddCar = () => {
 				// return Object.keys(model)[0] === value
 			});
 			newModel = [...newModel[0][value]];
-			console.log('models', newModel);
 			setModelList(newModel);
 		}
 		setFormValues({ ...formValues, [name]: value });
 	};
 
-	const fetchModels = async (make, year) => {
-		const url = 'https://www.carqueryapi.com/api/0.3/?callback=?&cmd=getModels&make=toyota&year=2021'
-		const headers = {
-			headers: {
-				'Content-Type': 'application/json',
-				'Accept': 'application/json',
-				'User-Agent': 'PostmanRuntime/7.38.0'
-			}
-		}
-
-		try {
-			const data = await fetch(url, headers)
-
-			const items = await data.text()
-
-			console.log(JSON.parse(items.slice(2, -2)))
-		} catch (err) {
-			console.log(err)
-		}
-	}
-
 	const submitForm = async () => {
-		// const response = await addVehicle(formData);
+		// handleUpload();
 		console.log(formValues);
 		window.location.href = "/rent-a-car";
 	}
 
+	const uploadImageToS3 = async (image, index) => {
+		// Get the file extension
+		const extension = image.name.split('.').pop().toLowerCase();
+		const res = await getPreSignedURL(formValues.id, `image/${extension}`, `image-${index}`);
+		const { url, key } = res.body;
+		// Get the pre-signed URL from your server
+
+		// Upload the image to the S3 bucket using the pre-signed URL
+		const data = await uplaodVehicleImagesToS3(url, image);
+		console.log('uploaded to: ', data);
+		return { key, url };
+	};
+
+	const handleUpload = async () => {
+		const data = await Promise.all(images.map(uploadImageToS3));
+
+		// Do something with the keys...
+		console.log('keys: ', data);
+	};
 
 	return (
 		<Box sx={{ width: "100%" }}>
@@ -178,27 +212,46 @@ const AddCar = () => {
 			</Tabs>
 			{tab === 0 && (
 				<Box component="form" noValidate autoComplete="off" sx={{ mt: 2 }}>
-					{/* {isFileUploading ? <CircularProgress size={40}
-            thickness={4} variant="determinate" value={100} /> :
-            <FormControl fullWidth margin="normal">
-              <Button variant="contained" component="label">
-                Upload CSV file
-                <input
-                  type="file"
-                  name="upload"
-                  accept=".csv"
-                  style={{ display: 'none', marginTop: '2em' }}
-                  onChange={handleImport}
-                />
-              </Button>
-            </FormControl>
-          } */}
-					{/* <FormControl fullWidth margin="normal">
-						<Button variant="contained" component="label">
-							Upload upto 25 Vehicle Image
-							<input type="file" required hidden onChange={handleImageChange} />
-						</Button>
-					</FormControl> */}
+					<Grid container spacing={2}>
+						{images.length > 0 && images.map((image, index) => (
+							<Grid item xs={4} key={index}>
+								<div style={{ position: 'relative' }}>
+									<img
+										src={URL.createObjectURL(image)}
+										alt={`Vehicle ${index + 1}`}
+										style={{ width: '100%', height: 'auto' }}
+									/>
+									<IconButton
+										style={{
+											position: 'absolute',
+											top: '-5%',
+											right: '-5%',
+											background: 'white',
+											color: '#0052cc'
+										}}
+										onClick={() => handleImageDelete(index)}
+									>
+										<DeleteIcon />
+									</IconButton>
+								</div>
+							</Grid>
+						))}
+					</Grid>
+					{isUploadingImages ? <CircularProgress /> :
+						<FormControl fullWidth margin="normal">
+							<Button variant="contained" component="label">
+								Upload upto 25 Vehicle Image
+								<input
+									type="file"
+									required
+									hidden
+									multiple
+									accept=".png, .jpg, .jpeg"
+									onChange={handleImageChange}
+								/>
+							</Button>
+						</FormControl>
+					}
 					<FormControl fullWidth margin="normal">
 						<InputLabel id="city-select-label">City</InputLabel>
 						<Select
@@ -378,7 +431,8 @@ const AddCar = () => {
 							!formValues.fuelType ||
 							!formValues.color ||
 							!formValues.transmission ||
-							!formValues.city
+							!formValues.city ||
+							images.length < 1
 						}
 					>
 						Next
@@ -403,18 +457,18 @@ const AddCar = () => {
 											type="file"
 											id={`${side}-upload`}
 											style={{ display: 'none' }}
-											onChange={(event) => handleImageChange(event, side)}
+											onChange={(event) => handleDocumentImageChange(event, side)}
 										/>
 										<label htmlFor={`${side}-upload`}>
 											<IconButton component="span">
 												<CameraAltIcon />
 											</IconButton>
 										</label>
-										{images[side] ? (
+										{documents[side] ? (
 											<CardMedia
 												component="img"
 												height="140"
-												image={images[side]}
+												image={documents[side]}
 												alt={`${side} of the vehicle`}
 											/>
 										) : (
@@ -438,27 +492,27 @@ const AddCar = () => {
 						Front and Back License Plate
 					</Typography>
 					<Grid container spacing={2} sx={{ mt: 2 }}>
-						{['licenseFront', 'licenseBack'].map((side) => (
+						{['frontPlateNumber', 'backPlateNumber'].map((side) => (
 							<Grid item xs={6} sm={6} key={side}>
 								<Card>
 									<CardActionArea>
 										<input
-											accept="image/png, image/jpeg" 
+											accept="image/png, image/jpeg"
 											type="file"
 											id={`license-${side}-upload`}
 											style={{ display: 'none' }}
-											onChange={(event) => handleImageChange(event, side)}
+											onChange={(event) => handleDocumentImageChange(event, side)}
 										/>
 										<label htmlFor={`license-${side}-upload`}>
 											<IconButton component="span">
 												<CameraAltIcon />
 											</IconButton>
 										</label>
-										{images[side] ? (
+										{documents[side] ? (
 											<CardMedia
 												component="img"
 												height="140"
-												image={images[side]}
+												image={documents[side]}
 												alt={`${side} of the vehicle`}
 											/>
 										) : (
@@ -487,22 +541,22 @@ const AddCar = () => {
 								<Card>
 									<CardActionArea>
 										<input
-											accept="image/png, image/jpeg" 
+											accept="image/png, image/jpeg"
 											type="file"
 											id={`${side}-upload`}
 											style={{ display: 'none' }}
-											onChange={(event) => handleImageChange(event, side)}
+											onChange={(event) => handleDocumentImageChange(event, side)}
 										/>
 										<label htmlFor={`${side}-upload`}>
 											<IconButton component="span">
 												<CameraAltIcon />
 											</IconButton>
 										</label>
-										{images[side] ? (
+										{documents[side] ? (
 											<CardMedia
 												component="img"
 												height="140"
-												image={images[side]}
+												image={documents[side]}
 												alt={`${side}`}
 											/>
 										) : (
@@ -530,22 +584,22 @@ const AddCar = () => {
 							<Card>
 								<CardActionArea>
 									<input
-										accept="image/png, image/jpeg" 
+										accept="image/png, image/jpeg"
 										type="file"
 										id="insurance-upload"
 										style={{ display: 'none' }}
-										onChange={(event) => handleImageChange(event, 'insurance')}
+										onChange={(event) => handleDocumentImageChange(event, 'insurance')}
 									/>
 									<label htmlFor="insurance-upload">
 										<IconButton component="span">
 											<CameraAltIcon />
 										</IconButton>
 									</label>
-									{images['insurance'] ? (
+									{documents['insurance'] ? (
 										<CardMedia
 											component="img"
 											height="140"
-											image={images['insurance']}
+											image={documents['insurance']}
 											alt={'insurance of the vehicle'}
 										/>
 									) : (
@@ -571,22 +625,22 @@ const AddCar = () => {
 							<Card>
 								<CardActionArea>
 									<input
-										accept="image/png, image/jpeg" 
+										accept="image/png, image/jpeg"
 										type="file"
 										id="registration-upload"
 										style={{ display: 'none' }}
-										onChange={(event) => handleImageChange(event, 'registration')}
+										onChange={(event) => handleDocumentImageChange(event, 'registration')}
 									/>
 									<label htmlFor="registration-upload">
 										<IconButton component="span">
 											<CameraAltIcon />
 										</IconButton>
 									</label>
-									{images['registration'] ? (
+									{documents['registration'] ? (
 										<CardMedia
 											component="img"
 											height="140"
-											image={images['registration']}
+											image={documents['registration']}
 											alt={'registration of the vehicle'}
 										/>
 									) : (
@@ -608,7 +662,127 @@ const AddCar = () => {
 				</Box>
 			)}
 			{tab === 2 && (
-				<Box sx={{ mt: 2 }}>
+				<Box
+					sx={{
+						'& .MuiTextField-root': { m: 1, width: '25ch' },
+					}}
+					noValidate
+					autoComplete="off"
+				>
+					{/* Text fields for Owner and Representative will go here */}
+					<TextField
+						required
+						id="ownerFirstName"
+						name="ownerFirstName"
+						label="Owner First Name"
+						value={formValues.ownerFirstName}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="ownerLastName"
+						name="ownerLastName"
+						label="Owner Last Name"
+						value={formValues.ownerLastName}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="ownerPhone"
+						name="ownerPhone"
+						label="Owner Phone"
+						value={formValues.ownerPhone}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="ownerEmail"
+						name="ownerEmail"
+						label="Owner Email"
+						value={formValues.ownerEmail}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="representativeFirstName"
+						name="representativeFirstName"
+						label="Representative First Name"
+						value={formValues.representativeFirstName}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="representativeLastName"
+						name="representativeLastName"
+						label="Representative Last Name"
+						value={formValues.representativeLastName}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="representativePhone"
+						name="representativePhone"
+						label="Representative Phone"
+						value={formValues.representativePhone}
+						onChange={handleChange}
+					/>
+
+					<TextField
+						required
+						id="representativeEmail"
+						name="representativeEmail"
+						label="Representative Email"
+						value={formValues.representativeEmail}
+						onChange={handleChange}
+					/>
+					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+						Power of Attorney
+					</Typography>
+					<Typography variant="body2">
+						Original Copy of Power of Attorney
+					</Typography>
+					<Grid container spacing={2} sx={{ mt: 2 }}>
+						<Grid item xs={12} sm={12}>
+							<Card>
+								<CardActionArea>
+									<input
+										accept="image/png, image/jpeg"
+										type="file"
+										id="powerOfAttorney-upload"
+										style={{ display: 'none' }}
+										onChange={(event) => handleDocumentImageChange(event, 'powerOfAttorney')}
+									/>
+									<label htmlFor="powerOfAttorney-upload">
+										<IconButton component="span">
+											<CameraAltIcon />
+										</IconButton>
+									</label>
+									{documents['powerOfAttorney'] ? (
+										<CardMedia
+											component="img"
+											height="350"
+											width="auto"
+											image={documents['powerOfAttorney']}
+											alt={'Power of Attorney for the vehicle'}
+										/>
+									) : (
+										<CardMedia
+											component="img"
+											height="250"
+											alt="Upload an image"
+											image=""
+										/>
+									)}
+								</CardActionArea>
+							</Card>
+						</Grid>
+					</Grid>
 					<Typography variant="h6" gutterBottom>
 						Enable Listing
 					</Typography>
