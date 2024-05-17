@@ -78,6 +78,19 @@ export const getPreSignedURLAdmin = async (id, fileType, filename) => {
         console.error(err);
     }
 }
+
+export const getDownloadUrl = async (key) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            operation: "getDownloadPresignedUrl",
+            requestDownloadKey: key
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 export const uplaodVehicleImagesToS3 = async(url, image) => {
     try {
         const response = await axios.put(url, image);
@@ -89,7 +102,9 @@ export const uplaodVehicleImagesToS3 = async(url, image) => {
 
 export const getAllVehicles = async () => {
     try {
-        const response = await axios.get(url('get_vehicles'));
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "getAllVehicles",
+        });
         return response.data;
     } catch (err) {
         console.error(err);

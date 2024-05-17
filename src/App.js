@@ -6,7 +6,8 @@ import RentACarPage from './pages/RentACarPage';
 import MainLayout from './Layout/MainLayout';
 import AddCar from './pages/AddCar';
 import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
-
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 
 // src/App.js
 function App() {
