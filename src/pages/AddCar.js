@@ -20,7 +20,7 @@ import {
 } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { addVehicle, getPreSignedURL, uplaodVehicleImagesToS3 } from "../api";
+import { addVehicle, getPreSignedURL, getPreSignedURLAdmin, uplaodVehicleImagesToS3 } from "../api";
 import carModel from '../api/models.json';
 import carMake from '../api/makes.json';
 import { cities, fuelType, categories, carColors, transmissionType } from '../config/constants';
@@ -33,6 +33,20 @@ const AddCar = () => {
 	const [tab, setTab] = useState(0);
 	const [modelList, setModelList] = useState([]);
 	const [makeList, setMakeList] = useState([]);
+	const [documents, setDocuments] = useState({
+		front: '',
+		back: '',
+		left: '',
+		right: '',
+		frontPlateNumber: '',
+		backPlateNumber: '',
+		registration: '',
+		frontDriversLicense: '',
+		backDriversLicense: '',
+		powerOfAttorney: '',
+		insurance: ''
+	})
+	const [images, setImages] = useState([]);
 	const [formValues, setFormValues] = useState({
 		city: '',
 		category: '',
@@ -58,22 +72,9 @@ const AddCar = () => {
 		representativeLastName: '',
 		representativePhone: '',
 		representativeEmail: '',
+		vehicleImageKeys: [],
+		adminDocumentKeys: [],
 	});
-	const [documents, setDocuments] = useState({
-		front: '',
-		back: '',
-		left: '',
-		right: '',
-		frontPlateNumber: '',
-		backPlateNumber: '',
-		registration: '',
-		insurance_1: '',
-		insurance_2: '',
-		frontDriversLicense: '',
-		backDriversLicense: '',
-		powerOfAttorney: ''
-	})
-	const [images, setImages] = useState([]);
 	const [isUploadingImages, setIsUploadingImages] = useState(false);
 
 	useEffect(() => {
@@ -94,37 +95,6 @@ const AddCar = () => {
 			// Navigate to next page or perform submission
 		}
 	};
-
-	async function uploadImage(file) {
-		// Fetch the pre-signed URL from your backend
-		const response = await fetch('https://your-api.com/get-presigned-url', {
-			method: 'POST',
-			body: JSON.stringify({
-				filename: file.name,
-				contentType: file.type
-			}),
-			headers: {
-				'Content-Type': 'application/json'
-			}
-		});
-		const { url, key } = await response.json();
-
-		// Upload the file using the pre-signed URL
-		const result = await fetch(url, {
-			method: 'PUT',
-			body: file,
-			headers: {
-				'Content-Type': file.type
-			}
-		});
-
-		if (result.ok) {
-			console.log('Uploaded successfully!');
-			return key; // Return the S3 key for storing in DynamoDB
-		} else {
-			throw new Error('Failed to upload');
-		}
-	}
 
 	const handleImageChange = async (e) => {
 		if (e.target.files.length > 25) {
@@ -147,17 +117,15 @@ const AddCar = () => {
 		setImages(images.filter((_, i) => i !== index));
 	};
 
-	const handleDocumentImageChange = (event, type) => {
-		const file = event.target.files[0];
-		if (file && (file.type === "image/png" || file.type === "image/jpeg" || file.type === "image/jpg")) {
-			const reader = new FileReader();
-			reader.onloadend = () => {
-				setDocuments(prevImages => ({ ...prevImages, [type]: reader.result }));
-			};
-			reader.readAsDataURL(file);
-		} else {
-			alert('Only PNG, JPG and JPEG formats are allowed.');
+	const handleDocumentImageChange = async (e, type) => {
+		setIsUploadingImages(true);
+		const files = Array.from(e.target.files);
+
+		for (const file of files) {
+			const resizedImage = await resizeImage(file);
+			setDocuments(prevImages => ({ ...prevImages, [type]: resizedImage }));
 		}
+		setIsUploadingImages(false);
 	};
 
 	const handleChange = (event) => {
@@ -178,29 +146,97 @@ const AddCar = () => {
 	};
 
 	const submitForm = async () => {
-		// handleUpload();
+		setIsUploadingImages(true);
+		await handleUpload();
 		console.log(formValues);
-		window.location.href = "/rent-a-car";
+		setIsUploadingImages(false);
+		// window.location.href = "/rent-a-car";
+	}
+
+	const uploadImageToS3Admin = async (documentType, image) => {
+		// Get the file extension
+		try {
+			const extension = image.name.split('.').pop().toLowerCase();
+			if (!extension) {
+				throw new Error('Invalid file extension');
+			}
+			const res = await getPreSignedURLAdmin(formValues.id, `image/${extension}`, `${documentType}`);
+			const { url, key } = res.body;
+			// Get the pre-signed URL from your server
+			// Upload the image to the S3 bucket using the pre-signed URL
+			await uplaodVehicleImagesToS3(url, image);
+			return  {key, url };
+		} catch (error) {
+			console.error(`Failed to upload admin document ${documentType}:`, error);
+			throw error;
+		};
 	}
 
 	const uploadImageToS3 = async (image, index) => {
-		// Get the file extension
-		const extension = image.name.split('.').pop().toLowerCase();
-		const res = await getPreSignedURL(formValues.id, `image/${extension}`, `image-${index}`);
-		const { url, key } = res.body;
-		// Get the pre-signed URL from your server
+		try {
+			const extension = image.name.split('.').pop().toLowerCase();
+			if (!extension) {
+				throw new Error('Invalid file extension');
+			}
 
-		// Upload the image to the S3 bucket using the pre-signed URL
-		const data = await uplaodVehicleImagesToS3(url, image);
-		console.log('uploaded to: ', data);
-		return { key, url };
+			const res = await getPreSignedURL(formValues.id, `image/${extension}`, `image-${index}`);
+			const { url, key } = res.body;
+
+			await uplaodVehicleImagesToS3(url, image);
+			return { key, url };
+		} catch (error) {
+			console.error(`Failed to upload image ${index}:`, error);
+			throw error;
+		}
 	};
 
 	const handleUpload = async () => {
-		const data = await Promise.all(images.map(uploadImageToS3));
+		const errors = [];
+		const imageKeys = [];
+		const adminKeys = [];
 
-		// Do something with the keys...
-		console.log('keys: ', data);
+		try {
+			// Synchronously upload admin documents
+			for (const [documentType, image] of Object.entries(documents)) {
+				if (image) {
+					try {
+						const {key, url} = await uploadImageToS3Admin(documentType, image);
+						adminKeys.push({ key, url });
+					} catch (error) {
+						errors.push(`Error uploading ${documentType}: ${error.message}`);
+					}
+				}
+			}
+
+			// Synchronously upload images
+			for (const [index, image] of images.entries()) {
+				try {
+					const {key, url} = await uploadImageToS3(image, index);
+					imageKeys.push({ key, url });
+				} catch (error) {
+					errors.push(`Error uploading image at index ${index}: ${error.message}`);
+				}
+			}
+
+			if (errors.length > 0) {
+				console.error('Upload errors:', errors);
+				return false;
+			}
+
+			const data = {
+				...formValues,
+				vehicleImageKeys: imageKeys,
+				adminDocumentKeys: adminKeys,
+			};
+
+			setFormValues(data);
+			const vehicleData = await addVehicle(data);
+			console.log('vehicle data: ', vehicleData);
+		} catch (error) {
+			console.error('Unexpected error:', error);
+			return false;
+		}
+		return true;
 	};
 
 	return (
@@ -237,21 +273,19 @@ const AddCar = () => {
 							</Grid>
 						))}
 					</Grid>
-					{isUploadingImages ? <CircularProgress /> :
-						<FormControl fullWidth margin="normal">
-							<Button variant="contained" component="label">
-								Upload upto 25 Vehicle Image
-								<input
-									type="file"
-									required
-									hidden
-									multiple
-									accept=".png, .jpg, .jpeg"
-									onChange={handleImageChange}
-								/>
-							</Button>
-						</FormControl>
-					}
+					<FormControl fullWidth margin="normal">
+						<Button variant="contained" component="label">
+							Upload upto 25 Vehicle Image
+							<input
+								type="file"
+								required
+								hidden
+								multiple
+								accept=".png, .jpg, .jpeg"
+								onChange={handleImageChange}
+							/>
+						</Button>
+					</FormControl>
 					<FormControl fullWidth margin="normal">
 						<InputLabel id="city-select-label">City</InputLabel>
 						<Select
@@ -453,7 +487,7 @@ const AddCar = () => {
 								<Card>
 									<CardActionArea>
 										<input
-											accept="image/png, image/jpeg" // Only accept JPG, JPEG, PNG
+											accept="image/png, image/jpeg, image/jpg" // Only accept JPG, JPEG, PNG
 											type="file"
 											id={`${side}-upload`}
 											style={{ display: 'none' }}
@@ -468,7 +502,7 @@ const AddCar = () => {
 											<CardMedia
 												component="img"
 												height="140"
-												image={documents[side]}
+												image={URL.createObjectURL(documents[side])}
 												alt={`${side} of the vehicle`}
 											/>
 										) : (
@@ -512,7 +546,7 @@ const AddCar = () => {
 											<CardMedia
 												component="img"
 												height="140"
-												image={documents[side]}
+												image={URL.createObjectURL(documents[side])}
 												alt={`${side} of the vehicle`}
 											/>
 										) : (
@@ -556,7 +590,7 @@ const AddCar = () => {
 											<CardMedia
 												component="img"
 												height="140"
-												image={documents[side]}
+												image={URL.createObjectURL(documents[side])}
 												alt={`${side}`}
 											/>
 										) : (
@@ -599,7 +633,7 @@ const AddCar = () => {
 										<CardMedia
 											component="img"
 											height="140"
-											image={documents['insurance']}
+											image={URL.createObjectURL(documents['insurance'])}
 											alt={'insurance of the vehicle'}
 										/>
 									) : (
@@ -640,7 +674,7 @@ const AddCar = () => {
 										<CardMedia
 											component="img"
 											height="140"
-											image={documents['registration']}
+											image={URL.createObjectURL(documents['registration'])}
 											alt={'registration of the vehicle'}
 										/>
 									) : (
@@ -669,133 +703,141 @@ const AddCar = () => {
 					noValidate
 					autoComplete="off"
 				>
-					{/* Text fields for Owner and Representative will go here */}
-					<TextField
-						required
-						id="ownerFirstName"
-						name="ownerFirstName"
-						label="Owner First Name"
-						value={formValues.ownerFirstName}
-						onChange={handleChange}
-					/>
+					{isUploadingImages ?
+						<Box sx={{ display: 'flex' }} justifyContent="center" alignItems="center" margin="auto">
+							<CircularProgress size="10%" />
+						</Box>
+						:
+						<>
+							{/* Text fields for Owner and Representative will go here */}
+							< TextField
+								required
+								id="ownerFirstName"
+								name="ownerFirstName"
+								label="Owner First Name"
+								value={formValues.ownerFirstName}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="ownerLastName"
-						name="ownerLastName"
-						label="Owner Last Name"
-						value={formValues.ownerLastName}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="ownerLastName"
+								name="ownerLastName"
+								label="Owner Last Name"
+								value={formValues.ownerLastName}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="ownerPhone"
-						name="ownerPhone"
-						label="Owner Phone"
-						value={formValues.ownerPhone}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="ownerPhone"
+								name="ownerPhone"
+								label="Owner Phone"
+								value={formValues.ownerPhone}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="ownerEmail"
-						name="ownerEmail"
-						label="Owner Email"
-						value={formValues.ownerEmail}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="ownerEmail"
+								name="ownerEmail"
+								label="Owner Email"
+								value={formValues.ownerEmail}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="representativeFirstName"
-						name="representativeFirstName"
-						label="Representative First Name"
-						value={formValues.representativeFirstName}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="representativeFirstName"
+								name="representativeFirstName"
+								label="Representative First Name"
+								value={formValues.representativeFirstName}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="representativeLastName"
-						name="representativeLastName"
-						label="Representative Last Name"
-						value={formValues.representativeLastName}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="representativeLastName"
+								name="representativeLastName"
+								label="Representative Last Name"
+								value={formValues.representativeLastName}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="representativePhone"
-						name="representativePhone"
-						label="Representative Phone"
-						value={formValues.representativePhone}
-						onChange={handleChange}
-					/>
+							<TextField
+								required
+								id="representativePhone"
+								name="representativePhone"
+								label="Representative Phone"
+								value={formValues.representativePhone}
+								onChange={handleChange}
+							/>
 
-					<TextField
-						required
-						id="representativeEmail"
-						name="representativeEmail"
-						label="Representative Email"
-						value={formValues.representativeEmail}
-						onChange={handleChange}
-					/>
-					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-						Power of Attorney
-					</Typography>
-					<Typography variant="body2">
-						Original Copy of Power of Attorney
-					</Typography>
-					<Grid container spacing={2} sx={{ mt: 2 }}>
-						<Grid item xs={12} sm={12}>
-							<Card>
-								<CardActionArea>
-									<input
-										accept="image/png, image/jpeg"
-										type="file"
-										id="powerOfAttorney-upload"
-										style={{ display: 'none' }}
-										onChange={(event) => handleDocumentImageChange(event, 'powerOfAttorney')}
-									/>
-									<label htmlFor="powerOfAttorney-upload">
-										<IconButton component="span">
-											<CameraAltIcon />
-										</IconButton>
-									</label>
-									{documents['powerOfAttorney'] ? (
-										<CardMedia
-											component="img"
-											height="350"
-											width="auto"
-											image={documents['powerOfAttorney']}
-											alt={'Power of Attorney for the vehicle'}
-										/>
-									) : (
-										<CardMedia
-											component="img"
-											height="250"
-											alt="Upload an image"
-											image=""
-										/>
-									)}
-								</CardActionArea>
-							</Card>
-						</Grid>
-					</Grid>
-					<Typography variant="h6" gutterBottom>
-						Enable Listing
-					</Typography>
-					<Typography variant="body2">
-						Click the button below to enable your car listing.
-					</Typography>
-					<Button
-						variant="contained"
-						color="primary"
-						sx={{ mt: 2 }}
-						onClick={submitForm} >
-						Enable Listing
-					</Button>
+							<TextField
+								required
+								id="representativeEmail"
+								name="representativeEmail"
+								label="Representative Email"
+								value={formValues.representativeEmail}
+								onChange={handleChange}
+							/>
+							<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+								Power of Attorney
+							</Typography>
+							<Typography variant="body2">
+								Original Copy of Power of Attorney
+							</Typography>
+							<Grid container spacing={2} sx={{ mt: 2 }}>
+								<Grid item xs={12} sm={12}>
+									<Card>
+										<CardActionArea>
+											<input
+												accept="image/png, image/jpeg"
+												type="file"
+												id="powerOfAttorney-upload"
+												style={{ display: 'none' }}
+												onChange={(event) => handleDocumentImageChange(event, 'powerOfAttorney')}
+											/>
+											<label htmlFor="powerOfAttorney-upload">
+												<IconButton component="span">
+													<CameraAltIcon />
+												</IconButton>
+											</label>
+											{documents['powerOfAttorney'] ? (
+												<CardMedia
+													component="img"
+													height="350"
+													width="auto"
+													image={URL.createObjectURL(documents['powerOfAttorney'])}
+													alt={'Power of Attorney for the vehicle'}
+												/>
+											) : (
+												<CardMedia
+													component="img"
+													height="250"
+													alt="Upload an image"
+													image=""
+												/>
+											)}
+										</CardActionArea>
+									</Card>
+								</Grid>
+							</Grid>
+							<Typography variant="h6" gutterBottom>
+								Enable Listing
+							</Typography>
+							<Typography variant="body2">
+								Click the button below to enable your car listing.
+							</Typography>
+							<Button
+								variant="contained"
+								color="primary"
+								sx={{ mt: 2 }}
+								onClick={submitForm} >
+								Enable Listing
+							</Button>
+						</>
+					}
 				</Box>
 			)}
 			{/* Implement other tabs as needed */}

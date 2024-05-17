@@ -65,6 +65,19 @@ export const getPreSignedURL = async (id, fileType, filename) => {
     }
 }
 
+export const getPreSignedURLAdmin = async (id, fileType, filename) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "getPresignedUrlAdmin",
+            'vehicleId': id,
+			"contentType": fileType,
+            filename
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
 export const uplaodVehicleImagesToS3 = async(url, image) => {
     try {
         const response = await axios.put(url, image);
