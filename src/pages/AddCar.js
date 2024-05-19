@@ -20,6 +20,7 @@ import {
 } from "@mui/material";
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UploadIcon from '@mui/icons-material/Upload';
 import { addVehicle, getPreSignedURL, getPreSignedURLAdmin, uplaodVehicleImagesToS3 } from "../api";
 import carModel from '../api/models.json';
 import carMake from '../api/makes.json';
@@ -38,8 +39,7 @@ const AddCar = () => {
 		back: '',
 		left: '',
 		right: '',
-		frontPlateNumber: '',
-		backPlateNumber: '',
+		plateNumber: '',
 		registration: '',
 		frontDriversLicense: '',
 		backDriversLicense: '',
@@ -82,13 +82,6 @@ const AddCar = () => {
 	}, []);
 
 	const handleNext = () => {
-		const requiredFields = ['city', 'make', 'model', 'year', 'category', 'doors', 'fuelType', 'seats', 'color', 'transmission'];
-		for (let field of requiredFields) {
-			if (!formValues[field]) {
-				alert(`Please fill the ${field} field.`);
-				return;
-			}
-		}
 		if (tab < 2) {
 			setTab(tab + 1);
 		} else {
@@ -165,7 +158,7 @@ const AddCar = () => {
 			// Get the pre-signed URL from your server
 			// Upload the image to the S3 bucket using the pre-signed URL
 			await uplaodVehicleImagesToS3(url, image);
-			return  {key, url };
+			return { key, url };
 		} catch (error) {
 			console.error(`Failed to upload admin document ${documentType}:`, error);
 			throw error;
@@ -200,7 +193,7 @@ const AddCar = () => {
 			for (const [documentType, image] of Object.entries(documents)) {
 				if (image) {
 					try {
-						const {key, url} = await uploadImageToS3Admin(documentType, image);
+						const { key, url } = await uploadImageToS3Admin(documentType, image);
 						adminKeys.push({ key, url });
 					} catch (error) {
 						errors.push(`Error uploading ${documentType}: ${error.message}`);
@@ -211,7 +204,7 @@ const AddCar = () => {
 			// Synchronously upload images
 			for (const [index, image] of images.entries()) {
 				try {
-					const {key, url} = await uploadImageToS3(image, index);
+					const { key, url } = await uploadImageToS3(image, index);
 					imageKeys.push({ key, url });
 				} catch (error) {
 					errors.push(`Error uploading image at index ${index}: ${error.message}`);
@@ -225,6 +218,7 @@ const AddCar = () => {
 
 			const data = {
 				...formValues,
+				createdAt: new Date().toUTCString(),
 				vehicleImageKeys: imageKeys,
 				adminDocumentKeys: adminKeys,
 			};
@@ -239,6 +233,22 @@ const AddCar = () => {
 		return true;
 	};
 
+	const thirdStepperFormValidation = () => Object.values(documents).some(field => field === '') || firstStepperFormValidation();
+
+	const secondStepperFormValidation = () => Object.entries(documents).some(([key, field]) => key === "powerOfAttorney" ? false : field === '');
+
+	const firstStepperFormValidation = () => (
+		!formValues.model ||
+		!formValues.make ||
+		!formValues.year ||
+		!formValues.category ||
+		!formValues.doors ||
+		!formValues.fuelType ||
+		!formValues.color ||
+		!formValues.transmission ||
+		!formValues.city ||
+		images.length < 1
+	);
 	return (
 		<Box sx={{ width: "100%" }}>
 			<Tabs value={tab} onChange={(event, newValue) => setTab(newValue)}>
@@ -275,7 +285,8 @@ const AddCar = () => {
 					</Grid>
 					<FormControl fullWidth margin="normal">
 						<Button variant="contained" component="label">
-							Upload upto 25 Vehicle Image
+							<UploadIcon />
+							Upload Vehicle Images (Up to 25 Images)
 							<input
 								type="file"
 								required
@@ -343,7 +354,7 @@ const AddCar = () => {
 					<FormControl fullWidth margin="normal">
 						<TextField
 							id="model-spec-input"
-							label="Model Specification"
+							label="Model Specification (Optional)"
 							placeholder="Optional"
 							name="modelSpecification"
 							value={formValues.modelSpecification}
@@ -456,21 +467,11 @@ const AddCar = () => {
 						variant="contained"
 						onClick={handleNext}
 						sx={{ mt: 2 }}
-						disabled={
-							!formValues.model ||
-							!formValues.make ||
-							!formValues.year ||
-							!formValues.category ||
-							!formValues.doors ||
-							!formValues.fuelType ||
-							!formValues.color ||
-							!formValues.transmission ||
-							!formValues.city ||
-							images.length < 1
-						}
+						disabled={firstStepperFormValidation()}
 					>
 						Next
 					</Button>
+					{firstStepperFormValidation() && <Typography style={{ color: 'red' }} variant="subtitle1">Please fill in the required fields and upload at least one picture</Typography>}
 				</Box>
 			)}
 			{tab === 1 && (
@@ -520,49 +521,46 @@ const AddCar = () => {
 					</Grid>
 
 					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-						License Plate Number
+						Vehicle Tag/Plate Number
 					</Typography>
 					<Typography variant="body2">
-						Front and Back License Plate
+						Vehicle Tag or Plate Number
 					</Typography>
 					<Grid container spacing={2} sx={{ mt: 2 }}>
-						{['frontPlateNumber', 'backPlateNumber'].map((side) => (
-							<Grid item xs={6} sm={6} key={side}>
-								<Card>
-									<CardActionArea>
-										<input
-											accept="image/png, image/jpeg"
-											type="file"
-											id={`license-${side}-upload`}
-											style={{ display: 'none' }}
-											onChange={(event) => handleDocumentImageChange(event, side)}
+						<Grid item xs={12} sm={12}>
+							<Card>
+								<CardActionArea>
+									<input
+										accept="image/png, image/jpeg"
+										type="file"
+										id="plateNumber-upload"
+										style={{ display: 'none' }}
+										onChange={(event) => handleDocumentImageChange(event, 'plateNumber')}
+									/>
+									<label htmlFor="plateNumber-upload">
+										<IconButton component="span">
+											<CameraAltIcon />
+										</IconButton>
+									</label>
+									{documents['plateNumber'] ? (
+										<CardMedia
+											component="img"
+											height="140"
+											image={URL.createObjectURL(documents['plateNumber'])}
+											alt={'Plate Number of the vehicle'}
 										/>
-										<label htmlFor={`license-${side}-upload`}>
-											<IconButton component="span">
-												<CameraAltIcon />
-											</IconButton>
-										</label>
-										{documents[side] ? (
-											<CardMedia
-												component="img"
-												height="140"
-												image={URL.createObjectURL(documents[side])}
-												alt={`${side} of the vehicle`}
-											/>
-										) : (
-											<CardMedia
-												component="img"
-												height="140"
-												alt="Upload an image"
-												image=""
-											/>
-										)}
-									</CardActionArea>
-								</Card>
-							</Grid>
-						))}
+									) : (
+										<CardMedia
+											component="img"
+											height="140"
+											alt="Upload an image"
+											image=""
+										/>
+									)}
+								</CardActionArea>
+							</Card>
+						</Grid>
 					</Grid>
-
 					<Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
 						Driver's License
 					</Typography>
@@ -689,10 +687,10 @@ const AddCar = () => {
 							</Card>
 						</Grid>
 					</Grid>
-
-					<Button onClick={handleNext} sx={{ mt: 2 }}>
+					<Button variant="contained" onClick={handleNext} sx={{ mt: 2 }} disabled={secondStepperFormValidation()}>
 						Next
 					</Button>
+					{secondStepperFormValidation() && <Typography style={{ color: 'red' }} variant="subtitle1">Please upload all documents</Typography>}
 				</Box>
 			)}
 			{tab === 2 && (
@@ -823,18 +821,20 @@ const AddCar = () => {
 									</Card>
 								</Grid>
 							</Grid>
-							<Typography variant="h6" gutterBottom>
+							{/* <Typography variant="h6" gutterBottom>
 								Enable Listing
 							</Typography>
 							<Typography variant="body2">
 								Click the button below to enable your car listing.
-							</Typography>
+							</Typography> */}
 							<Button
 								variant="contained"
 								color="primary"
 								sx={{ mt: 2 }}
-								onClick={submitForm} >
-								Enable Listing
+								onClick={submitForm} 
+								disabled={thirdStepperFormValidation()}
+								>
+								Submit
 							</Button>
 						</>
 					}

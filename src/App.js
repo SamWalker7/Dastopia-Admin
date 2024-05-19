@@ -6,8 +6,10 @@ import RentACarPage from './pages/RentACarPage';
 import MainLayout from './Layout/MainLayout';
 import AddCar from './pages/AddCar';
 import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+import './App.css';
 
 // src/App.js
 function App() {
@@ -44,6 +46,19 @@ function App() {
 				color: '#0052cc',
 			},
 		},
+		background: {
+			default: '#f4f6f8',
+			paper: '#ffffff',
+		},
+		typography: {
+			fontFamily: 'Roboto, Arial, sans-serif',
+			h5: {
+				fontWeight: 600,
+			},
+		},
+		shape: {
+			borderRadius: 8,
+		},
 	});
 
 	theme = createTheme(theme, {
@@ -59,6 +74,7 @@ function App() {
 
 	return (
 		<ThemeProvider theme={theme}>.
+			<CssBaseline />
 			<Router>
 				<Routes>
 					<Route path="/" element={<LoginPage />} />
