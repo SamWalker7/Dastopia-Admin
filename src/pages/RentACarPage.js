@@ -11,25 +11,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import { getAllVehicles, getDownloadUrl } from "../api";
 import Slider from 'react-slick';
-
-// const initialRows = [
-//   createData(
-//     "https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-//     "Audi A3",
-//     "Pending"
-//   ),
-//   createData(
-//     "https://images.pexels.com/photos/38637/car-audi-auto-automotive-38637.jpeg",
-//     "BMW M3",
-//     "Approved",
-//     false
-//   ), // Set enabled to false
-//   createData(
-//     "https://images.pexels.com/photos/6692306/pexels-photo-6692306.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-//     "Mercedes Benz C Class",
-//     "Declined"
-//   ),
-// ];
+import './page-styles.css';
 
 const RentACarPage = () => {
   const [rows, setRows] = useState([]);
@@ -37,6 +19,8 @@ const RentACarPage = () => {
   const [selectedIndex, setSelectedIndex] = useState(null);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+  const [vehicleData, setVehicleData] = useState([]);
 
   const toggleListing = (index) => {
     const newRows = [...rows];
@@ -73,6 +57,7 @@ const RentACarPage = () => {
 
   const fetchVehicles = async () => {
     const { body } = await getAllVehicles();
+    setVehicleData(body);
     let data = [];
     for (const vehicle of body) {
       let urls = []
@@ -82,7 +67,7 @@ const RentACarPage = () => {
         for (const image of vehicle?.vehicleImageKeys) {
           const url = await getDownloadUrl(image.key);
           // console.log('url: ' + url.body);
-          if(url.body) {
+          if (url.body) {
             urls.push(url.body);
           } else {
             urls.push("https://images.pexels.com/photos/170811/pexels-photo-170811.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1");
@@ -93,6 +78,7 @@ const RentACarPage = () => {
     }
 
     const display = data.map((vehicle) => ({
+      ...vehicle,
       name: vehicle.make + ' ' + vehicle.model,
       status: vehicle?.isEnabled ? 'Approved' : vehicle?.isEnabled === false ? 'Declined' : 'Pending',
       image: vehicle?.images.length > 0 ? vehicle.images
@@ -112,11 +98,20 @@ const RentACarPage = () => {
 
   const settings = {
     dots: true,
-    infinite: true,
+    infinite: false,
     speed: 500,
     slidesToShow: 1,
-    slidesToScroll: 1
+    slidesToScroll: 1,
+    arrows: true
   };
+
+  const handleToggleDetails = () => {
+    setShowDetails(!showDetails);
+  };
+
+  const filteredVehicleData = (data) => data.filter(
+    ([key]) => key !== 'vehicleImageKeys' && key !== 'adminDocumentKeys' && key !== 'image'
+  );
 
   return (
     <Grid container spacing={2}>
@@ -137,18 +132,20 @@ const RentACarPage = () => {
             <Grid item xs={12} sm={6} md={4} key={index}>
               <Card>
                 {Array.isArray(row?.image) && row?.image?.length > 0 ?
-                  <Slider {...settings}>
-                    {row?.image?.map((url, index) => (
-                      <div key={index}>
-                        <CardMedia
-                          component="img"
-                          height="300"
-                          image={url}
-                          alt={`Vehicle Image ${index}`}
-                        />
-                      </div>
-                    ))}
-                  </Slider>
+                  <div className="image-slider-container">
+                    <Slider {...settings}>
+                      {row?.image?.map((url, index) => (
+                        <div key={index}>
+                          <CardMedia
+                            component="img"
+                            height="300"
+                            image={url}
+                            alt={`Vehicle Image ${index}`}
+                          />
+                        </div>
+                      ))}
+                    </Slider>
+                  </div>
                   :
                   <CardMedia
                     component="img"
@@ -193,6 +190,21 @@ const RentACarPage = () => {
                     )}
                   </Menu>
                 </CardContent>
+                {/* <Button variant="contained" color="primary" onClick={handleToggleDetails}>
+                  {showDetails ? "Hide Vehicle Details" : "See Vehicle Details"}
+                </Button> */}
+                {showDetails && (
+                  <div>
+                    {Object.entries(row).map(([key, value]) => {
+                      if (key !== "image" && key !== 'vehicleImageKeys' && key !== 'adminDocumentKeys') return null;
+                      (
+                        <Typography variant="body2" key={key}>
+                          <strong>{key}:</strong> {value}
+                        </Typography>
+                      )
+                    })}
+                  </div>
+                )}
                 <CardActions>
                   <Button
                     variant="contained"
