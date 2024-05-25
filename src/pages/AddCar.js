@@ -143,7 +143,7 @@ const AddCar = () => {
 		await handleUpload();
 		console.log(formValues);
 		setIsUploadingImages(false);
-		// window.location.href = "/rent-a-car";
+		window.location.href = "/rent-a-car";
 	}
 
 	const uploadImageToS3Admin = async (documentType, image) => {
