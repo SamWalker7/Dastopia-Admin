@@ -1,6 +1,6 @@
 // src/pages/DashboardPage.js
 import React from 'react';
-import { Box } from '@mui/material';
+import Box from '@mui/material/Box';
 import CardSection from '../components/card-section';
 import PersonIcon from '@mui/icons-material/Person';
 import ListIcon from '@mui/icons-material/List';

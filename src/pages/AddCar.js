@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from "react";
-import {
-	Button,
-	TextField,
-	Select,
-	MenuItem,
-	FormControl,
-	InputLabel,
-	Tab,
-	Tabs,
-	Box,
-	Typography,
-	Grid,
-	Card,
-	CardActionArea,
-	IconButton,
-	CardMedia,
-	FormHelperText,
-	CircularProgress,
-} from "@mui/material";
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import IconButton from '@mui/material/IconButton';
+import CardMedia from '@mui/material/CardMedia';
+import FormHelperText from '@mui/material/FormHelperText';
+import CircularProgress from '@mui/material/CircularProgress';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UploadIcon from '@mui/icons-material/Upload';

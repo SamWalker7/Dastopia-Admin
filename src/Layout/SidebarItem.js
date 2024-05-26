@@ -1,6 +1,8 @@
 // src/components/SidebarItem.js
 import React from 'react';
-import { ListItem, ListItemIcon, ListItemText } from '@mui/material';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import { Link, useLocation } from 'react-router-dom';
 
 const SidebarItem = ({ text, icon, path }) => {

@@ -1,15 +1,16 @@
 // src/Layout/Sidebar.js
 import React from 'react';
-import { Drawer, List, ListItem, ListItemIcon, ListItemText, IconButton, Divider } from '@mui/material';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import IconButton from '@mui/material/IconButton';
+import Divider from '@mui/material/Divider';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import { Link, useLocation } from 'react-router-dom';
 import SidebarItem from './SidebarItem';
 
 const Sidebar = ({ open, handleDrawerClose }) => {
-  const location = useLocation();
   const sidebarConfig = [
     {
       text: 'Dashboard',
@@ -30,7 +31,7 @@ const Sidebar = ({ open, handleDrawerClose }) => {
   const drawerWidth = 240;
 
   return (
-<Drawer
+    <Drawer
       sx={{
         width: drawerWidth,
         flexShrink: 0,
