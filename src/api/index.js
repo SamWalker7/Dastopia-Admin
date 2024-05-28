@@ -51,6 +51,18 @@ export const addVehicle = async (data) => {
     }
 }
 
+export const updateVehicle = async (data) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "update",
+            "vehicleData": data,
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
+
 export const getPreSignedURL = async (id, fileType, filename) => {
     try {
         const response = await axios.post(url('add_vehicle'), {
@@ -104,6 +116,18 @@ export const getAllVehicles = async () => {
     try {
         const response = await axios.post(url('add_vehicle'), {
             "operation": "getAllVehicles",
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+export const getVehicleById = async (id) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "getVehicleById",
+            "id": id
         });
         return response.data;
     } catch (err) {

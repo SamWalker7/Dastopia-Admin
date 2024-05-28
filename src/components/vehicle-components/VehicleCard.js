@@ -94,7 +94,7 @@ const VehicleCard = ({ row, index, handleClick, handleClose, toggleListing, anch
                 <IconButton
                     color="black"
                     onClick={() => {
-                        /* Edit action */
+                        window.location.href = `/edit-vehicle?id=${row.id}`;
                     }}
                 >
                     <EditIcon />

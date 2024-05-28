@@ -6,6 +6,7 @@ import DashboardPage from '../pages/DashboardPage';
 import RentACarPage from '../pages/RentACarPage';
 import AddCar from '../pages/AddCar';
 import EnhancedMainLayout from '../Layout/EnhancedMainLayout';
+import EditVehicle from '../pages/EditVehicle';
 
 const AppRoutes = ({ sidebarOpen, setSidebarOpen }) => (
     <Routes>
@@ -31,6 +32,14 @@ const AppRoutes = ({ sidebarOpen, setSidebarOpen }) => (
             element={
                 <EnhancedMainLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
                     <AddCar />
+                </EnhancedMainLayout>
+            }
+        />
+        <Route
+            path="/edit-vehicle"
+            element={
+                <EnhancedMainLayout sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}>
+                    <EditVehicle />
                 </EnhancedMainLayout>
             }
         />
