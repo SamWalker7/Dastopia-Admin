@@ -55,6 +55,12 @@
             "make_country": "USA"
         },
         {
+            "make_id": "chang",
+            "make_display": "Chang",
+            "make_is_common": "1",
+            "make_country": "CHINA"
+        },
+        {
             "make_id": "chevrolet",
             "make_display": "Chevrolet",
             "make_is_common": "1",
