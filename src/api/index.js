@@ -134,3 +134,16 @@ export const getVehicleById = async (id) => {
         console.error(err);
     }
 }
+
+export const deleteVehicleById = async (id, imageKeys) => {
+    try {
+        const response = await axios.post(url('add_vehicle'), {
+            "operation": "deleteVehicleById",
+            "id": id,
+            "imageKeys": imageKeys || []
+        });
+        return response.data;
+    } catch (err) {
+        console.error(err);
+    }
+}
