@@ -569,6 +569,12 @@
             "make_display": "Zagato",
             "make_is_common": "1",
             "make_country": "Italy"
+        },
+        {
+            "make_id": "other",
+            "make_display": "Other",
+            "make_is_common": "1",
+            "make_country": "N/A"
         } 
     ]
 }

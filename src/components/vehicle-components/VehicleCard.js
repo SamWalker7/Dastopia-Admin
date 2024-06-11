@@ -55,7 +55,7 @@ const VehicleCard = ({ row, index, handleClick, handleClose, toggleListing, anch
             )}
             <CardContent>
                 <Typography variant="h5" component="div">
-                    {`${row.make} ${row.model}`}
+                    {`${row.make} ${row.model} ${row.year}`}
                 </Typography>
                 <VehicleStatus
                     status={row.status}
