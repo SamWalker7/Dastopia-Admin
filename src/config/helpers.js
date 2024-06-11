@@ -1,6 +1,12 @@
 import Papa from 'papaparse';
 import Pica from 'pica';
 
+export const filterByDateRange = (data, daysAgo) => {
+  const pastDate = new Date();
+  pastDate.setDate(pastDate.getDate() - daysAgo);
+  return data?.filter(item => new Date(item.createdAt) >= pastDate).length;
+};
+
 export const handleImport = (e) => {
   // setIsFileUploading(true);
   const file = e.target.files[0]; // Get the file from the input element

@@ -4,8 +4,10 @@ import Box from '@mui/material/Box';
 import CardSection from '../components/card-section';
 import PersonIcon from '@mui/icons-material/Person';
 import ListIcon from '@mui/icons-material/List';
+import CircularProgress from '@mui/material/CircularProgress';
 import NotificationsIcon from '@mui/icons-material/Notifications'; 
 import { getAllVehicles } from "../api";
+import { filterByDateRange } from '../config/helpers';
 
 const DashboardPage = () => {
   const [ totalListings, setTotalListings ] = useState(null);
@@ -22,26 +24,8 @@ const DashboardPage = () => {
     setIsLoading(true);
     const { body } = await getAllVehicles();
     setTotalListings(body?.length);
-
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const listingsLast7Days = body?.filter(item => {
-        const itemDate = new Date(item.createdAt);
-        return itemDate >= oneWeekAgo;
-    }).length;
-
-    setListingLast7Days(listingsLast7Days);
-
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const listingsLast30Days = body?.filter(item => {
-        const itemDate = new Date(item.createdAt);
-        return itemDate >= thirtyDaysAgo;
-    }).length;
-
-    setListingLas30Days(listingsLast30Days);
+    setListingLast7Days(filterByDateRange(body, 7));
+    setListingLas30Days(filterByDateRange(body, 30));
   }
   const userItems = [
     { icon: <PersonIcon fontSize="large" />, title: '', count: 0, period: 'Last 30 days' },
@@ -50,9 +34,9 @@ const DashboardPage = () => {
   ];
 
   const listingItems = [
-    { icon: <ListIcon fontSize="large" />, title: '', count: totalListings ? totalListings : 'Loading...', period: 'Total listings' },
-    { icon: <ListIcon fontSize="large" />, title: '', count: listingLas30Days ? listingLas30Days : 'Loading...', period: 'Last 30 days' },
-    { icon: <ListIcon fontSize="large" />, title: '', count: listingLast7Days ? listingLast7Days : 'Loading...', period: 'Last 7 days' },
+    { icon: <ListIcon fontSize="large" />, title: '', count: totalListings ? totalListings : <CircularProgress />, period: 'Total listings' },
+    { icon: <ListIcon fontSize="large" />, title: '', count: listingLas30Days ? listingLas30Days : <CircularProgress />, period: 'Last 30 days' },
+    { icon: <ListIcon fontSize="large" />, title: '', count: listingLast7Days ? listingLast7Days : <CircularProgress />, period: 'Last 7 days' },
   ];
 
   const reservationItems = [
