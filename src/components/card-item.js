@@ -29,13 +29,13 @@ const CardItem = ({ icon, title, count, period }) => {
             <Typography variant="h4" fontWeight="bold">
                 {count}
             </Typography>
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h5" gutterBottom color="gray">
                 {title > 0 ? <>
-                    <TrendingUpIcon color="success"/>
+                    <TrendingUpIcon fontSize="large" color="success"/>
                     {title}%
                 </> : title !== '' ?
                     <>
-                        <TrendingDownIcon color="error"/>
+                        <TrendingDownIcon fontSize="large" color="error"/>
                         {title}%
                     </> : <></>
                 }

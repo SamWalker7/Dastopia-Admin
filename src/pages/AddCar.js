@@ -415,7 +415,8 @@ const AddCar = () => {
 							}}
 						>
 							<IconButton component="span">
-								<AddIcon fontSize="large" />
+								{/* <AddIcon fontSize="large" /> */}
+								<CameraAltIcon fontSize="large" color="primary"/>
 							</IconButton>
 							Upload Vehicle Images
 							<input
