@@ -7,6 +7,38 @@ export const filterByDateRange = (data, daysAgo) => {
   return data?.filter(item => new Date(item.createdAt) >= pastDate).length;
 };
 
+export const getPercentageChangeLast7Days = (data) => {
+  // Get the number of items created in the last 7 days
+  const last7DaysCount = filterByDateRange(data, 7);
+
+  // Get the number of items created in the 7 days before the last 7 days
+  const last14DaysCount = filterByDateRange(data, 14);
+  const previous7DaysCount = last14DaysCount - last7DaysCount;
+  // Calculate the percentage change
+  if (previous7DaysCount === 0) {
+    // Avoid division by zero
+    return last7DaysCount === 0 ? 0 : 100; // If previous7DaysCount is 0 and last7DaysCount is not, the change is considered 100%
+  } else {
+    return ((last7DaysCount - previous7DaysCount) / previous7DaysCount) * 100;
+  }
+};
+
+export const getPercentageChangeLast30Days = (data) => {
+  // Get the number of items created in the last 7 days
+  const last30DaysCount = filterByDateRange(data, 30);
+
+  // Get the number of items created in the 7 days before the last 7 days
+  const last60DaysCount = filterByDateRange(data, 60);
+  const previous30DaysCount = last60DaysCount - last30DaysCount;
+  // Calculate the percentage change
+  if (previous30DaysCount === 0) {
+    // Avoid division by zero
+    return last30DaysCount === 0 ? 0 : 100; // If previous7DaysCount is 0 and last7DaysCount is not, the change is considered 100%
+  } else {
+    return ((last30DaysCount - previous30DaysCount) / previous30DaysCount) * 100;
+  }
+};
+
 export const handleImport = (e) => {
   // setIsFileUploading(true);
   const file = e.target.files[0]; // Get the file from the input element

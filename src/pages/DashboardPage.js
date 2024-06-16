@@ -7,12 +7,14 @@ import ListIcon from '@mui/icons-material/List';
 import CircularProgress from '@mui/material/CircularProgress';
 import NotificationsIcon from '@mui/icons-material/Notifications'; 
 import { getAllVehicles } from "../api";
-import { filterByDateRange } from '../config/helpers';
+import { filterByDateRange, getPercentageChangeLast7Days, getPercentageChangeLast30Days } from '../config/helpers';
 
 const DashboardPage = () => {
   const [ totalListings, setTotalListings ] = useState(null);
   const [ listingLast7Days, setListingLast7Days ] = useState(null);
+  const [ percentageLast7Days, setPercentageLast7Days ] = useState(null);
   const [ listingLas30Days, setListingLas30Days ] = useState(null);
+  const [ percentageLast30Days, setPercentageLast30Days ] = useState(null);
   const [ totalUsers, setTotalUsers ] = useState(0);
   const [ totalReservations, setTotalReservations ] = useState(0);
   const [ isLoading, setIsLoading ] = useState(true);
@@ -25,24 +27,26 @@ const DashboardPage = () => {
     const { body } = await getAllVehicles();
     setTotalListings(body?.length);
     setListingLast7Days(filterByDateRange(body, 7));
+    setPercentageLast7Days(getPercentageChangeLast7Days(body));
     setListingLas30Days(filterByDateRange(body, 30));
+    setPercentageLast30Days(getPercentageChangeLast30Days(body));
   }
   const userItems = [
     { icon: <PersonIcon fontSize="large" />, title: '', count: 0, period: 'Last 30 days' },
     { icon: <PersonIcon fontSize="large" />, title: '', count: 0, period: 'Last 24 hours' },
-    { icon: <PersonIcon fontSize="large" />, title: '', count: 8, period: 'Total users' }
+    { icon: <PersonIcon fontSize="large" />, title: '', count: 0, period: 'Total users' }
   ];
 
   const listingItems = [
     { icon: <ListIcon fontSize="large" />, title: '', count: totalListings ? totalListings : <CircularProgress />, period: 'Total listings' },
-    { icon: <ListIcon fontSize="large" />, title: '', count: listingLas30Days ? listingLas30Days : <CircularProgress />, period: 'Last 30 days' },
-    { icon: <ListIcon fontSize="large" />, title: '', count: listingLast7Days ? listingLast7Days : <CircularProgress />, period: 'Last 7 days' },
+    { icon: <ListIcon fontSize="large" />, title: percentageLast30Days || percentageLast30Days === 0 ? percentageLast30Days : <CircularProgress /> , count: listingLas30Days ? listingLas30Days : <CircularProgress />, period: 'Last 30 days' },
+    { icon: <ListIcon fontSize="large" />, title: percentageLast7Days || percentageLast7Days === 0 ? percentageLast7Days : <CircularProgress />, count: listingLast7Days ? listingLast7Days : <CircularProgress />, period: 'Last 7 days' },
   ];
 
   const reservationItems = [
     { icon: <NotificationsIcon fontSize="large" />, title: '', count: 0, period: 'Last 30 days' },
     { icon: <NotificationsIcon fontSize="large" />, title: '', count: 0, period: 'Last 24 hours' },
-    { icon: <NotificationsIcon fontSize="large" />, title: '', count: 7, period: 'Total reservations' }
+    { icon: <NotificationsIcon fontSize="large" />, title: '', count: 0, period: 'Total reservations' }
   ];
   return (
     <div>
