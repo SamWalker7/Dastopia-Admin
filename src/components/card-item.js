@@ -8,6 +8,8 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import Icon from '@mui/material/Icon';
 
 const CardItem = ({ icon, title, count, period }) => {
+    let percentageChange = typeof title === 'string' ? parseFloat(title) : title;
+    percentageChange = Math.round((percentageChange + Number.EPSILON) * 100) / 100;
     return (
         <Box
             sx={{
@@ -29,20 +31,23 @@ const CardItem = ({ icon, title, count, period }) => {
             <Typography variant="h4" fontWeight="bold">
                 {count}
             </Typography>
-            <Typography variant="h5" gutterBottom color="gray">
-                {title > 0 ? <>
-                    <TrendingUpIcon fontSize="large" color="success"/>
-                    {title}%
-                </> : title !== '' ?
-                    <>
-                        <TrendingDownIcon fontSize="large" color="error"/>
-                        {title}%
-                    </> : <></>
-                }
-            </Typography>
             <Typography variant="body2" color="textSecondary">
                 {period}
             </Typography>
+            <Typography variant="h5" gutterBottom color="gray">
+                {title > 0 ? <>
+                    <TrendingUpIcon fontSize="large" color="success"/>
+                    {percentageChange}%
+                </> : title !== '' ?
+                    <>
+                        <TrendingDownIcon fontSize="large" color="error"/>
+                        {percentageChange}%
+                    </> : <></>
+                }
+            </Typography>
+            {/* <Typography variant="body2" color="textSecondary">
+                {period} vs it's previous {period}
+            </Typography> */}
         </Box>
     );
 };
