@@ -3,17 +3,25 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import Grid from "@mui/material/Grid";
 import AddIcon from "@mui/icons-material/Add";
+import TextField from "@mui/material/TextField";
+import MenuItem from "@mui/material/MenuItem";
 import { useNavigate } from "react-router-dom";
 import { getAllVehicles, getDownloadUrl } from "../api";
 import VehicleCard from "../components/vehicle-components/VehicleCard";
-import './page-styles.css';
+import "./page-styles.css";
 
 const RentACarPage = () => {
   const [rows, setRows] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    make: "",
+    model: "",
+    year: "",
+    search: "",
+  });
+  const navigate = useNavigate();
 
   const toggleListing = (index) => {
     const newRows = [...rows];
@@ -22,7 +30,7 @@ const RentACarPage = () => {
   };
 
   const handleAddCar = () => {
-    navigate("/add-car"); // Changed from history.push
+    navigate("/add-car");
   };
 
   const handleClick = (event, index) => {
@@ -39,14 +47,7 @@ const RentACarPage = () => {
 
   useEffect(() => {
     fetchVehicles();
-  }, [])
-
-  const createData = (image, name, status, enabled = true) => ({
-    image,
-    name,
-    status,
-    enabled,
-  });
+  }, []);
 
   const fetchVehicles = async () => {
     setIsLoading(true);
@@ -55,9 +56,13 @@ const RentACarPage = () => {
     for (const vehicle of body) {
       data.push({
         ...vehicle,
-        status: vehicle?.isEnabled ? 'Approved' : vehicle?.isEnabled === false ? 'Declined' : 'Pending',
+        status: vehicle?.isEnabled
+          ? "Approved"
+          : vehicle?.isEnabled === false
+          ? "Declined"
+          : "Pending",
         images: [], // Initially, set images to an empty array
-        imageLoading: true // Flag to indicate images are loading
+        imageLoading: true, // Flag to indicate images are loading
       });
     }
 
@@ -78,7 +83,23 @@ const RentACarPage = () => {
         setRows([...data]); // Update state with new images
       }
     }
-  }
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
+  };
+
+  const filteredRows = rows.filter((row) => {
+    return (
+      (filters.make === "" || row.make === filters.make) &&
+      (filters.model === "" || row.model === filters.model) &&
+      (filters.year === "" || row.year === filters.year) &&
+      (filters.search === "" ||
+        (row.model &&
+          row.model.toLowerCase().includes(filters.search.toLowerCase())))
+    );
+  });
 
   return (
     <Grid container spacing={2}>
@@ -93,23 +114,84 @@ const RentACarPage = () => {
           Add New Listing
         </Button>
       </Grid>
+      <Grid item xs={12}>
+        <Grid container spacing={2}>
+          <Grid item xs={3}>
+            <TextField
+              select
+              label="Make"
+              name="make"
+              value={filters.make}
+              onChange={handleFilterChange}
+              fullWidth
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="Toyota">Toyota</MenuItem>
+              <MenuItem value="Honda">Honda</MenuItem>
+              <MenuItem value="Ford">Ford</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              select
+              label="Model"
+              name="model"
+              value={filters.model}
+              onChange={handleFilterChange}
+              fullWidth
+            >
+              <MenuItem value="">All</MenuItem>
+              <MenuItem value="Camry">Camry</MenuItem>
+              <MenuItem value="Civic">Civic</MenuItem>
+              <MenuItem value="F-150">F-150</MenuItem>
+              <MenuItem value="F-150">Vitz</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              label="Year"
+              name="year"
+              value={filters.year}
+              onChange={handleFilterChange}
+              fullWidth
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <TextField
+              label="search by model"
+              name="search"
+              value={filters.search}
+              onChange={handleFilterChange}
+              fullWidth
+            />
+          </Grid>
+        </Grid>
+      </Grid>
       {isLoading ? (
         <CircularProgress />
       ) : (
-        rows.map((row, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <VehicleCard
-              row={row}
-              index={index}
-              handleClick={handleClick}
-              handleClose={handleClose}
-              toggleListing={toggleListing}
-              anchorEl={anchorEl}
-              selectedIndex={selectedIndex}
-              setAnchorEl={setAnchorEl}
-            />
-          </Grid>
-        ))
+        <>
+          {filteredRows.length > 0 ? (
+            filteredRows.map((row, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <VehicleCard
+                  row={row}
+                  index={index}
+                  handleClick={handleClick}
+                  handleClose={handleClose}
+                  toggleListing={toggleListing}
+                  anchorEl={anchorEl}
+                  selectedIndex={selectedIndex}
+                  setAnchorEl={setAnchorEl}
+                />
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <p>No Data Found</p>
+            </Grid>
+          )}
+        </>
       )}
     </Grid>
   );
