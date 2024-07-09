@@ -141,6 +141,8 @@ const EditVehicle = ({ match }) => {
     setDocuments(newDocuments);
   };
 
+  console.log(formValues);
+
   const handleNext = () => {
     if (tab < 2) {
       setTab(tab + 1);
@@ -897,7 +899,16 @@ const EditVehicle = ({ match }) => {
                               marginRight: "30px",
                             }}
                           />
-                        </form>
+                        </form>{" "}
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          sx={{ mt: 2 }}
+                          onClick={submitForm}
+                          disabled={thirdStepperFormValidation()}
+                        >
+                          Submit
+                        </Button>
                       </div>
                     ) : (
                       <div>
@@ -1000,21 +1011,20 @@ const EditVehicle = ({ match }) => {
                             </Card>
                           </Grid>
                         </Grid>
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          sx={{ mt: 2 }}
+                          onClick={submitForm}
+                          disabled={thirdStepperFormValidation()}
+                        >
+                          Submit
+                        </Button>
                       </div>
                     )
                   ) : (
                     <></>
                   )}
-
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    sx={{ mt: 2 }}
-                    onClick={submitForm}
-                    disabled={thirdStepperFormValidation()}
-                  >
-                    Submit
-                  </Button>
                 </>
               )}
             </Box>
