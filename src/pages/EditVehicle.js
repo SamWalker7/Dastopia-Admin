@@ -37,7 +37,6 @@ import {
 import { resizeImage } from "../config/helpers";
 import carModel from "../api/models.json";
 import carMake from "../api/makes.json";
-import { useLocation, useParams } from "react-router-dom";
 
 const EditVehicle = ({ match }) => {
   const queryParams = new URLSearchParams(window.location.search);
