@@ -972,6 +972,7 @@ const EditVehicle = ({ match }) => {
                                       "powerOfAttorney"
                                     )
                                   }
+                                  required
                                 />
                                 <label htmlFor="powerOfAttorney-upload">
                                   <IconButton component="span">
