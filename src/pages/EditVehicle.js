@@ -133,7 +133,6 @@ const EditVehicle = ({ match }) => {
         const url = await getDownloadUrl(image.key);
         urls.push(url.body || "https://via.placeholder.com/300");
       }
-      console.log("urls: ", urls);
       setImages(urls);
       // vehicleData.images = urls;
       // vehicleData.imageLoading = false; // Set image loading flag to false
@@ -572,7 +571,14 @@ const EditVehicle = ({ match }) => {
                 Please upload images of all 4 sides (Front/Back/Left/Right)
               </Typography>
               <Grid container spacing={2} sx={{ mt: 2 }}>
-                {["front", "back", "left", "right"].map((side) => (
+                {[
+                  "front",
+                  "back",
+                  "left",
+                  "right",
+                  "plateNumber",
+                  "registration",
+                ].map((side) => (
                   <Grid item xs={6} sm={3} key={side}>
                     <Card>
                       <CardActionArea>
@@ -591,16 +597,14 @@ const EditVehicle = ({ match }) => {
                           </IconButton>
                         </label>
                         {documents[side] ? (
-                          //     <img
-                          //     src={URL.createObjectURL(document[side])}
-                          //     style={{ width: '100%', height: 'auto' }}
-                          // />
-                          <CardMedia
-                            component="img"
-                            height="140"
-                            image={document[side]}
-                            alt={`${side} of the vehicle`}
-                          />
+                          <>
+                            <CardMedia
+                              component="img"
+                              height="140"
+                              image={documents[side]}
+                              alt={`${side} of the vehicle`}
+                            />
+                          </>
                         ) : (
                           <CardMedia
                             component="img"
