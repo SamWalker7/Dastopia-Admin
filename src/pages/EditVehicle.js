@@ -854,6 +854,9 @@ const EditVehicle = ({ match }) => {
                             label="Owner First Name"
                             value={formValues.ownerFirstName}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -863,6 +866,9 @@ const EditVehicle = ({ match }) => {
                             label="Owner Last Name"
                             value={formValues.ownerLastName}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -872,6 +878,9 @@ const EditVehicle = ({ match }) => {
                             label="Owner Phone"
                             value={formValues.ownerPhone}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -881,6 +890,9 @@ const EditVehicle = ({ match }) => {
                             label="Owner Email"
                             value={formValues.ownerEmail}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
                         </form>
                       </div>
@@ -895,6 +907,9 @@ const EditVehicle = ({ match }) => {
                             label="Representative First Name"
                             value={formValues.representativeFirstName}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -904,6 +919,9 @@ const EditVehicle = ({ match }) => {
                             label="Representative Last Name"
                             value={formValues.representativeLastName}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -913,6 +931,9 @@ const EditVehicle = ({ match }) => {
                             label="Representative Phone"
                             value={formValues.representativePhone}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
 
                           <TextField
@@ -922,6 +943,9 @@ const EditVehicle = ({ match }) => {
                             label="Representative Email"
                             value={formValues.representativeEmail}
                             onChange={handleChange}
+                            style={{
+                              marginRight: "30px",
+                            }}
                           />
                         </form>
                         <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
