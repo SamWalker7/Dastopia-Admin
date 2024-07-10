@@ -23,6 +23,7 @@ const RentACarPage = () => {
     year: "",
     search: "",
   });
+  const [modelList, setModelList] = useState([]); // State for model list
   const navigate = useNavigate();
 
   const toggleListing = (index) => {
@@ -89,11 +90,18 @@ const RentACarPage = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters({ ...filters, [name]: value });
-
-    // Reset model filter when make changes
     if (name === "make") {
+      let newModel = modelData.filter((model) => {
+        if (Object.keys(model)[0] === value) {
+          console.log("model: ", ...Object.values(model));
+          return Object.values(model);
+        } else return false;
+      });
+      newModel = [...newModel[0][value]];
+      setModelList(newModel);
       setFilters({ ...filters, make: value, model: "" });
+    } else {
+      setFilters({ ...filters, [name]: value });
     }
   };
 
@@ -109,14 +117,11 @@ const RentACarPage = () => {
   });
 
   const getModelOptions = () => {
-    if (filters.make && modelData[filters.make]) {
-      return modelData[filters.make].map((model) => (
-        <MenuItem key={model} value={model}>
-          {model}
-        </MenuItem>
-      ));
-    }
-    return [];
+    return modelList.map((model) => (
+      <MenuItem key={model} value={model}>
+        {model}
+      </MenuItem>
+    ));
   };
 
   return (

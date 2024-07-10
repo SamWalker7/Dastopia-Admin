@@ -1,10 +1,6 @@
 [
   {
-    "AC": [
-      "ACE",
-      "Aceca",
-      "Cobra"
-    ]
+    "AC": ["ACE", "Aceca", "Cobra"]
   },
   {
     "Acura": [
@@ -27,10 +23,7 @@
     ]
   },
   {
-    "Adler": [
-      "Diplomat",
-      "Trumpf Junior"
-    ]
+    "Adler": ["Diplomat", "Trumpf Junior"]
   },
   {
     "Alfa Romeo": [
@@ -82,36 +75,19 @@
     ]
   },
   {
-    "Alpine": [
-      "A110",
-      "A310",
-      "A610",
-      "GTA"
-    ]
+    "Alpine": ["A110", "A310", "A610", "GTA"]
   },
   {
-    "AMC": [
-      "Eagle",
-      "Hornet"
-    ]
+    "AMC": ["Eagle", "Hornet"]
   },
   {
-    "Apal": [
-      "21541 Stalker"
-    ]
+    "Apal": ["21541 Stalker"]
   },
   {
-    "Aro": [
-      10,
-      24,
-      "Spartana"
-    ]
+    "Aro": [10, 24, "Spartana"]
   },
   {
-    "Asia": [
-      "Rocsta",
-      "Topic"
-    ]
+    "Asia": ["Rocsta", "Topic"]
   },
   {
     "Aston Martin": [
@@ -192,35 +168,19 @@
     ]
   },
   {
-    "Aurus": [
-      "Senat"
-    ]
+    "Aurus": ["Senat"]
   },
   {
-    "Austin": [
-      "FL2",
-      "Metro",
-      "Montego",
-      "Sprite"
-    ]
+    "Austin": ["FL2", "Metro", "Montego", "Sprite"]
   },
   {
-    "Austin Healey": [
-      100,
-      3000
-    ]
+    "Austin Healey": [100, 3000]
   },
   {
-    "Autobianchi": [
-      "A 112"
-    ]
+    "Autobianchi": ["A 112"]
   },
   {
-    "Autocam": [
-      2160,
-      2163,
-      3101
-    ]
+    "Autocam": [2160, 2163, 3101]
   },
   {
     "Baic": [
@@ -237,25 +197,16 @@
     ]
   },
   {
-    "Bajaj": [
-      "Qute"
-    ]
+    "Bajaj": ["Qute"]
   },
   {
-    "Baltijas Dzips": [
-      "BD-1322"
-    ]
+    "Baltijas Dzips": ["BD-1322"]
   },
   {
-    "Batmobile": [
-      1989,
-      2018
-    ]
+    "Batmobile": [1989, 2018]
   },
   {
-    "Beijing": [
-      "BJ 2020"
-    ]
+    "Beijing": ["BJ 2020"]
   },
   {
     "Bentley": [
@@ -277,20 +228,13 @@
     ]
   },
   {
-    "Bertone": [
-      "Freeclimber"
-    ]
+    "Bertone": ["Freeclimber"]
   },
   {
-    "Bilenkin": [
-      "Vintage"
-    ]
+    "Bilenkin": ["Vintage"]
   },
   {
-    "Bitter": [
-      "CD",
-      "Type 3"
-    ]
+    "Bitter": ["CD", "Type 3"]
   },
   {
     "BMW": [
@@ -339,16 +283,10 @@
     ]
   },
   {
-    "Borgward": [
-      "BX5",
-      "BX7",
-      "Hansa 1100"
-    ]
+    "Borgward": ["BX5", "BX7", "Hansa 1100"]
   },
   {
-    "Brabus": [
-      "ML 63 Biturbo"
-    ]
+    "Brabus": ["ML 63 Biturbo"]
   },
   {
     "Brilliance": [
@@ -369,18 +307,10 @@
     ]
   },
   {
-    "Bristol": [
-      "Blenheim",
-      "Blenheim Speedster",
-      "Fighter",
-      "Speedster"
-    ]
+    "Bristol": ["Blenheim", "Blenheim Speedster", "Fighter", "Speedster"]
   },
   {
-    "Bufori": [
-      "Geneva",
-      "La Joya"
-    ]
+    "Bufori": ["Geneva", "La Joya"]
   },
   {
     "Bugatti": [
@@ -479,39 +409,19 @@
     ]
   },
   {
-    "Callaway": [
-      "C12"
-    ]
+    "Callaway": ["C12"]
   },
   {
-    "Carbodies": [
-      "FX4",
-      "FX4S"
-    ]
+    "Carbodies": ["FX4", "FX4S"]
   },
   {
-    "Caterham": [
-      21,
-      "CSR",
-      "Seven"
-    ]
+    "Caterham": [21, "CSR", "Seven"]
   },
   {
-    "Chana": [
-      "Benni"
-    ]
+    "Chana": ["Benni"]
   },
   {
-    "Chang": [
-      "Alsvin",
-      "CS",
-      "CX",
-      "DS",
-      "Eado",
-      "Lamore",
-      "Lumin",
-      "Raetom"
-    ]
+    "Chang": ["Alsvin", "CS", "CX", "DS", "Eado", "Lamore", "Lumin", "Raetom"]
   },
   {
     "Changan": [
@@ -530,15 +440,10 @@
     ]
   },
   {
-    "ChangFeng": [
-      "Flying",
-      "SUV (CS6)"
-    ]
+    "ChangFeng": ["Flying", "SUV (CS6)"]
   },
   {
-    "Changhe": [
-      "Ideal"
-    ]
+    "Changhe": ["Ideal"]
   },
   {
     "Chery": [
@@ -573,9 +478,7 @@
     ]
   },
   {
-    "CheryExeed": [
-      "TXL"
-    ]
+    "CheryExeed": ["TXL"]
   },
   {
     "Chevrolet": [
@@ -757,25 +660,16 @@
     ]
   },
   {
-    "Cizeta": [
-      "V16T"
-    ]
+    "Cizeta": ["V16T"]
   },
   {
-    "Coggiola": [
-      "T Rex",
-      "T-Rex"
-    ]
+    "Coggiola": ["T Rex", "T-Rex"]
   },
   {
-    "Combat": [
-      "T98"
-    ]
+    "Combat": ["T98"]
   },
   {
-    "Cord": [
-      "L-29"
-    ]
+    "Cord": ["L-29"]
   },
   {
     "Dacia": [
@@ -793,11 +687,7 @@
     ]
   },
   {
-    "Dadi": [
-      "City Leading",
-      "Shuttle",
-      "Smoothing"
-    ]
+    "Dadi": ["City Leading", "Shuttle", "Smoothing"]
   },
   {
     "Daewoo": [
@@ -884,55 +774,28 @@
     ]
   },
   {
-    "Daimler": [
-      "SP250",
-      "Super Eight",
-      "V8"
-    ]
+    "Daimler": ["SP250", "Super Eight", "V8"]
   },
   {
-    "Dallara": [
-      "Stradale"
-    ]
+    "Dallara": ["Stradale"]
   },
   {
-    "Dallas": [
-      "Fun"
-    ]
+    "Dallas": ["Fun"]
   },
   {
-    "Datsun": [
-      "240Z",
-      "GO+",
-      "Laurel",
-      "mi-Do",
-      "on-DO",
-      "Stanza",
-      "Urvan"
-    ]
+    "Datsun": ["240Z", "GO+", "Laurel", "mi-Do", "on-DO", "Stanza", "Urvan"]
   },
   {
-    "De Tomaso": [
-      "Bigua",
-      "Guara",
-      "Longchamp",
-      "Mangusta"
-    ]
+    "De Tomaso": ["Bigua", "Guara", "Longchamp", "Mangusta"]
   },
   {
-    "Deco Rides": [
-      "Zephyr"
-    ]
+    "Deco Rides": ["Zephyr"]
   },
   {
-    "Delage": [
-      "D6"
-    ]
+    "Delage": ["D6"]
   },
   {
-    "DeLorean": [
-      "DMC-12"
-    ]
+    "DeLorean": ["DMC-12"]
   },
   {
     "Derways": [
@@ -946,21 +809,13 @@
     ]
   },
   {
-    "DeSoto": [
-      "Custom",
-      "Firedome",
-      "Fireflite"
-    ]
+    "DeSoto": ["Custom", "Firedome", "Fireflite"]
   },
   {
-    "DFSK": [
-      "V21"
-    ]
+    "DFSK": ["V21"]
   },
   {
-    "DKW": [
-      "3=6"
-    ]
+    "DKW": ["3=6"]
   },
   {
     "Dodge": [
@@ -1019,46 +874,22 @@
     ]
   },
   {
-    "Doninvest": [
-      "Orion"
-    ]
+    "Doninvest": ["Orion"]
   },
   {
-    "Donkervoort": [
-      "D8 Cosworth",
-      "D8 GT",
-      "D8 GTO",
-      "D8 Zetec"
-    ]
+    "Donkervoort": ["D8 Cosworth", "D8 GT", "D8 GTO", "D8 Zetec"]
   },
   {
-    "DS": [
-      3,
-      4,
-      7,
-      "7 Crossback"
-    ]
+    "DS": [3, 4, 7, "7 Crossback"]
   },
   {
-    "DW Hower": [
-      "H3",
-      "H5"
-    ]
+    "DW Hower": ["H3", "H5"]
   },
   {
-    "Eagle": [
-      "Premier",
-      "Summit",
-      "Talon",
-      "Vision",
-      "Vista"
-    ]
+    "Eagle": ["Premier", "Summit", "Talon", "Vision", "Vista"]
   },
   {
-    "Excalibur": [
-      "Series IV",
-      "Series V"
-    ]
+    "Excalibur": ["Series IV", "Series V"]
   },
   {
     "FAW": [
@@ -1178,14 +1009,10 @@
     ]
   },
   {
-    "Fisker": [
-      "Karma"
-    ]
+    "Fisker": ["Karma"]
   },
   {
-    "Flanker": [
-      "F"
-    ]
+    "Flanker": ["F"]
   },
   {
     "Ford": [
@@ -1270,29 +1097,16 @@
     ]
   },
   {
-    "Foton": [
-      "Gratour",
-      "Sauvana",
-      "Tunland"
-    ]
+    "Foton": ["Gratour", "Sauvana", "Tunland"]
   },
   {
-    "FSO": [
-      "125p",
-      "Polonez"
-    ]
+    "FSO": ["125p", "Polonez"]
   },
   {
-    "Fuqi": [
-      "6500 (Land King)",
-      "6500 Land King"
-    ]
+    "Fuqi": ["6500 (Land King)", "6500 Land King"]
   },
   {
-    "GAC": [
-      "GN8",
-      "Trumpchi GS8"
-    ]
+    "GAC": ["GN8", "Trumpchi GS8"]
   },
   {
     "GAZ": [
@@ -1356,22 +1170,10 @@
     ]
   },
   {
-    "Genesis": [
-      "G70",
-      "G80",
-      "G90",
-      "GV70",
-      "GV80"
-    ]
+    "Genesis": ["G70", "G80", "G90", "GV70", "GV80"]
   },
   {
-    "Geo": [
-      "Metro",
-      "Prizm",
-      "Spectrum",
-      "Storm",
-      "Tracker"
-    ]
+    "Geo": ["Metro", "Prizm", "Spectrum", "Storm", "Tracker"]
   },
   {
     "GMC": [
@@ -1393,19 +1195,13 @@
     ]
   },
   {
-    "Gonow": [
-      "Troy"
-    ]
+    "Gonow": ["Troy"]
   },
   {
-    "Gordon": [
-      "Roadster"
-    ]
+    "Gordon": ["Roadster"]
   },
   {
-    "GP": [
-      "Madison"
-    ]
+    "GP": ["Madison"]
   },
   {
     "Great Wall": [
@@ -1437,68 +1233,28 @@
     ]
   },
   {
-    "Hafei": [
-      "Brio",
-      "Princip",
-      "Saibao",
-      "Sigma",
-      "Simbo"
-    ]
+    "Hafei": ["Brio", "Princip", "Saibao", "Sigma", "Simbo"]
   },
   {
-    "Haima": [
-      2,
-      3,
-      7,
-      "Family",
-      "Family F7",
-      "Freema",
-      "M3",
-      "S5"
-    ]
+    "Haima": [2, 3, 7, "Family", "Family F7", "Freema", "M3", "S5"]
   },
   {
-    "Hanomag": [
-      "Rekord",
-      "Typ 13"
-    ]
+    "Hanomag": ["Rekord", "Typ 13"]
   },
   {
-    "Haval": [
-      "F7",
-      "F7x",
-      "H2",
-      "H5",
-      "H6",
-      "H6 Coupe",
-      "H8",
-      "H9"
-    ]
+    "Haval": ["F7", "F7x", "H2", "H5", "H6", "H6 Coupe", "H8", "H9"]
   },
   {
-    "Hawtai": [
-      "B21",
-      "Boliger",
-      "Laville"
-    ]
+    "Hawtai": ["B21", "Boliger", "Laville"]
   },
   {
-    "Heinkel": [
-      "Typ 154"
-    ]
+    "Heinkel": ["Typ 154"]
   },
   {
-    "Hindustan": [
-      "Ambassador",
-      "Contessa",
-      "Lancer",
-      "Pajero"
-    ]
+    "Hindustan": ["Ambassador", "Contessa", "Lancer", "Pajero"]
   },
   {
-    "Hispano-Suiza": [
-      "K6"
-    ]
+    "Hispano-Suiza": ["K6"]
   },
   {
     "Holden": [
@@ -1602,29 +1358,16 @@
     ]
   },
   {
-    "Horch": [
-      830,
-      853
-    ]
+    "Horch": [830, 853]
   },
   {
-    "HuangHai": [
-      "Antelope",
-      "Landscape",
-      "Plutus"
-    ]
+    "HuangHai": ["Antelope", "Landscape", "Plutus"]
   },
   {
-    "Hudson": [
-      "Super Six"
-    ]
+    "Hudson": ["Super Six"]
   },
   {
-    "Hummer": [
-      "H1",
-      "H2",
-      "H3"
-    ]
+    "Hummer": ["H1", "H2", "H3"]
   },
   {
     "Hyundai": [
@@ -1721,34 +1464,16 @@
     ]
   },
   {
-    "Innocenti": [
-      "Elba",
-      "Mille",
-      "Small"
-    ]
+    "Innocenti": ["Elba", "Mille", "Small"]
   },
   {
-    "Invicta": [
-      "S1"
-    ]
+    "Invicta": ["S1"]
   },
   {
-    "Iran Khodro": [
-      "Dena",
-      "Runna",
-      "Sahra",
-      "Samand",
-      "Sarir",
-      "Soren"
-    ]
+    "Iran Khodro": ["Dena", "Runna", "Sahra", "Samand", "Sarir", "Soren"]
   },
   {
-    "Isdera": [
-      "Commendatore 112i",
-      "Imperator",
-      "Imperator 108i",
-      "Spyder"
-    ]
+    "Isdera": ["Commendatore 112i", "Imperator", "Imperator 108i", "Spyder"]
   },
   {
     "Isuzu": [
@@ -1780,19 +1505,10 @@
     ]
   },
   {
-    "IVECO": [
-      "Massif"
-    ]
+    "IVECO": ["Massif"]
   },
   {
-    "IZH": [
-      2125,
-      2126,
-      21261,
-      2715,
-      2717,
-      "Moskvich-412"
-    ]
+    "IZH": [2125, 2126, 21261, 2715, 2717, "Moskvich-412"]
   },
   {
     "JAC": [
@@ -1856,33 +1572,19 @@
     ]
   },
   {
-    "Jensen": [
-      "Interceptor",
-      "S-V8"
-    ]
+    "Jensen": ["Interceptor", "S-V8"]
   },
   {
-    "Jiangnan": [
-      "Alto",
-      "Chuanqi",
-      "City Spirit"
-    ]
+    "Jiangnan": ["Alto", "Chuanqi", "City Spirit"]
   },
   {
-    "Jinbei": [
-      "Haise"
-    ]
+    "Jinbei": ["Haise"]
   },
   {
-    "JMC": [
-      "Baodian",
-      "X6"
-    ]
+    "JMC": ["Baodian", "X6"]
   },
   {
-    "Kanonir": [
-      2317
-    ]
+    "Kanonir": [2317]
   },
   {
     "Kia": [
@@ -1950,27 +1652,13 @@
     ]
   },
   {
-    "Koenigsegg": [
-      "CC8S",
-      "CCR"
-    ]
+    "Koenigsegg": ["CC8S", "CCR"]
   },
   {
-    "KTM AG": [
-      "X-Bow"
-    ]
+    "KTM AG": ["X-Bow"]
   },
   {
-    "Lada": [
-      "110",
-      "111",
-      "112",
-      "Kalina",
-      "Nova",
-      "Niva",
-      "Priora",
-      "Samara"
-    ]
+    "Lada": ["110", "111", "112", "Kalina", "Nova", "Niva", "Priora", "Samara"]
   },
   {
     "Lamborghini": [
@@ -2035,10 +1723,7 @@
     ]
   },
   {
-    "Landwind": [
-      "X6",
-      "X7"
-    ]
+    "Landwind": ["X6", "X7"]
   },
   {
     "Lexus": [
@@ -2083,9 +1768,7 @@
     ]
   },
   {
-    "Ligier": [
-      "JS 51"
-    ]
+    "Ligier": ["JS 51"]
   },
   {
     "Lincoln": [
@@ -2122,27 +1805,13 @@
     ]
   },
   {
-    "LTI": [
-      "TX"
-    ]
+    "LTI": ["TX"]
   },
   {
-    "LuAZ": [
-      1302,
-      "1302 Volyn",
-      967,
-      969
-    ]
+    "LuAZ": [1302, "1302 Volyn", 967, 969]
   },
   {
-    "Luxgen": [
-      5,
-      6,
-      7,
-      "Luxgen5",
-      "Luxgen7 SUV",
-      "U6 Turbo"
-    ]
+    "Luxgen": [5, 6, 7, "Luxgen5", "Luxgen7 SUV", "U6 Turbo"]
   },
   {
     "Mahindra": [
@@ -2158,21 +1827,13 @@
     ]
   },
   {
-    "Marcos": [
-      "GTS",
-      "TS"
-    ]
+    "Marcos": ["GTS", "TS"]
   },
   {
-    "Marlin": [
-      "5Exi"
-    ]
+    "Marlin": ["5Exi"]
   },
   {
-    "Marussia": [
-      "B1",
-      "B2"
-    ]
+    "Marussia": ["B1", "B2"]
   },
   {
     "Maruti": [
@@ -2204,11 +1865,7 @@
     ]
   },
   {
-    "Maybach": [
-      57,
-      62,
-      "Exelero"
-    ]
+    "Maybach": [57, 62, "Exelero"]
   },
   {
     "Mazda": [
@@ -2279,23 +1936,10 @@
     ]
   },
   {
-    "McLaren": [
-      "570S",
-      "600LT",
-      "650S",
-      "720S",
-      "F1",
-      "GT",
-      "P1",
-      "Senna"
-    ]
+    "McLaren": ["570S", "600LT", "650S", "720S", "F1", "GT", "P1", "Senna"]
   },
   {
-    "Mega": [
-      "Club",
-      "Monte Carlo",
-      "Track"
-    ]
+    "Mega": ["Club", "Monte Carlo", "Track"]
   },
   {
     "Mercedes-Benz": [
@@ -2383,10 +2027,7 @@
     ]
   },
   {
-    "Metrocab": [
-      "Metrocab I",
-      "Taxi"
-    ]
+    "Metrocab": ["Metrocab I", "Taxi"]
   },
   {
     "MG": [
@@ -2404,9 +2045,7 @@
     ]
   },
   {
-    "Minelli": [
-      "TF 1800"
-    ]
+    "Minelli": ["TF 1800"]
   },
   {
     "Mini": [
@@ -2493,25 +2132,13 @@
     ]
   },
   {
-    "Mitsuoka": [
-      "Galue",
-      "MC-1",
-      "Rock Star",
-      "Ryugi"
-    ]
+    "Mitsuoka": ["Galue", "MC-1", "Rock Star", "Ryugi"]
   },
   {
-    "Monte Carlo": [
-      "GTB Centenaire"
-    ]
+    "Monte Carlo": ["GTB Centenaire"]
   },
   {
-    "Morgan": [
-      "4-Apr",
-      "Aero 8",
-      "Plus 4",
-      "Plus 8"
-    ]
+    "Morgan": ["4-Apr", "Aero 8", "Plus 4", "Plus 8"]
   },
   {
     "Moskvich": [
@@ -2543,9 +2170,7 @@
     ]
   },
   {
-    "Nash": [
-      "Ambassador"
-    ]
+    "Nash": ["Ambassador"]
   },
   {
     "Nissan": [
@@ -2672,10 +2297,7 @@
     ]
   },
   {
-    "Noble": [
-      "M12 GTO",
-      "M15"
-    ]
+    "Noble": ["M12 GTO", "M15"]
   },
   {
     "Oldsmobile": [
@@ -2742,35 +2364,19 @@
     ]
   },
   {
-    "Packard": [
-      "200/250",
-      "Custom Eight",
-      "Six"
-    ]
+    "Packard": ["200/250", "Custom Eight", "Six"]
   },
   {
-    "Pagani": [
-      "Zonda",
-      "Zonda C12"
-    ]
+    "Pagani": ["Zonda", "Zonda C12"]
   },
   {
-    "Panoz": [
-      "Esperante",
-      "Roadster"
-    ]
+    "Panoz": ["Esperante", "Roadster"]
   },
   {
-    "Paykan": [
-      "Saloon"
-    ]
+    "Paykan": ["Saloon"]
   },
   {
-    "Perodua": [
-      "Kelisa",
-      "Kenari",
-      "Nippa"
-    ]
+    "Perodua": ["Kelisa", "Kenari", "Nippa"]
   },
   {
     "Peugeot": [
@@ -2880,10 +2486,7 @@
     ]
   },
   {
-    "Premier": [
-      "118NE",
-      "Padmini"
-    ]
+    "Premier": ["118NE", "Padmini"]
   },
   {
     "Proton": [
@@ -2908,60 +2511,31 @@
     ]
   },
   {
-    "PUCH": [
-      "G-modell",
-      "Pinzgauer"
-    ]
+    "PUCH": ["G-modell", "Pinzgauer"]
   },
   {
-    "Puma": [
-      "AM4",
-      "AMV",
-      "GTB",
-      "GTE"
-    ]
+    "Puma": ["AM4", "AMV", "GTB", "GTE"]
   },
   {
-    "Qoros": [
-      3
-    ]
+    "Qoros": [3]
   },
   {
-    "Qvale": [
-      "Mangusta"
-    ]
+    "Qvale": ["Mangusta"]
   },
   {
-    "Racing car": [
-      "Dallara F399/300",
-      "Show car \"Formula-1\""
-    ]
+    "Racing car": ["Dallara F399/300", "Show car \"Formula-1\""]
   },
   {
-    "RAM": [
-      1500
-    ]
+    "RAM": [1500]
   },
   {
-    "Rambler": [
-      "Ambassador"
-    ]
+    "Rambler": ["Ambassador"]
   },
   {
-    "Ravon": [
-      "Gentra",
-      "Matiz",
-      "Nexia",
-      "Nexia R3",
-      "R2",
-      "R4"
-    ]
+    "Ravon": ["Gentra", "Matiz", "Nexia", "Nexia R3", "R2", "R4"]
   },
   {
-    "Reliant": [
-      "Scimitar Sabre",
-      "Scimitar SS1"
-    ]
+    "Reliant": ["Scimitar Sabre", "Scimitar SS1"]
   },
   {
     "Renault": [
@@ -3030,27 +2604,16 @@
     ]
   },
   {
-    "Renault Samsung": [
-      "SM3",
-      "SM5",
-      "SM7"
-    ]
+    "Renault Samsung": ["SM3", "SM5", "SM7"]
   },
   {
-    "Rezvani": [
-      "Beast",
-      "Tank"
-    ]
+    "Rezvani": ["Beast", "Tank"]
   },
   {
-    "Rimac": [
-      "C Two"
-    ]
+    "Rimac": ["C Two"]
   },
   {
-    "Rinspeed": [
-      "Chopster"
-    ]
+    "Rinspeed": ["Chopster"]
   },
   {
     "Rolls-Royce": [
@@ -3069,9 +2632,7 @@
     ]
   },
   {
-    "Ronart": [
-      "Lightning"
-    ]
+    "Ronart": ["Lightning"]
   },
   {
     "Rover": [
@@ -3120,27 +2681,16 @@
     ]
   },
   {
-    "Saipa": [
-      "Saina",
-      "Tiba"
-    ]
+    "Saipa": ["Saina", "Tiba"]
   },
   {
-    "Saleen": [
-      "S7"
-    ]
+    "Saleen": ["S7"]
   },
   {
-    "Samsung": [
-      "SM3",
-      "SM5",
-      "SM7"
-    ]
+    "Samsung": ["SM3", "SM5", "SM7"]
   },
   {
-    "Santana": [
-      "PS-10"
-    ]
+    "Santana": ["PS-10"]
   },
   {
     "Saturn": [
@@ -3161,21 +2711,10 @@
     ]
   },
   {
-    "Scion": [
-      "FR-S",
-      "iA",
-      "iM",
-      "iQ",
-      "tC",
-      "xA",
-      "xB",
-      "xD"
-    ]
+    "Scion": ["FR-S", "iA", "iM", "iQ", "tC", "xA", "xB", "xD"]
   },
   {
-    "Sears": [
-      "Model J"
-    ]
+    "Sears": ["Model J"]
   },
   {
     "SEAT": [
@@ -3202,31 +2741,16 @@
     ]
   },
   {
-    "Shanghai Maple": [
-      "C31",
-      "C32",
-      "C51",
-      "C52",
-      "C61",
-      "C81"
-    ]
+    "Shanghai Maple": ["C31", "C32", "C51", "C52", "C61", "C81"]
   },
   {
-    "Shifeng": [
-      "E-Car"
-    ]
+    "Shifeng": ["E-Car"]
   },
   {
-    "ShuangHuan": [
-      "Noble",
-      "Sceo"
-    ]
+    "ShuangHuan": ["Noble", "Sceo"]
   },
   {
-    "Simca": [
-      "1300/1500",
-      1307
-    ]
+    "Simca": ["1300/1500", 1307]
   },
   {
     "Skoda": [
@@ -3255,39 +2779,22 @@
     ]
   },
   {
-    "SMA": [
-      "Maple Hysoul",
-      "Maple Marindo"
-    ]
+    "SMA": ["Maple Hysoul", "Maple Marindo"]
   },
   {
-    "Smart": [
-      "Forfour",
-      "Fortwo",
-      "Roadster"
-    ]
+    "Smart": ["Forfour", "Fortwo", "Roadster"]
   },
   {
-    "SMZ": [
-      "S-ZA",
-      "S-ZD"
-    ]
+    "SMZ": ["S-ZA", "S-ZD"]
   },
   {
-    "Soueast": [
-      "Lioncel"
-    ]
+    "Soueast": ["Lioncel"]
   },
   {
-    "Spectre": [
-      "R42",
-      "R45"
-    ]
+    "Spectre": ["R42", "R45"]
   },
   {
-    "Spyker": [
-      "C8"
-    ]
+    "Spyker": ["C8"]
   },
   {
     "SsangYong": [
@@ -3311,14 +2818,10 @@
     ]
   },
   {
-    "Steyr": [
-      1500
-    ]
+    "Steyr": [1500]
   },
   {
-    "Studebaker": [
-      "Golden Hawk"
-    ]
+    "Studebaker": ["Golden Hawk"]
   },
   {
     "Subaru": [
@@ -3436,9 +2939,7 @@
     ]
   },
   {
-    "Talbot": [
-      "Solara"
-    ]
+    "Talbot": ["Solara"]
   },
   {
     "Tata": [
@@ -3456,32 +2957,16 @@
     ]
   },
   {
-    "Tatra": [
-      57,
-      77,
-      80,
-      87,
-      "T603",
-      "T613",
-      "T700"
-    ]
+    "Tatra": [57, 77, 80, 87, "T603", "T613", "T700"]
   },
   {
-    "Tesla": [
-      "Model 3",
-      "Model S"
-    ]
+    "Tesla": ["Model 3", "Model S"]
   },
   {
-    "Tianma": [
-      "Century",
-      "Dragon"
-    ]
+    "Tianma": ["Century", "Dragon"]
   },
   {
-    "Tianye": [
-      "Admiral"
-    ]
+    "Tianye": ["Admiral"]
   },
   {
     "Tofas": [
@@ -3675,21 +3160,10 @@
     ]
   },
   {
-    "Trabant": [
-      1.1,
-      "P 601"
-    ]
+    "Trabant": [1.1, "P 601"]
   },
   {
-    "Triumph": [
-      "Acclaim",
-      "Spitfire",
-      "Stag",
-      "TR4",
-      "TR6",
-      "TR7",
-      "TR8"
-    ]
+    "Triumph": ["Acclaim", "Spitfire", "Stag", "TR4", "TR6", "TR7", "TR8"]
   },
   {
     "TVR": [
@@ -3729,9 +3203,7 @@
     ]
   },
   {
-    "Ultima": [
-      "GTR"
-    ]
+    "Ultima": ["GTR"]
   },
   {
     "Vauxhall": [
@@ -3805,21 +3277,10 @@
     ]
   },
   {
-    "Vector": [
-      "M12",
-      "W8",
-      "W8 Twin Turbo"
-    ]
+    "Vector": ["M12", "W8", "W8 Twin Turbo"]
   },
   {
-    "Venturi": [
-      210,
-      "260 LM",
-      300,
-      "300 Atlantique",
-      400,
-      "400 GT"
-    ]
+    "Venturi": [210, "260 LM", 300, "300 Atlantique", 400, "400 GT"]
   },
   {
     "Volkswagen": [
@@ -3932,53 +3393,28 @@
     ]
   },
   {
-    "Vortex": [
-      "Corda",
-      "Estina",
-      "Tingo"
-    ]
+    "Vortex": ["Corda", "Estina", "Tingo"]
   },
   {
-    "Wanderer": [
-      "W23",
-      "W50"
-    ]
+    "Wanderer": ["W23", "W50"]
   },
   {
-    "Wartburg": [
-      353
-    ]
+    "Wartburg": [353]
   },
   {
-    "Wiesmann": [
-      "GT",
-      "MF3"
-    ]
+    "Wiesmann": ["GT", "MF3"]
   },
   {
-    "Willys": [
-      "CJ",
-      "Jeepster",
-      "Knight Model 20"
-    ]
+    "Willys": ["CJ", "Jeepster", "Knight Model 20"]
   },
   {
-    "Wuling": [
-      "Sunshine",
-      "Xingwang"
-    ]
+    "Wuling": ["Sunshine", "Xingwang"]
   },
   {
-    "Xin Kai": [
-      "PICKUP X3",
-      "SR-V X3",
-      "SUV X3"
-    ]
+    "Xin Kai": ["PICKUP X3", "SR-V X3", "SUV X3"]
   },
   {
-    "Yulon": [
-      "Feeling"
-    ]
+    "Yulon": ["Feeling"]
   },
   {
     "Zastava": [
@@ -4010,42 +3446,21 @@
     ]
   },
   {
-    "Zibar": [
-      "MK2"
-    ]
+    "Zibar": ["MK2"]
   },
   {
-    "ZIL": [
-      111,
-      114,
-      117,
-      4104
-    ]
+    "ZIL": [111, 114, 117, 4104]
   },
   {
-    "ZiS": [
-      101,
-      110
-    ]
+    "ZiS": [101, 110]
   },
   {
-    "Zotye": [
-      "Coupa",
-      "Nomad (RX6400)",
-      "SR9",
-      "T600",
-      "Z100",
-      "Z300"
-    ]
+    "Zotye": ["Coupa", "Nomad (RX6400)", "SR9", "T600", "Z100", "Z300"]
   },
   {
-    "ZX": [
-      "Admiral",
-      "Grand Tiger",
-      "GrandTiger",
-      "Landmark"
-    ]
-  }, {
+    "ZX": ["Admiral", "Grand Tiger", "GrandTiger", "Landmark"]
+  },
+  {
     "Other": []
   }
 ]
