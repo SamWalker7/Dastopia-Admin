@@ -8,6 +8,8 @@ import MenuItem from "@mui/material/MenuItem";
 import { useNavigate } from "react-router-dom";
 import { getAllVehicles, getDownloadUrl } from "../api";
 import VehicleCard from "../components/vehicle-components/VehicleCard";
+import makesData from "../api/makes.json";
+import modelData from "../api/models.json"; // Import the model data
 import "./page-styles.css";
 
 const RentACarPage = () => {
@@ -88,6 +90,11 @@ const RentACarPage = () => {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters({ ...filters, [name]: value });
+
+    // Reset model filter when make changes
+    if (name === "make") {
+      setFilters({ ...filters, make: value, model: "" });
+    }
   };
 
   const filteredRows = rows.filter((row) => {
@@ -100,6 +107,17 @@ const RentACarPage = () => {
           row.model.toLowerCase().includes(filters.search.toLowerCase())))
     );
   });
+
+  const getModelOptions = () => {
+    if (filters.make && modelData[filters.make]) {
+      return modelData[filters.make].map((model) => (
+        <MenuItem key={model} value={model}>
+          {model}
+        </MenuItem>
+      ));
+    }
+    return [];
+  };
 
   return (
     <Grid container spacing={2}>
@@ -126,9 +144,11 @@ const RentACarPage = () => {
               fullWidth
             >
               <MenuItem value="">All</MenuItem>
-              <MenuItem value="Toyota">Toyota</MenuItem>
-              <MenuItem value="Honda">Honda</MenuItem>
-              <MenuItem value="Ford">Ford</MenuItem>
+              {makesData.Makes.map((make) => (
+                <MenuItem key={make.make_id} value={make.make_display}>
+                  {make.make_display}
+                </MenuItem>
+              ))}
             </TextField>
           </Grid>
           <Grid item xs={3}>
@@ -139,12 +159,10 @@ const RentACarPage = () => {
               value={filters.model}
               onChange={handleFilterChange}
               fullWidth
+              disabled={!filters.make}
             >
               <MenuItem value="">All</MenuItem>
-              <MenuItem value="Camry">Camry</MenuItem>
-              <MenuItem value="Civic">Civic</MenuItem>
-              <MenuItem value="F-150">F-150</MenuItem>
-              <MenuItem value="F-150">Vitz</MenuItem>
+              {getModelOptions()}
             </TextField>
           </Grid>
           <Grid item xs={3}>
@@ -158,7 +176,7 @@ const RentACarPage = () => {
           </Grid>
           <Grid item xs={3}>
             <TextField
-              label="search by model"
+              label="Search by model"
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
