@@ -866,7 +866,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="ownerFirstName"
                             name="ownerFirstName"
-                            label="Owner First Name"
+                            placeholder="Owner First Name"
                             value={formValues.ownerGivenName}
                             onChange={handleChange}
                             style={{
@@ -878,7 +878,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="ownerLastName"
                             name="ownerLastName"
-                            label="Owner Last Name"
+                            placeholder="Owner Last Name"
                             value={formValues.ownerSurName}
                             onChange={handleChange}
                             style={{
@@ -890,7 +890,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="ownerPhone"
                             name="ownerPhone"
-                            label="Owner Phone"
+                            placeholder="Owner Phone"
                             value={formValues.ownerPhone}
                             onChange={handleChange}
                             style={{
@@ -902,7 +902,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="ownerEmail"
                             name="ownerEmail"
-                            label="Owner Email"
+                            placeholder="Owner Email"
                             value={formValues.ownerEmail}
                             onChange={handleChange}
                             style={{
@@ -928,7 +928,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativeFirstName"
                             name="representativeFirstName"
-                            label="Representative FirstName"
+                            placeholder="Representative FirstName"
                             value={formValues.representativeFirstName}
                             onChange={handleChange}
                             style={{
@@ -940,7 +940,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativeLastName"
                             name="representativeLastName"
-                            label="Representative LastName"
+                            placeholder="Representative LastName"
                             value={formValues.representativeLastName}
                             onChange={handleChange}
                             style={{
@@ -952,7 +952,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativePhone"
                             name="representativePhone"
-                            label="Representative Phone"
+                            placeholder="Representative Phone"
                             value={formValues.representativePhone}
                             onChange={handleChange}
                             style={{
@@ -964,7 +964,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativeEmail"
                             name="representativeEmail"
-                            label="Representative Email"
+                            placeholder="Representative Email"
                             value={formValues.representativeEmail}
                             onChange={handleChange}
                             style={{
