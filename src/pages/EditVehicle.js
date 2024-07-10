@@ -857,7 +857,7 @@ const EditVehicle = ({ match }) => {
                             id="ownerFirstName"
                             name="ownerFirstName"
                             label="Owner First Name"
-                            value={formValues.ownerFirstName}
+                            value={formValues.ownerGivenName}
                             onChange={handleChange}
                             style={{
                               marginRight: "30px",
@@ -869,7 +869,7 @@ const EditVehicle = ({ match }) => {
                             id="ownerLastName"
                             name="ownerLastName"
                             label="Owner Last Name"
-                            value={formValues.ownerLastName}
+                            value={formValues.ownerSurName}
                             onChange={handleChange}
                             style={{
                               marginRight: "30px",
