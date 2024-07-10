@@ -918,7 +918,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativeFirstName"
                             name="representativeFirstName"
-                            label="Representative First Name"
+                            label="Representative FirstName"
                             value={formValues.representativeFirstName}
                             onChange={handleChange}
                             style={{
@@ -930,7 +930,7 @@ const EditVehicle = ({ match }) => {
                             required
                             id="representativeLastName"
                             name="representativeLastName"
-                            label="Representative Last Name"
+                            label="Representative LastName"
                             value={formValues.representativeLastName}
                             onChange={handleChange}
                             style={{
