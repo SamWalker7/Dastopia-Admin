@@ -74,6 +74,7 @@ const EditVehicle = ({ match }) => {
     seats: "",
     color: "",
     transmission: "",
+    plateNumber: "",
     modelSpecification: "",
     id: vehicleId,
     isPostedByOwner: "",
@@ -127,7 +128,7 @@ const EditVehicle = ({ match }) => {
     setIsLoading(false);
 
     // Fetch images after setting vehicle data
-    if (body?.vehicleImageKeys?.length > 0) {
+    if (body?.adminDocumentKeys?.length > 0) {
       let urls = [];
       for (const image of body.vehicleImageKeys) {
         const url = await getDownloadUrl(image.key);
@@ -433,6 +434,15 @@ const EditVehicle = ({ match }) => {
                     Please select vehicle make and year
                   </FormHelperText>
                 )}
+              </FormControl>
+              <FormControl fullWidth margin="normal">
+                <TextField
+                  id="plateNumber"
+                  label="Plate Number"
+                  name="plateNumber"
+                  value={formValues.plateNumber}
+                  onChange={handleChange}
+                />
               </FormControl>
               <FormControl fullWidth margin="normal">
                 <TextField
