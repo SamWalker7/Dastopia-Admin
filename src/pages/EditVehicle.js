@@ -19,6 +19,10 @@ import CircularProgress from "@mui/material/CircularProgress";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadIcon from "@mui/icons-material/Upload";
+import Radio from "@mui/material/Radio";
+import RadioGroup from "@mui/material/RadioGroup";
+import FormLabel from "@mui/material/FormLabel";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import {
   getVehicleById,
   getDownloadUrl,
@@ -92,10 +96,10 @@ const EditVehicle = ({ match }) => {
     adminDocumentKeys: [],
   });
   const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [isOwner, setIsOwner] = useState(null);
+  const [isOwner, setIsOwner] = useState(true);
 
   const handleOwnerChange = (event) => {
-    setIsOwner(event.target.value === "yes");
+    setIsOwner(event.target.value === "owner");
   };
 
   useEffect(() => {
@@ -123,9 +127,11 @@ const EditVehicle = ({ match }) => {
         }
       });
     }
-    console.log("newDocuments: ", newDocuments);
+
     setFormValues(vehicleData);
     setIsLoading(false);
+    setDocuments(newDocuments);
+    console.log("newDocumentss: ", newDocuments);
 
     // Fetch images after setting vehicle data
     if (body?.adminDocumentKeys?.length > 0) {
@@ -139,10 +145,7 @@ const EditVehicle = ({ match }) => {
       // vehicleData.imageLoading = false; // Set image loading flag to false
       setFormValues({ ...vehicleData }); // Update state with new images
     }
-    setDocuments(newDocuments);
   };
-
-  console.log(formValues);
 
   const handleNext = () => {
     if (tab < 2) {
@@ -834,207 +837,205 @@ const EditVehicle = ({ match }) => {
                 </Box>
               ) : (
                 <>
-                  <div>
-                    <h2>Are you the owner of the car?</h2>
-                    <form>
-                      <label>
-                        <input
-                          type="radio"
-                          name="ownerStatus"
-                          value="yes"
-                          onChange={handleOwnerChange}
-                        />{" "}
-                        Yes
-                      </label>
-                      <label>
-                        <input
-                          type="radio"
-                          name="ownerStatus"
-                          value="no"
-                          onChange={handleOwnerChange}
-                        />{" "}
-                        No
-                      </label>
-                    </form>
-                  </div>
-                  {isOwner !== null ? (
-                    isOwner ? (
-                      <div>
-                        <h2>Owner Information Form</h2>
-                        <form>
-                          <TextField
-                            required
-                            id="ownerFirstName"
-                            name="ownerFirstName"
-                            placeholder="Owner First Name"
-                            value={formValues.ownerGivenName}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="ownerLastName"
-                            name="ownerLastName"
-                            placeholder="Owner Last Name"
-                            value={formValues.ownerSurName}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="ownerPhone"
-                            name="ownerPhone"
-                            placeholder="Owner Phone"
-                            value={formValues.ownerPhone}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="ownerEmail"
-                            name="ownerEmail"
-                            placeholder="Owner Email"
-                            value={formValues.ownerEmail}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-                        </form>{" "}
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          sx={{ mt: 2 }}
-                          onClick={submitForm}
-                          disabled={thirdStepperFormValidation()}
-                        >
-                          Submit
-                        </Button>
-                      </div>
+                  <FormControl component="fieldset">
+                    <FormLabel component="legend">Are you the owner?</FormLabel>
+                    <RadioGroup
+                      aria-label="owner"
+                      name="owner"
+                      value={isOwner ? "owner" : "representative"}
+                      onChange={handleOwnerChange}
+                    >
+                      <FormControlLabel
+                        value="owner"
+                        control={<Radio />}
+                        label="Yes"
+                      />
+                      <FormControlLabel
+                        value="representative"
+                        control={<Radio />}
+                        label="No"
+                      />
+                    </RadioGroup>
+                  </FormControl>
+                  {isOwner !== null &&
+                    (isOwner ? (
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth margin="normal">
+                            <TextField
+                              required
+                              fullWidth
+                              id="ownerFirstName"
+                              name="ownerFirstName"
+                              label="Owner First Name"
+                              value={formValues.ownerFirstName}
+                              onChange={handleChange}
+                            />
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth margin="normal">
+                            <TextField
+                              required
+                              id="ownerLastName"
+                              name="ownerLastName"
+                              label="Owner Last Name"
+                              value={formValues.ownerLastName}
+                              onChange={handleChange}
+                            />
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth margin="normal">
+                            <TextField
+                              required
+                              id="ownerPhone"
+                              name="ownerPhone"
+                              label="Owner Phone"
+                              value={formValues.ownerPhone}
+                              onChange={handleChange}
+                            />
+                          </FormControl>
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <FormControl fullWidth margin="normal">
+                            <TextField
+                              required
+                              id="ownerEmail"
+                              name="ownerEmail"
+                              label="Owner Email"
+                              value={formValues.ownerEmail}
+                              onChange={handleChange}
+                            />
+                          </FormControl>
+                        </Grid>
+                      </Grid>
                     ) : (
-                      <div>
-                        <h2>Representative Information Form</h2>
-                        <form>
-                          <TextField
-                            required
-                            id="representativeFirstName"
-                            name="representativeFirstName"
-                            placeholder="Representative FirstName"
-                            value={formValues.representativeFirstName}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="representativeLastName"
-                            name="representativeLastName"
-                            placeholder="Representative LastName"
-                            value={formValues.representativeLastName}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="representativePhone"
-                            name="representativePhone"
-                            placeholder="Representative Phone"
-                            value={formValues.representativePhone}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-
-                          <TextField
-                            required
-                            id="representativeEmail"
-                            name="representativeEmail"
-                            placeholder="Representative Email"
-                            value={formValues.representativeEmail}
-                            onChange={handleChange}
-                            style={{
-                              marginRight: "30px",
-                            }}
-                          />
-                        </form>
-                        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-                          Power of Attorney
-                        </Typography>
-                        <Typography variant="body2">
-                          Original Copy of Power of Attorney
-                        </Typography>
-                        <Grid container spacing={2} sx={{ mt: 2 }}>
-                          <Grid item xs={12} sm={12}>
-                            <Card>
-                              <CardActionArea>
-                                <input
-                                  accept="image/png, image/jpeg"
-                                  type="file"
-                                  id="powerOfAttorney-upload"
-                                  style={{ display: "none" }}
-                                  onChange={(event) =>
-                                    handleDocumentImageChange(
-                                      event,
-                                      "powerOfAttorney"
-                                    )
-                                  }
-                                  required
-                                />
-                                <label htmlFor="powerOfAttorney-upload">
-                                  <IconButton component="span">
-                                    <CameraAltIcon />
-                                  </IconButton>
-                                </label>
-                                {/* Display uploaded image or placeholder */}
-                                {documents["powerOfAttorney"] ? (
-                                  <CardMedia
-                                    component="img"
-                                    height="350"
-                                    width="auto"
-                                    image={documents["powerOfAttorney"]}
-                                    alt={"Power of Attorney for the vehicle"}
-                                  />
-                                ) : (
-                                  <CardMedia
-                                    component="img"
-                                    height="250"
-                                    alt="Upload an image"
-                                    image=""
-                                  />
-                                )}
-                              </CardActionArea>
-                            </Card>
+                      <>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={3}>
+                            <FormControl fullWidth margin="normal">
+                              <TextField
+                                required
+                                id="representativeFirstName"
+                                name="representativeFirstName"
+                                label="Representative First Name"
+                                value={formValues.representativeFirstName}
+                                onChange={handleChange}
+                              />
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <FormControl fullWidth margin="normal">
+                              <TextField
+                                required
+                                id="representativeLastName"
+                                name="representativeLastName"
+                                label="Representative Last Name"
+                                value={formValues.representativeLastName}
+                                onChange={handleChange}
+                              />
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <FormControl fullWidth margin="normal">
+                              <TextField
+                                required
+                                id="representativePhone"
+                                name="representativePhone"
+                                label="Representative Phone"
+                                value={formValues.representativePhone}
+                                onChange={handleChange}
+                              />
+                            </FormControl>
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <FormControl fullWidth margin="normal">
+                              <TextField
+                                required
+                                id="representativeEmail"
+                                name="representativeEmail"
+                                label="Representative Email"
+                                value={formValues.representativeEmail}
+                                onChange={handleChange}
+                              />
+                            </FormControl>
                           </Grid>
                         </Grid>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          sx={{ mt: 2 }}
-                          onClick={submitForm}
-                          disabled={thirdStepperFormValidation()}
-                        >
-                          Submit
-                        </Button>
-                      </div>
-                    )
-                  ) : (
-                    <></>
-                  )}
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={12}>
+                            <Typography
+                              variant="h6"
+                              gutterBottom
+                              sx={{ mt: 4 }}
+                            >
+                              Power of Attorney
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <Typography variant="body2">
+                              Original Copy of Power of Attorney
+                            </Typography>
+                          </Grid>
+                          <Grid container spacing={2} sx={{ m: 1, mt: 1 }}>
+                            <Grid item xs={12} sm={12}>
+                              <Card>
+                                <CardActionArea>
+                                  <input
+                                    accept="image/png, image/jpeg"
+                                    type="file"
+                                    id="powerOfAttorney-upload"
+                                    style={{ display: "none" }}
+                                    onChange={(event) =>
+                                      handleDocumentImageChange(
+                                        event,
+                                        "powerOfAttorney"
+                                      )
+                                    }
+                                  />
+                                  <label htmlFor="powerOfAttorney-upload">
+                                    <IconButton component="span">
+                                      <CameraAltIcon />
+                                    </IconButton>
+                                  </label>
+                                  {documents["powerOfAttorney"] ? (
+                                    <CardMedia
+                                      component="img"
+                                      height="350"
+                                      width="auto"
+                                      image={documents["powerOfAttorney"]}
+                                      alt={"Power of Attorney for the vehicle"}
+                                    />
+                                  ) : (
+                                    <CardMedia
+                                      component="img"
+                                      height="250"
+                                      alt="Upload an image"
+                                      image=""
+                                    />
+                                  )}
+                                </CardActionArea>
+                              </Card>
+                            </Grid>
+                          </Grid>
+                        </Grid>
+                      </>
+                    ))}
+                  {/* <Typography variant="h6" gutterBottom>
+								Enable Listing
+							</Typography>
+							<Typography variant="body2">
+								Click the button below to enable your car listing.
+							</Typography> */}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    sx={{ mt: 2 }}
+                    onClick={submitForm}
+                    disabled={thirdStepperFormValidation()}
+                  >
+                    Submit
+                  </Button>
                 </>
               )}
             </Box>
