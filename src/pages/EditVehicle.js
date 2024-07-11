@@ -24,10 +24,16 @@ import { resizeImage } from "../config/helpers";
 import carModel from '../api/models.json';
 import carMake from '../api/makes.json';
 import { useLocation, useParams } from 'react-router-dom';
+import { useSelector } from "react-redux";
 
 const EditVehicle = ({ match }) => {
     const queryParams = new URLSearchParams(window.location.search);
     const vehicleId = queryParams.get("id");
+
+    const vehicles = useSelector((state) => state.vehicles.vehicles);
+
+    const [data, setData] = useState({})
+
     const years = Array.from({ length: new Date().getFullYear() - 2001 + 1 }, (_, i) => 2001 + i);
     const [tab, setTab] = useState(0);
     const [modelList, setModelList] = useState([]);
@@ -76,14 +82,31 @@ const EditVehicle = ({ match }) => {
     });
     const [isUploadingImages, setIsUploadingImages] = useState(false);
 
+
+    const fetchData = async () => {
+        vehicles.map((v) => {
+            if(v.id === vehicleId){
+                setData(v);
+                console.log(v, "vehicle")
+            }
+        });
+        
+    }
+
     useEffect(() => {
+        fetchData();
         fetchVehicleDetails();
         setMakeList(carMake?.Makes.map(make => make.make_display));
+
     }, []);
+
+    
 
     const fetchVehicleDetails = async () => {
         setIsLoading(true);
         const { body } = await getVehicleById(vehicleId);
+
+      
 
         const vehicleData = {
             ...body,
@@ -544,7 +567,7 @@ const EditVehicle = ({ match }) => {
                                                     <CardMedia
                                                         component="img"
                                                         height="140"
-                                                        image={(document[side])}
+                                                        image={document[side]}
                                                         alt={`${side} of the vehicle`}
                                                     />
                                                 ) : (
@@ -554,6 +577,7 @@ const EditVehicle = ({ match }) => {
                                                         image="/static/images/cards/placeholder.jpg"
                                                         alt="Upload an image"
                                                     />
+                                              
                                                 )}
                                             </CardActionArea>
                                         </Card>

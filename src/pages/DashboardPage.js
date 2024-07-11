@@ -8,6 +8,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import NotificationsIcon from '@mui/icons-material/Notifications'; 
 import { getAllVehicles } from "../api";
 import { filterByDateRange, getPercentageChangeLast7Days, getPercentageChangeLast30Days } from '../config/helpers';
+import CarListingsChart from '../components/visualization/ChartListingChart';
 
 const DashboardPage = () => {
   const [ totalListings, setTotalListings ] = useState(null);
@@ -26,6 +27,7 @@ const DashboardPage = () => {
     setIsLoading(true);
     const { body } = await getAllVehicles();
     setTotalListings(body?.length);
+    console.log(body, "car listing data")
     setListingLast7Days(filterByDateRange(body, 7));
     setPercentageLast7Days(getPercentageChangeLast7Days(body));
     setListingLas30Days(filterByDateRange(body, 30));
@@ -48,6 +50,13 @@ const DashboardPage = () => {
     { icon: <NotificationsIcon fontSize="large" />, title: '', count: 0, period: 'Last 24 hours' },
     { icon: <NotificationsIcon fontSize="large" />, title: '', count: 0, period: 'Total reservations' }
   ];
+
+  const data = [
+    { model: 'Toyota', count: 10, date: '2024-07-01' },
+    { model: 'Honda', count: 15, date: '2024-06-25' },
+    { model: 'Ford', count: 8, date: '2024-05-20' },
+  ];
+
   return (
     <div>
       {/* <Typography style={{fontWeight: 'bold', fontFamily: "sans-serif"}} variant="h3" bold="true">
@@ -58,7 +67,9 @@ const DashboardPage = () => {
       </Typography> */}
       <Box sx={{ padding: '16px' }}>
         <CardSection title="Users" items={userItems} />
-        <CardSection title="Listings" items={listingItems} />
+        {/* <CardSection title="Listings" items={listingItems} />
+         */}
+         <CarListingsChart data={data} /> 
         <CardSection title="Reservations" items={reservationItems} />
       </Box>
     </div>

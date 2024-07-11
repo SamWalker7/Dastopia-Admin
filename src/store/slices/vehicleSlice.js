@@ -45,7 +45,11 @@ export const fetchImages = createAsyncThunk(
 const vehicleSlice = createSlice({
     name: "vehicle",
     initialState,
-    reducers: {},
+    reducers: {
+        clearError(state){
+            state.error = null
+        },
+    },
     extraReducers: (builder) => {
         builder.addCase(fetchVehicles.pending, (state) => {
             state.loading = true;

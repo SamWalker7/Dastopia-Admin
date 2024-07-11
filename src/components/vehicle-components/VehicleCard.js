@@ -19,7 +19,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useInView } from 'react-intersection-observer';
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // Imported components
 import VehicleImageSlider from "./VehicleImageSlider";
@@ -160,14 +160,12 @@ const VehicleCard = ({ row, index, handleClick, handleClose, toggleListing, anch
                     <IconButton color="primary" onClick={handleToggleDetails}>
                         <VisibilityIcon />
                     </IconButton>
-                    <IconButton
+                    <Link
+                       to={`/edit-vehicle?id=${row.id}`}
                         color="black"
-                        onClick={() => {
-                            window.location.href = `/edit-vehicle?id=${row.id}`;
-                        }}
                     >
                         <EditIcon />
-                    </IconButton>
+                    </Link>
                     <IconButton
                         color="error"
                         onClick={handleModalOpen}
