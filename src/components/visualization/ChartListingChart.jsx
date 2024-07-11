@@ -5,6 +5,30 @@ import Dropdown from 'react-dropdown';
 import 'react-dropdown/style.css';
 
 const CarListingsChart = ({ data }) => {
+
+
+  function mergeCountsByMonth(dataArray) {
+    let result = [];
+ 
+    let countMap = new Map();
+    
+  
+    dataArray.forEach(obj => {
+        let [year, month, day] = obj.date.split('-');
+        let date = new Date(year, month - 1, day);
+        let yearMonth = `${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)}`;
+        if (countMap.has(yearMonth)) {
+            countMap.set(yearMonth, countMap.get(yearMonth) + obj.count);
+        } else {
+            countMap.set(yearMonth, obj.count);
+        }
+    });
+    countMap.forEach((count, month) => {
+        result.push({ date: month, count: count });
+    });
+    
+    return result;
+}
   const svgRef = useRef();
   const [filteredData, setFilteredData] = useState(data);
   const [filter, setFilter] = useState('last 7 days');
@@ -26,55 +50,62 @@ const CarListingsChart = ({ data }) => {
     const height = 400;
     const margin = { top: 20, right: 30, bottom: 70, left: 60 };
 
-
     let xTickValues;
     let startDate;
     let numDays;
 
     switch (filter) {
-      case 'last 7 days':
-        startDate = subDays(new Date(), 7);
-        numDays = 7;
-        xTickValues = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        break;
       case 'last 30 days':
+      case 'last 7 days':
+        startDate = subDays(new Date(), filter === 'last 30 days' ? 30 : 7);
+        numDays = 7;
+        xTickValues = ['Jan', 'Feb', 'Mar', 'Apr','May', 'June','July', 'Aug','Sept', 'Oct','Nov' ,'Dec'];
+        break;
+        
       case 'last 90 days':
       case 'last 1 year':
         startDate = subDays(new Date(), filter === 'last 30 days' ? 30 : filter === 'last 90 days' ? 90 : 365);
         numDays = filter === 'last 30 days' ? 30 : filter === 'last 90 days' ? 90 : 365;
-        xTickValues = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov', 'Dec'];
+        xTickValues = ['Jan', 'Feb', 'Mar', 'Apr','May', 'June','July', 'Aug','Sept', 'Oct','Nov' ,'Dec']
         break;
       default:
         startDate = subDays(new Date(), 7);
         numDays = 7;
-        xTickValues = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        xTickValues = ['Jan', 'Feb', 'Mar', 'Apr','May', 'June','July', 'Aug','Sept', 'Oct','Nov' ,'Dec'];
     }
 
 
     const filteredDataByDate = data.filter(d => new Date(d.date) >= startDate);
 
+    let filtered = mergeCountsByMonth(filteredDataByDate);
 
-    const dataWithDays = filteredDataByDate.map(d => ({
+    let dataWithDays = filtered.map(d => ({
       ...d,
       day: Math.floor((new Date(d.date) - startDate) / (1000 * 60 * 60 * 24)) + 1,
     }));
 
 
+   
+
+   
+
     const maxCount = d3.max(dataWithDays, d => d.count) || 0;
     const yMax = maxCount < 100 ? 100 : maxCount + 100;
     const yInterval = maxCount < 100 ? 10 : 100;
 
-    const x = d3.scaleLinear()
-      .domain([1, numDays])
-      .range([margin.left, width - margin.right]);
+    const x = d3.scaleBand()
+      .domain(dataWithDays.map(d => d.day))
+      .range([margin.left, width - margin.right])
+      .padding(0.9)
 
     const y = d3.scaleLinear()
       .domain([0, yMax])
+      .nice()
       .range([height - margin.bottom, margin.top]);
 
     const xAxis = svg.append('g')
       .attr('transform', `translate(0,${height - margin.bottom})`)
-      .call(d3.axisBottom(x).ticks(xTickValues.length).tickFormat((d, i) => xTickValues[i]));
+      .call(d3.axisBottom(x).tickFormat((d, i) => xTickValues[i]));
 
     xAxis.append('text')
       .attr('x', width / 2)
@@ -94,26 +125,15 @@ const CarListingsChart = ({ data }) => {
       .attr('transform', 'rotate(-90)')
       .text('Count');
 
-    const line = d3.line()
-      .x(d => x(d.day))
-      .y(d => y(d.count));
-
-    svg.append('path')
-      .datum(dataWithDays)
-      .attr('fill', 'none')
-      .attr('stroke', 'steelblue')
-      .attr('stroke-width', 2)
-      .attr('d', line);
-
-
-
-    svg.selectAll('circle')
+    svg.selectAll('.bar')
       .data(dataWithDays)
       .enter()
-      .append('circle')
-      .attr('cx', d => x(d.day))
-      .attr('cy', d => y(d.count))
-      .attr('r', 4)
+      .append('rect')
+      .attr('class', 'bar')
+      .attr('x', d => x(d.day))
+      .attr('width', x.bandwidth())
+      .attr('y', d => y(d.count))
+      .attr('height', d => height - margin.bottom - y(d.count))
       .attr('fill', 'steelblue');
 
   }, [filteredData, filter]);
@@ -155,7 +175,9 @@ const CarListingsChart = ({ data }) => {
       </div>
       <svg style={{
         border: "1px solid #004080",
-        marginTop: "20px"
+        marginTop: "20px",
+        padding:"4px",
+        width:"100%"
       }} ref={svgRef} width="100%" height={400}></svg>
     </div>
   );
