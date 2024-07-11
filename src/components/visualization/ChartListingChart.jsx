@@ -83,12 +83,6 @@ const CarListingsChart = ({ data }) => {
       ...d,
       day: Math.floor((new Date(d.date) - startDate) / (1000 * 60 * 60 * 24)) + 1,
     }));
-
-
-   
-
-   
-
     const maxCount = d3.max(dataWithDays, d => d.count) || 0;
     const yMax = maxCount < 100 ? 100 : maxCount + 100;
     const yInterval = maxCount < 100 ? 10 : 100;
