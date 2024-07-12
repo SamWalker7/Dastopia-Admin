@@ -20,8 +20,9 @@ const RentACarPage = () => {
   const [filters, setFilters] = useState({
     make: "",
     model: "",
-    year: "",
-    search: "",
+    startYear: "",
+    endYear: "",
+    email: "",
   });
   const [modelList, setModelList] = useState([]); // State for model list
   const navigate = useNavigate();
@@ -106,13 +107,23 @@ const RentACarPage = () => {
   };
 
   const filteredRows = rows.filter((row) => {
+    const startYear = filters.startYear ? parseInt(filters.startYear) : null;
+    const endYear = filters.endYear ? parseInt(filters.endYear) : null;
+    const yearFilter =
+      (!startYear || row.year >= startYear) &&
+      (!endYear || row.year <= endYear);
+
     return (
       (filters.make === "" || row.make === filters.make) &&
       (filters.model === "" || row.model === filters.model) &&
-      (filters.year === "" || row.year === filters.year) &&
-      (filters.search === "" ||
-        (row.model &&
-          row.model.toLowerCase().includes(filters.search.toLowerCase())))
+      yearFilter &&
+      (filters.email === "" ||
+        (row.ownerEmail &&
+          row.ownerEmail.toLowerCase().includes(filters.email.toLowerCase())) ||
+        (row.representativeEmail &&
+          row.representativeEmail
+            .toLowerCase()
+            .includes(filters.email.toLowerCase())))
     );
   });
 
@@ -163,29 +174,51 @@ const RentACarPage = () => {
               name="model"
               value={filters.model}
               onChange={handleFilterChange}
-              fullWidth
               disabled={!filters.make}
+              fullWidth
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="all">All</MenuItem>
               {getModelOptions()}
             </TextField>
           </Grid>
           <Grid item xs={3}>
-            <TextField
-              label="Year"
-              name="year"
-              value={filters.year}
+            <input
+              type="date"
+              label="Start Year"
+              name="startYear"
+              value={filters.startYear}
               onChange={handleFilterChange}
-              fullWidth
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "16px",
+              }}
+            />
+          </Grid>
+          <Grid item xs={3}>
+            <input
+              type="date"
+              label="End Year"
+              name="endYear"
+              value={filters.endYear}
+              onChange={handleFilterChange}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "16px",
+              }}
             />
           </Grid>
           <Grid item xs={3}>
             <TextField
-              label="Search by model"
-              name="search"
-              value={filters.search}
+              label="Search by email"
+              name="email"
+              value={filters.email}
               onChange={handleFilterChange}
-              fullWidth
             />
           </Grid>
         </Grid>
