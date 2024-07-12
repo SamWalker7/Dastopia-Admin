@@ -59,7 +59,7 @@ const CarListingsChart = ({ data }) => {
       case 'last 7 days':
         startDate = subDays(new Date(), filter === 'last 30 days' ? 30 : 7);
         numDays = 7;
-        xTickValues = ['Jan', 'Feb', 'Mar', 'Apr','May', 'June','July', 'Aug','Sept', 'Oct','Nov' ,'Dec'];
+        xTickValues = filter == 'last 7 days' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['Jan', 'Feb', 'Mar', 'Apr','May', 'June','July', 'Aug','Sept', 'Oct','Nov' ,'Dec'];
         break;
         
       case 'last 90 days':
@@ -83,12 +83,6 @@ const CarListingsChart = ({ data }) => {
       ...d,
       day: Math.floor((new Date(d.date) - startDate) / (1000 * 60 * 60 * 24)) + 1,
     }));
-
-
-   
-
-   
-
     const maxCount = d3.max(dataWithDays, d => d.count) || 0;
     const yMax = maxCount < 100 ? 100 : maxCount + 100;
     const yInterval = maxCount < 100 ? 10 : 100;
@@ -110,9 +104,10 @@ const CarListingsChart = ({ data }) => {
     xAxis.append('text')
       .attr('x', width / 2)
       .attr('y', 50)
-      .attr('fill', 'black')
+      .attr('fill', '#004080')
       .attr('text-anchor', 'middle')
-      .text('Date');
+      .style('font-size', '14px')
+      .text('Time Frame');
 
     const yAxis = svg.append('g')
       .attr('transform', `translate(${margin.left},0)`)
@@ -120,10 +115,11 @@ const CarListingsChart = ({ data }) => {
       .append('text')
       .attr('x', -height / 2)
       .attr('y', -50)
-      .attr('fill', 'black')
+      .attr('fill', '#004080')
       .attr('text-anchor', 'middle')
       .attr('transform', 'rotate(-90)')
-      .text('Count');
+      .style('font-size', '14px')
+      .text('Number of vehicles');
 
     svg.selectAll('.bar')
       .data(dataWithDays)
@@ -174,7 +170,7 @@ const CarListingsChart = ({ data }) => {
         <Dropdown options={filters} onChange={handleFilterChange} value={filter} placeholder="Select a filter" />
       </div>
       <svg style={{
-        border: "1px solid #004080",
+       
         marginTop: "20px",
         padding:"4px",
         width:"100%"
