@@ -183,8 +183,7 @@ const RentACarPage = () => {
             </TextField>
           </Grid>
           <Grid item xs={3}>
-            <input
-              type="date"
+            <select
               label="Start Year"
               name="startYear"
               value={filters.startYear}
@@ -196,11 +195,20 @@ const RentACarPage = () => {
                 border: "1px solid #ccc",
                 fontSize: "16px",
               }}
-            />
+            >
+              <option value="">Select Year</option>
+              {Array.from(
+                { length: 10 },
+                (_, i) => new Date().getFullYear() - i
+              ).map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </Grid>
           <Grid item xs={3}>
-            <input
-              type="date"
+            <select
               label="End Year"
               name="endYear"
               value={filters.endYear}
@@ -212,7 +220,17 @@ const RentACarPage = () => {
                 border: "1px solid #ccc",
                 fontSize: "16px",
               }}
-            />
+            >
+              <option value="">Select Year</option>
+              {Array.from(
+                { length: 10 },
+                (_, i) => new Date().getFullYear() - i
+              ).map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
           </Grid>
           <Grid item xs={3}>
             <TextField
