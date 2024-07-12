@@ -93,12 +93,13 @@ const RentACarPage = () => {
     const { name, value } = e.target;
     if (name === "make") {
       let newModel = modelData.filter((model) => {
-        if (Object.keys(model)[0] === value) {
-          console.log("model: ", ...Object.values(model));
-          return Object.values(model);
-        } else return false;
+        return Object.keys(model)[0] === value;
       });
-      newModel = [...newModel[0][value]];
+      if (newModel.length > 0) {
+        newModel = Object.values(newModel[0])[0];
+      } else {
+        newModel = [];
+      }
       setModelList(newModel);
       setFilters({ ...filters, make: value, model: "" });
     } else {
