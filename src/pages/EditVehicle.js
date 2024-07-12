@@ -1021,6 +1021,12 @@ const EditVehicle = ({ match }) => {
                         </Grid>
                       </>
                     ))}
+                  {/* <Typography variant="h6" gutterBottom>
+								Enable Listing
+							</Typography>
+							<Typography variant="body2">
+								Click the button below to enable your car listing.
+							</Typography> */}
                   <Button
                     variant="contained"
                     color="primary"
