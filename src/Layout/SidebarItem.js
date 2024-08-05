@@ -3,7 +3,7 @@ import React from 'react';
 import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 
 const SidebarItem = ({ text, icon, path }) => {
   const location = useLocation();
@@ -12,7 +12,7 @@ const SidebarItem = ({ text, icon, path }) => {
   return (
     <ListItem
       button
-      component={Link}
+      component={NavLink}
       to={path}
       sx={{
         color: isSelected ? '#000' : '#fff',

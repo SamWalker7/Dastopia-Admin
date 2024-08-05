@@ -8,14 +8,21 @@ import MenuItem from "@mui/material/MenuItem";
 import { useNavigate } from "react-router-dom";
 import { getAllVehicles, getDownloadUrl } from "../api";
 import VehicleCard from "../components/vehicle-components/VehicleCard";
+
 import makesData from "../api/makes.json";
 import modelData from "../api/models.json"; // Import the model data
 import "./page-styles.css";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchImages, fetchVehicles } from "../store/slices/vehicleSlice";
+
 
 const RentACarPage = () => {
-  const [rows, setRows] = useState([]);
+
+  const dispatch = useDispatch();
+
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     make: "",
@@ -29,7 +36,7 @@ const RentACarPage = () => {
   const toggleListing = (index) => {
     const newRows = [...rows];
     newRows[index].enabled = !newRows[index].enabled;
-    setRows(newRows);
+    // setRows(newRows);
   };
 
   const handleAddCar = () => {
@@ -44,48 +51,28 @@ const RentACarPage = () => {
   const handleClose = (status) => {
     const newRows = [...rows];
     newRows[selectedIndex].status = status;
-    setRows(newRows);
+    // setRows(newRows);
     setAnchorEl(null);
   };
 
+
+
+
+  const rows = useSelector((state) => state.vehicles.vehicles)
+  const loading = useSelector((state) => state.vehicles.loading)
+
   useEffect(() => {
-    fetchVehicles();
-  }, []);
+    const loadData = async () => {
+      const response = await dispatch(fetchVehicles())
+      if (fetchVehicles.fulfilled.match(response)) {
+        const vehicles = response.payload;
+        vehicles.map(async (vehicle) => {
+          await dispatch(fetchImages(vehicle))
+        })
 
-  const fetchVehicles = async () => {
-    setIsLoading(true);
-    const { body } = await getAllVehicles();
-    let data = [];
-    for (const vehicle of body) {
-      data.push({
-        ...vehicle,
-        status: vehicle?.isEnabled
-          ? "Approved"
-          : vehicle?.isEnabled === false
-          ? "Declined"
-          : "Pending",
-        images: [], // Initially, set images to an empty array
-        imageLoading: true, // Flag to indicate images are loading
-      });
-    }
-
-    setRows(data);
-    setIsLoading(false);
-
-    // Fetch images after setting vehicle data
-    for (let i = 0; i < body.length; i++) {
-      const vehicle = body[i];
-      if (vehicle?.vehicleImageKeys?.length > 0) {
-        let urls = [];
-        for (const image of vehicle?.vehicleImageKeys) {
-          const url = await getDownloadUrl(image.key);
-          urls.push(url.body || "https://via.placeholder.com/300");
-        }
-        data[i].images = urls;
-        data[i].imageLoading = false; // Set image loading flag to false
-        setRows([...data]); // Update state with new images
       }
     }
+
   };
 
   const handleFilterChange = (e) => {
@@ -124,6 +111,11 @@ const RentACarPage = () => {
     ));
   };
 
+
+    if (rows.length < 1) {
+      loadData();
+    }
+  }, [])
   return (
     <Grid container spacing={2}>
       <Grid item xs={12}>
@@ -137,6 +129,7 @@ const RentACarPage = () => {
           Add New Listing
         </Button>
       </Grid>
+
       <Grid item xs={12}>
         <Grid container spacing={2}>
           <Grid item xs={3}>
@@ -215,6 +208,27 @@ const RentACarPage = () => {
             </Grid>
           )}
         </>
+
+      {loading ? (
+        <CircularProgress />
+      ) : (
+        rows.map((row, index) => {
+          return (
+            <Grid item xs={12} sm={6} md={4} key={index}>
+              <VehicleCard
+                row={row}
+                index={index}
+                handleClick={handleClick}
+                handleClose={handleClose}
+                toggleListing={toggleListing}
+                anchorEl={anchorEl}
+                selectedIndex={selectedIndex}
+                setAnchorEl={setAnchorEl}
+              />
+            </Grid>
+          )
+        })
+
       )}
     </Grid>
   );
