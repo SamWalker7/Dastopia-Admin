@@ -55,21 +55,20 @@ const RentACarPage = () => {
     setAnchorEl(null);
   };
 
-
-
-
   const rows = useSelector((state) => state.vehicles.vehicles)
   const loading = useSelector((state) => state.vehicles.loading)
 
   useEffect(() => {
-    const loadData = async () => {
-      const response = await dispatch(fetchVehicles())
-      if (fetchVehicles.fulfilled.match(response)) {
-        const vehicles = response.payload;
-        vehicles.map(async (vehicle) => {
-          await dispatch(fetchImages(vehicle))
-        })
-      }
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    const response = await dispatch(fetchVehicles())
+    if (fetchVehicles.fulfilled.match(response)) {
+      const vehicles = response.payload;
+      vehicles.map(async (vehicle) => {
+        await dispatch(fetchImages(vehicle))
+      })
     }
   }
 
@@ -110,10 +109,10 @@ const RentACarPage = () => {
   };
 
 
-    if (rows.length < 1) {
-      loadData();
-    }
-  }, [])
+  if (rows.length < 1) {
+    loadData();
+  }
+
   return (
     <Grid container spacing={2}>
       <Grid item xs={12}>
@@ -206,7 +205,7 @@ const RentACarPage = () => {
             </Grid>
           )}
         </>
-
+      )}
       {loading ? (
         <CircularProgress />
       ) : (
@@ -226,7 +225,6 @@ const RentACarPage = () => {
             </Grid>
           )
         })
-
       )}
     </Grid>
   );
