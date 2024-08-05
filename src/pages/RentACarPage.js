@@ -69,11 +69,9 @@ const RentACarPage = () => {
         vehicles.map(async (vehicle) => {
           await dispatch(fetchImages(vehicle))
         })
-
       }
     }
-
-  };
+  }
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
