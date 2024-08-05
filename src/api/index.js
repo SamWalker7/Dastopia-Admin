@@ -1,7 +1,7 @@
 import axios from "axios"
 import { carQueryAPI, dastopiaAPI } from "../config/constants";
 
-const url = (path) => (dastopiaAPI + path);
+export const url = (path) => (dastopiaAPI + path);
 
 export const getMakes = async () => {
     try {
