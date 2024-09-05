@@ -77,6 +77,7 @@ const AddCar = () => {
 		representativeLastName: '',
 		representativePhone: '',
 		representativeEmail: '',
+		price: '',
 		vehicleImageKeys: [],
 		adminDocumentKeys: [],
 	});
@@ -910,6 +911,18 @@ const AddCar = () => {
 													/>
 												</FormControl>
 											</Grid>
+											<Grid item xs={12} sm={3}>
+												<FormControl fullWidth margin="normal">
+													<TextField
+														required
+														id="price"
+														name="price"
+														label="Price"
+														value={formValues.price}
+														onChange={handleChange}
+													/>
+												</FormControl>
+											</Grid>
 										</Grid>
 									) : (
 										<>
@@ -962,6 +975,19 @@ const AddCar = () => {
 														/>
 													</FormControl>
 												</Grid>
+
+												<Grid item xs={12} sm={3}>
+												<FormControl fullWidth margin="normal">
+													<TextField
+														required
+														id="price"
+														name="price"
+														label="Price"
+														value={formValues.price}
+														onChange={handleChange}
+													/>
+												</FormControl>
+											</Grid>
 											</Grid>
 											<Grid container spacing={2}>
 												<Grid item xs={12} sm={12}>
