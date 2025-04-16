@@ -1,11 +1,23 @@
-import { configureStore } from "@reduxjs/toolkit";
+// import { configureStore } from "@reduxjs/toolkit";
+// import vehicleReducer from "./slices/vehicleSlice";
+// import userReducer from "./slices/userSlice"; // Import the new user reducer
 
-import vehicleReducer from "./slices/vehicleSlice"
+// const store = configureStore({
+//   reducer: {
+//     vehicle: vehicleReducer, // Existing vehicle reducer
+//     user: userReducer, // New user reducer for login and profile management
+//   },
+// });
 
-const store = configureStore({
-    reducer: {
-        vehicles: vehicleReducer
-    }
-})
+// export default store;
+import { createStore, applyMiddleware } from "redux";
+import { thunk } from 'redux-thunk';
+import { composeWithDevTools } from '@redux-devtools/extension';
+import rootReducer from "../store/auth/rootReducer";
+
+const store = createStore(
+  rootReducer,
+  composeWithDevTools(applyMiddleware(thunk))
+);
 
 export default store;

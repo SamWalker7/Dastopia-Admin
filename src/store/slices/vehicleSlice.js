@@ -1,7 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { getAllVehicles, getDownloadUrl, url } from "../../api";
-
+import { getAllVehicles, getDownloadUrl } from "../../api";
 
 const initialState = {
     vehicles: [],
@@ -12,12 +10,13 @@ const initialState = {
 export const fetchVehicles = createAsyncThunk("vehicle/fetchVehicles", async (_, { rejectWithValue }) => {
     try {
         const response = await getAllVehicles();
-
+        console.log(response, "response")
         return response.body;
     } catch (err) {
-        return err;
+        return rejectWithValue(err);
     }
-});
+
+})
 
 export const fetchImages = createAsyncThunk(
     'vehicles/fetchVehicleImages',
@@ -46,7 +45,7 @@ const vehicleSlice = createSlice({
     name: "vehicle",
     initialState,
     reducers: {
-        clearError(state){
+        clearError(state) {
             state.error = null
         },
     },
@@ -85,5 +84,8 @@ const vehicleSlice = createSlice({
     }
 })
 
+
 export default vehicleSlice.reducer;
+
+
 
