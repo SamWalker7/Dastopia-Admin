@@ -6,7 +6,8 @@ import "./output.css"; // Import Tailwind CSS
 import PermanentDrawerLeft from "./newPages/PermanentDrawerLeft";
 import { refreshToken } from "./store/auth/authThunks";
 import  Login from "./newPages/Login"; // Import your Login component
-
+import OTP from "./newPages/Otp"; // Import your OTP component
+import UserManagment from "./newPages/UserManagment"; // Import your UserManagment component
 function App() {
   const [user, setUser] = useState(() => {
     // Retrieve user data from localStorage on initial load
@@ -50,6 +51,9 @@ function App() {
       <Routes>
        <Route index path="/" element={ <Login />}/>
         <Route path="/dashboard" element={<PermanentDrawerLeft />} />
+        <Route index path="/otp" element={ <OTP />}/>
+        <Route index path="/usermanagment" element={ <UserManagment />}/>
+
       </Routes>
     </Provider>
   );
