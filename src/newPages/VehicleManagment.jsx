@@ -1,5 +1,6 @@
+// VehicleManagment.js (or VehicleManagment.jsx)
 import { HiMiniArrowsUpDown } from "react-icons/hi2";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   TextField,
   Select,
@@ -9,31 +10,14 @@ import {
   Box,
   FormControl,
   InputLabel,
-  Modal,
-  IconButton,
-  InputAdornment,
-  inputBaseClasses,
+  // InputAdornment was removed here, need to add it back
+  InputAdornment, // <--- Add this back
+  Typography,
+  Link,
 } from "@mui/material";
 
 import Breadcrumbs from "@mui/material/Breadcrumbs";
-import Typography from "@mui/material/Typography";
-import Link from "@mui/material/Link";
-import Stack from "@mui/material/Stack";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import { FaRegCircle } from "react-icons/fa";
-import image from "./avatar.png";
-import {
-  IoChatboxOutline,
-  IoLocationOutline,
-  IoPersonOutline,
-} from "react-icons/io5";
-import AttachFileIcon from "@mui/icons-material/AttachFile";
-import GridViewIcon from "@mui/icons-material/GridView";
-import { FaStar } from "react-icons/fa";
-import { MdOutlineLocalPhone, MdOutlineMail } from "react-icons/md";
-import { ETH } from "react-world-flags";
-import CloseIcon from "@mui/icons-material/Close";
-
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CarRentalOutlinedIcon from "@mui/icons-material/CarRentalOutlined";
 import DirectionsCarFilledOutlinedIcon from "@mui/icons-material/DirectionsCarFilledOutlined";
@@ -41,342 +25,42 @@ import CarCrashOutlinedIcon from "@mui/icons-material/CarCrashOutlined";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
 import { Grid } from "@mui/material";
 import { Search, UploadFile } from "@mui/icons-material";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-const Account = () => {
-  const [rentals, setRentals] = useState([
-    {
-      startDate: "23/3/2022",
-      endDate: "24/3/2022",
-      carName: "Bekele Mamo",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-    {
-      startDate: "24/3/2022",
-      endDate: "23/3/2022",
-      carName: "Addis Ababa",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Active",
-    },
-    {
-      startDate: "25/3/2022",
-      endDate: "22/3/2022",
-      carName: "Zeina Haile",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Canceled",
-    },
-    {
-      startDate: "26/3/2022",
-      endDate: "NA",
-      carName: "Teddy Worku",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-    {
-      startDate: "27/3/2022",
-      endDate: "21/3/2022",
-      carName: "Biruk Tadesse",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-  ]);
 
-  const [filters, setFilters] = useState({
-    search: "",
-    role: "",
-    status: "",
-  });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters({
-      ...filters,
-      [name]: value,
-    });
-  };
-
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
-
-  const [sortConfig, setSortConfig] = useState({
-    key: null,
-    direction: "ascending",
-  });
-
-  const statusColors = {
-    Completed: "bg-blue-950 text-white",
-    Active: "bg-green-100 text-green-700",
-    Canceled: "bg-red-100 text-red-600",
-  };
-
-  const filteredRentals = rentals.filter((rental) => {
-    // Safeguard: Ensure rental.name and filters.search are defined
-    const rentalName = rental.name || ""; // Fallback to empty string if undefined
-    const searchTerm = filters.search || ""; // Fallback to empty string if undefined
-
-    return (
-      rentalName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filters.role ? rental.role === filters.role : true) &&
-      (filters.status ? rental.status === filters.status : true)
-    );
-  });
-
-  const sortedRentals = [...filteredRentals].sort((a, b) => {
-    if (sortConfig.key) {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-
-      if (sortConfig.key === "registrationDate") {
-        aValue = new Date(aValue.split("/").reverse().join("/"));
-        bValue = new Date(bValue.split("/").reverse().join("/"));
-      }
-
-      if (aValue === bValue) return 0;
-
-      if (sortConfig.direction === "ascending") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    }
-    return 0;
-  });
-
-  const handleSort = (key) => {
-    let direction = "ascending";
-    if (sortConfig.key === key && sortConfig.direction === "ascending") {
-      direction = "descending";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  return (
-    <div className=" flex flex-col">
-      <div className="flex w-full  gap-4">
-        {" "}
-        {/* Rentee Details */}
-        <section className="h-fit bg-white p-6 space-y-6 w-fit px-10 shadow-blue-100  rounded-xl drop-shadow-xs shadow-xs">
-          <div className=" items-center flex gap-8">
-            <img
-              src={image}
-              alt="Renter Profile"
-              className="w-32 h-32 rounded-full"
-            />
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg  font-semibold text-[#00113D] mb-2">
-                User Details
-              </h2>
-              <h3 className="flex gap-4 text-sm  text-[#38393D]">
-                <IoPersonOutline size={18} /> Steven Gerard
-              </h3>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineLocalPhone size={18} />
-                <p>+251 9243212</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineMail size={18} />
-                <p>jandoe@gmail.com</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <IoLocationOutline size={18} />
-                <p>Addis Ababa, Ethiopia</p>
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm  border rounded-full border-[#00113D] text-[#00113D] bg-white">
-                <IoChatboxOutline size={16} />
-                <button>Chat With Renter</button>
-              </div>
-            </div>
-          </div>
-        </section>
-        {/* Rental Details */}
-        <section className="w-fit bg-white p-6  shadow-blue-100  rounded-xl drop-shadow-xs shadow-xs">
-          <h2 className="text-lg font-semibold text-[#00113D] mb-4">
-            Account Details
-          </h2>
-          <div className="flex flex-col  text-sm text-[#38393D]">
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="pr-4">Status</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    Active
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="pr-4">Registration Date</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    12/11/2025 | 12:05 am
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="px-r">Rent Amount</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    1,453 Birr/Day
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 mt-20 px-4 py-2 text-sm  border rounded-full border-[#00113D] text-[#00113D] bg-white">
-              <CalendarMonthOutlinedIcon fontSize="small" />
-              <button>Available Dates</button>
-            </div>
-          </div>
-        </section>
-        <div className="flex flex-col w-1/3 gap-6">
-          <div className=" bg-white p-6 flex justify-between items-center w-full gap-24 shadow-blue-200  rounded-xl drop-shadow-xs shadow-xs">
-            <h2 className="text-base font-semibold text-[#00113D] ">
-              Total Rent
-            </h2>
-            <span className="px-4 text-gray-600 text-base">12</span>
-          </div>{" "}
-          <div className=" bg-white p-6 flex justify-between items-center w-full gap-24 shadow-blue-200  rounded-xl drop-shadow-xs shadow-xs">
-            <h2 className="text-base font-semibold text-[#00113D] ">
-              Rental Earnings
-            </h2>
-            <span className="pr-4 text-gray-600 text-base">1,273</span>
-          </div>{" "}
-          <div className=" bg-white p-6 flex justify-between items-center w-full gap-24 shadow-blue-200  rounded-xl drop-shadow-xs shadow-xs">
-            <h2 className="text-base font-semibold text-[#00113D] ">
-              Rental Ratings
-            </h2>
-            <div className="pr-4 gap-x-2 flex text-gray-600 text-base">
-              <FaStar color="gold" size={24} />
-              4.5
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Table */}
-      <div className="p-10 bg-white w-full flex flex-col  drop-shadow-sm shadow-blue-200 shadow mt-8 rounded-lg">
-        <div className=" text-xl font-semibold mb-8">Vehicle Overview</div>
-        <div className="grid grid-cols-1 sm:grid-cols-4  p-4 gap-4 ">
-          <div className="flex items-center">
-            Vehicle Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Sedan</span>
-          </div>
-          <div className="flex items-center">
-            Vehicle Make{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">BYD</span>
-          </div>
-          <div className="flex items-center">
-            License Plate Number{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">AD D3990</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Year of Manufacture{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">2007</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Mileage{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">2000 KM</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Vehicle Model{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Segull</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Fuel Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Benzene</span>
-          </div>
-          <div className="flex items-center">
-            Transmission Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Automatic</span>
-          </div>
-          <div className="flex items-center">
-            Vehicle ID{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">AA D90032</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-8">
-        <div className="p-10 bg-white w-1/2 flex flex-col mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
-          <div className=" text-xl font-semibold mb-8">
-            Documents and Compliance
-          </div>
-          <div className=" w-full  justify-between   flex ">
-            <div className="flex flex-col items-center">
-              Libre Document{" "}
-              <span className="my-2 bg-blue-100 underline rounded-md  p-2 ">
-                {" "}
-                <AttachFileIcon />
-                Libre Document{" "}
-              </span>
-            </div>
-            <div className="flex flex-col items-center">
-              Insurance Document{" "}
-              <span className="my-2 bg-blue-100 underline rounded-md p-2 ">
-                <AttachFileIcon />
-                Insurance Document
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-10 bg-white w-1/2 flex flex-col mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
-          <div className=" text-xl font-semibold mb-8">Photos and Media</div>
-          <div className=" w-full  justify-between   flex ">
-            <div className=" w-full  justify-between   flex ">
-              <div className="flex flex-col items-center">
-                Vehicle Photos{" "}
-                <span className="my-2 bg-blue-100 underline rounded-md  p-2 ">
-                  {" "}
-                  <GridViewIcon /> View Photos{" "}
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                Insurance Document{" "}
-                <span className="my-2 bg-blue-100 underline rounded-md p-2 ">
-                  <AttachFileIcon />
-                  Insurance Document
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+import Account from "./Account1"; // Import the Account component
+import AddCarModal from "./AddCarModal"; // Import the new AddCarModal component
 
 const VehicleManagment = () => {
-  const [rentals] = useState([
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      carModel: "Camry",
-      status: "Inactive",
-      carType: "SUV",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      carModel: "Civic",
-      status: "Active",
-      carType: "Sedan",
-    },
-    // Add more mock data as needed
-  ]);
+  const [rentals, setRentals] = useState([]);
+  const apiUrl =
+    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/vehicle";
+
+  useEffect(() => {
+    const fetchRentals = async () => {
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        // Process the API response to match your desired state structure
+        const formattedRentals = data.body.map((vehicle) => ({
+          carMake: vehicle.make,
+          vehicleID: vehicle.id,
+          plate: vehicle.licensePlateNumber || null, // Use actual plate if available, otherwise null
+          YearManufactured: vehicle.year, // Assuming year is in the response
+          carModel: vehicle.model,
+          status: vehicle.isActive === "active" ? "Active" : "Inactive", // Adjust status mapping as needed
+          carType: vehicle.category, // Assuming category maps to carType
+        }));
+        setRentals(formattedRentals);
+      } catch (error) {
+        console.error("Error fetching rentals:", error);
+        // Optionally set an error state to display an error message to the user
+      }
+    };
+
+    fetchRentals();
+  }, []);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -387,9 +71,12 @@ const VehicleManagment = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
-  const [selectedUser, setSelectedUser] = useState(null);
+  // State related to showing the Account view
+  const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [showAccount, setShowAccount] = useState(false);
-  const [openModal, setOpenModal] = useState(false);
+
+  // State related to the Add Car Modal
+  const [openAddCarModal, setOpenAddCarModal] = useState(false); // Renamed for clarity
 
   const statusColors = {
     Invited: "bg-[#F6DE95] text-[#816204] font-bold",
@@ -425,8 +112,8 @@ const VehicleManagment = () => {
     setCurrentPage(value);
   };
 
-  const handleRowClick = (user) => {
-    setSelectedUser(user);
+  const handleRowClick = (rental) => {
+    setSelectedVehicleId(rental.vehicleID);
     setShowAccount(true);
   };
 
@@ -439,7 +126,7 @@ const VehicleManagment = () => {
           key="2"
           color="inherit"
           className="cursor-pointer hover:text-blue-800"
-          onClick={() => setShowAccount(false)}
+          onClick={() => setShowAccount(false)} // Go back to vehicle list
         >
           Vehicle Management
         </button>,
@@ -455,20 +142,58 @@ const VehicleManagment = () => {
           Vehicle Management
         </Typography>,
       ];
-  const handleOpenModal = () => {
-    setOpenModal(true);
+
+  // Handlers for the Add Car Modal
+  const handleOpenAddCarModal = () => {
+    setOpenAddCarModal(true);
   };
 
-  const handleCloseModal = () => {
-    setOpenModal(false);
+  const handleCloseAddCarModal = () => {
+    setOpenAddCarModal(false);
   };
 
-  const [file, setFile] = useState(null);
-
-  const handleFileUpload = (e) => {
-    setFile(e.target.files[0]);
+  // This function will be called by the AddCarModal when the form is submitted
+  const handleAddCarSubmit = (formData) => {
+    console.log("Received form data from modal:", formData);
+    // TODO: Implement the actual API call here to add the new car
+    // You'll need to make a POST request to your vehicle API endpoint
+    // using the formData received. Handle file upload separately if needed.
+    // Example structure for a POST request:
+    /*
+      const addCarApiUrl = "YOUR_ADD_CAR_API_ENDPOINT"; // Replace with your actual endpoint
+      try {
+          const response = await fetch(addCarApiUrl, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json', // Or multipart/form-data if sending file directly
+                  // Add Authorization header if required
+              },
+              body: JSON.stringify({
+                 // Map formData fields to your API expected payload structure
+                 make: formData.carMake,
+                 model: formData.carModel,
+                 year: formData.manufacturingDate, // Or just year part if API expects that
+                 category: formData.carType,
+                 // ... other fields
+              })
+          });
+          if (!response.ok) {
+              throw new Error(`Failed to add car: ${response.status}`);
+          }
+          console.log("Car added successfully!");
+          // Optionally refresh the vehicle list after successful addition
+          // fetchRentals(); // You might need to adjust this to refetch data
+      } catch (error) {
+          console.error("Error adding car:", error);
+          // Show error message to user
+      }
+      */
+    // After successful API call, you might want to refetch the list
+    // For demonstration, let's just close the modal
+    // handleCloseAddCarModal(); // Modal is closed within AddCarModal's handleSubmit now
   };
 
+  // Sorting logic (Keep as is)
   const [sortConfig, setSortConfig] = useState({
     key: null,
     direction: "ascending",
@@ -479,11 +204,24 @@ const VehicleManagment = () => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      if (sortConfig.key === "registrationDate") {
-        aValue = new Date(aValue.split("/").reverse().join("/"));
-        bValue = new Date(bValue.split("/").reverse().join("/"));
+      // Note: Your date sorting logic might need adjustment depending on the date format
+      // It currently splits by '/' and reverses, assuming MM/DD/YYYY or DD/MM/YYYY format,
+      // but your API response gives just the year. Adjust if needed.
+      if (sortConfig.key === "YearManufactured") {
+        // Changed key from registrationDate to YearManufactured
+        // Simple numerical sort for year
+        // Handle potential non-numeric values gracefully
+        const numA = Number(aValue);
+        const numB = Number(bValue);
+
+        if (isNaN(numA) && isNaN(numB)) return 0; // Both not numbers, keep original order
+        if (isNaN(numA)) return sortConfig.direction === "ascending" ? 1 : -1; // Non-number goes to end
+        if (isNaN(numB)) return sortConfig.direction === "ascending" ? -1 : 1; // Non-number goes to end
+
+        return sortConfig.direction === "ascending" ? numA - numB : numB - numA;
       }
 
+      // Default string comparison
       if (aValue === bValue) return 0;
 
       if (sortConfig.direction === "ascending") {
@@ -522,16 +260,18 @@ const VehicleManagment = () => {
         </Breadcrumbs>
       </div>
 
-      {showAccount ? (
-        <Account selectedUser={selectedUser} />
+      {showAccount && selectedVehicleId ? (
+        // Render the Account component when showAccount is true
+        <Account vehicleId={selectedVehicleId} />
       ) : (
+        // Render the vehicle list view when showAccount is false
         <div>
-          {" "}
           <div className="flex gap-10 mb-10">
-            {" "}
+            {/* Your status cards */}
             <div>
               <div className="bg-white drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
                 <DirectionsCarFilledOutlinedIcon />
+                {/* These counts likely need to be fetched from an API or derived from the rentals data */}
                 <Typography variant="h6">1,200</Typography>
                 <Typography variant="body8">Total Vehicle</Typography>
               </div>
@@ -539,292 +279,111 @@ const VehicleManagment = () => {
             <div>
               <div className="bg-white drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
                 <CarRentalOutlinedIcon />
-                <Typography variant="h6">200</Typography>
+                <Typography variant="h6">200</Typography>{" "}
+                {/* Example static count */}
                 <Typography variant="body8">Active Vehicle</Typography>
               </div>
             </div>
             <div>
               <div className="bg-white drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
                 <ApprovalOutlinedIcon />
-                <Typography variant="h6">50</Typography>
+                <Typography variant="h6">50</Typography>{" "}
+                {/* Example static count */}
                 <Typography variant="body8">Pending Approval</Typography>
               </div>
             </div>
             <div>
               <div className="bg-white drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
                 <CarCrashOutlinedIcon />
-                <Typography variant="h6">12</Typography>
+                <Typography variant="h6">12</Typography>{" "}
+                {/* Example static count */}
                 <Typography variant="body8">Deactivated Vehicle</Typography>
               </div>
             </div>
           </div>
+
           <div className="bg-white w-full drop-shadow-xs shadow-blue-200 py-4 shadow-xs rounded-lg">
             <div className="px-2 rounded-lg">
-              <div className="flex">
-                <Box
-                  className="flex justify-between px-2 w-full"
-                  display="flex"
-                  gap={2}
-                  mb={2}
-                >
-                  <h2 className="text-sm font-semibold pl-2 my-4">Car List</h2>
-                  <div className="flex gap-4">
-                    <TextField
-                      label="Search Car"
-                      variant="outlined"
-                      name="search"
-                      value={filters.search}
+              <div className="flex items-center justify-between">
+                {" "}
+                {/* Added items-center */}
+                <h2 className="text-sm font-semibold pl-2 my-4">Car List</h2>
+                <div className="flex gap-4 items-center pr-4">
+                  {" "}
+                  {/* Added items-center */}
+                  <TextField
+                    label="Search Car"
+                    variant="outlined"
+                    name="search"
+                    value={filters.search}
+                    onChange={handleFilterChange}
+                    size="small"
+                    // No fullWidth here, let flexbox manage width
+                    sx={{ minWidth: 180 }} // Give it a minimum width
+                    InputProps={{
+                      // Add search icon back to search input
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {" "}
+                          {/* This is the InputAdornment causing the error */}
+                          <Search />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <FormControl
+                    variant="outlined"
+                    size="small"
+                    sx={{ minWidth: 120 }}
+                  >
+                    <InputLabel size="small">Car Type</InputLabel>
+                    <Select
+                      label="Car Type"
+                      name="carType"
+                      value={filters.carType}
                       onChange={handleFilterChange}
                       size="small"
-                      fullWidth
-                    />
-                    <FormControl fullWidth>
-                      <InputLabel size="small">Car Type</InputLabel>
-                      <Select
-                        label="Car Type"
-                        name="carType"
-                        value={filters.carType}
-                        onChange={handleFilterChange}
-                        size="small"
-                      >
-                        <MenuItem value="">All Car Types</MenuItem>
-                        <MenuItem value="Sedan">Sedan</MenuItem>
-                        <MenuItem value="SUV">SUV</MenuItem>
-                        <MenuItem value="Hatchback">Hatchback</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-                      <InputLabel size="small">Status</InputLabel>
-                      <Select
-                        label="Status"
-                        name="status"
-                        value={filters.status}
-                        onChange={handleFilterChange}
-                        size="small"
-                      >
-                        <MenuItem value="">All Statuses</MenuItem>
-                        <MenuItem value="Inactive">Inactive</MenuItem>
-                        <MenuItem value="Active">Active</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </div>
-                </Box>
-                <button
-                  onClick={() => setOpenModal(true)}
-                  className="bg-[#00173C] cursor-pointer w-28 justify-center h-fit text-xs text-white flex items-center shadow-lg px-4 py-3 rounded-4xl mr-4 mx-2"
-                >
-                  Add Car
-                </button>
-
-                {/* Modal */}
-                <Modal
-                  className="flex items-center   justify-center"
-                  open={openModal}
-                  onClose={handleCloseModal}
-                >
-                  <Box
-                    className="scale-75"
-                    sx={{
-                      padding: 4,
-                      backgroundColor: "#f9f9ff",
-                      borderRadius: 2,
-                    }}
+                    >
+                      <MenuItem value="">All Car Types</MenuItem>
+                      <MenuItem value="Sedan">Sedan</MenuItem>
+                      <MenuItem value="SUV">SUV</MenuItem>
+                      <MenuItem value="Hatchback">Hatchback</MenuItem>
+                      {/* Add other types if necessary */}
+                    </Select>
+                  </FormControl>
+                  <FormControl variant="outlined" sx={{ minWidth: 120 }}>
+                    <InputLabel size="small">Status</InputLabel>
+                    <Select
+                      label="Status"
+                      name="status"
+                      value={filters.status}
+                      onChange={handleFilterChange}
+                      size="small"
+                    >
+                      <MenuItem value="">All Statuses</MenuItem>
+                      <MenuItem value="Inactive">Inactive</MenuItem>
+                      <MenuItem value="Active">Active</MenuItem>
+                      {/* Add other statuses if necessary, e.g., Pending Approval */}
+                    </Select>
+                  </FormControl>
+                  {/* Button to open the Add Car Modal */}
+                  <button
+                    onClick={handleOpenAddCarModal} // Use the handler to open the new modal state
+                    className="bg-[#00173C] cursor-pointer w-28 justify-center h-fit text-xs text-white flex items-center shadow-lg px-4 py-3 rounded-4xl"
                   >
-                    <Typography variant="h6" sx={{ marginBottom: 2 }}>
-                      Owner Details
-                    </Typography>
-                    <Grid container spacing={1}>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Full Name"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Phone Number"
-                          type="tel"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Search />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      </Grid>
-                    </Grid>
-
-                    <Typography
-                      variant="h6"
-                      sx={{ marginTop: 4, marginBottom: 2 }}
-                    >
-                      Vehicle Details
-                    </Typography>
-                    <div
-                      container
-                      className="grid grid-cols-4 gap-2"
-                      spacing={1}
-                    >
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Car Type"
-                          select
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        >
-                          <MenuItem value="SUV">SUV</MenuItem>
-                          <MenuItem value="Sedan">Sedan</MenuItem>
-                        </TextField>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Car Make"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Car Model"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Transmission Type"
-                          select
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        >
-                          <MenuItem value="Automatic">Automatic</MenuItem>
-                          <MenuItem value="Manual">Manual</MenuItem>
-                        </TextField>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Manufacturing Date"
-                          type="date"
-                          fullWidth
-                          InputLabelProps={{ shrink: true }}
-                          margin="normal"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Fuel Type"
-                          select
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        >
-                          <MenuItem value="Petrol">Petrol</MenuItem>
-                          <MenuItem value="Diesel">Diesel</MenuItem>
-                        </TextField>
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Total Mileage"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="Number of Seats"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                    </div>
-
-                    <Typography
-                      variant="h6"
-                      sx={{ marginTop: 4, marginBottom: 2 }}
-                    >
-                      Licence Details
-                    </Typography>
-                    <Grid container spacing={0}>
-                      <Grid item xs={12} md={6}>
-                        <TextField
-                          label="License Plate Code Number"
-                          select
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        >
-                          <MenuItem value="Code 1">Code 1</MenuItem>
-                          <MenuItem value="Code 3">Code 3</MenuItem>
-                        </TextField>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            border: "2px dashed #ccc",
-                            padding: 2,
-                            borderRadius: 2,
-                            cursor: "pointer",
-                            textAlign: "center",
-                          }}
-                          onClick={() =>
-                            document.getElementById("fileUpload").click()
-                          }
-                        >
-                          <UploadFile sx={{ fontSize: 40, marginBottom: 1 }} />
-                          <Typography variant="body2">
-                            {file
-                              ? file.name
-                              : "Upload your code 3 license permit"}
-                          </Typography>
-                          <input
-                            id="fileUpload"
-                            type="file"
-                            style={{ display: "none" }}
-                            onChange={handleFileUpload}
-                          />
-                        </Box>
-                      </Grid>
-                      <Grid item xs={12}>
-                        <TextField
-                          label="Licence Plate Number"
-                          variant="outlined"
-                          fullWidth
-                          margin="normal"
-                        />
-                      </Grid>
-                    </Grid>
-
-                    {/* Modal Actions */}
-                    <Box className="flex pb-8 gap-4 w-full px-10">
-                      <button
-                        variant="outlined"
-                        onClick={handleCloseModal}
-                        className="flex-1 py-2  text-sm rounded-full bg-[#FDEAEA] text-red-700 border border-red-700"
-                      >
-                        Cancel
-                      </button>
-                      <button className="flex-1 text-sm py-1 rounded-full bg-[#00113D] text-white">
-                        Add User
-                      </button>
-                    </Box>
-                  </Box>
-                </Modal>
+                    Add Car
+                  </button>
+                </div>
               </div>
+
+              {/* Render the new AddCarModal component */}
+              <AddCarModal
+                open={openAddCarModal} // Pass the open state
+                onClose={handleCloseAddCarModal} // Pass the close handler
+                onSubmit={handleAddCarSubmit} // Pass the submit handler
+              />
+
+              {/* Table and Pagination (Keep as is) */}
               <div className="overflow-x-auto">
                 <table className="min-w-full bg-white border border-x-0 border-t-0 border-gray-100 rounded-lg">
                   <thead>
@@ -833,32 +392,29 @@ const VehicleManagment = () => {
                         Vehicle ID
                       </th>
                       <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
+                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer" // Added cursor-pointer
                         onClick={() => handleSort("carType")}
                       >
-                        Car Type{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
+                        Car Type <HiMiniArrowsUpDown className="inline ml-1" />
                       </th>
                       <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
+                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer" // Added cursor-pointer
                         onClick={() => handleSort("carMake")}
                       >
-                        Car Make{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
+                        Car Make <HiMiniArrowsUpDown className="inline ml-1" />
                       </th>
                       <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
+                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer" // Added cursor-pointer
                         onClick={() => handleSort("carModel")}
                       >
-                        Car Model{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
+                        Car Model <HiMiniArrowsUpDown className="inline ml-1" />
                       </th>
                       <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
-                        onClick={() => handleSort("carModel")}
+                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer" // Added cursor-pointer
+                        onClick={() => handleSort("YearManufactured")} // Use correct key for sorting
                       >
                         Year of Manufacture{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
+                        <HiMiniArrowsUpDown className="inline ml-1" />
                       </th>
                       <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                         License Plate Number
@@ -906,6 +462,7 @@ const VehicleManagment = () => {
                     ))}
                   </tbody>
                 </table>
+
                 <Box display="flex" justifyContent="center" mt={4}>
                   <Pagination
                     count={Math.ceil(filteredRentals.length / itemsPerPage)}

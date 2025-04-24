@@ -85,7 +85,7 @@ const useVehicleFormStore = create(
       uploadedDocuments: { ...initialUploadedDocuments }, // --- Token Refresh Logic ---
 
       refreshAccessToken: async () => {
-        const storedUser = localStorage.getItem("customer");
+        const storedUser = localStorage.getItem("admin");
         const user = storedUser ? JSON.parse(storedUser) : null;
         const refreshToken = user?.RefreshToken;
 
@@ -112,14 +112,14 @@ const useVehicleFormStore = create(
               refreshResponse.status,
               await refreshResponse.text()
             );
-            localStorage.removeItem("customer"); // Clear stored user data on refresh failure as refresh token might be invalid too
+            localStorage.removeItem("admin"); // Clear stored user data on refresh failure as refresh token might be invalid too
             throw new Error("Failed to refresh access token"); // Or handle differently, maybe redirect to login
           }
 
           const refreshedTokens = await refreshResponse.json(); // Update tokens in localStorage and Zustand store
 
           const updatedUser = { ...user, ...refreshedTokens };
-          localStorage.setItem("customer", JSON.stringify(updatedUser));
+          localStorage.setItem("admin", JSON.stringify(updatedUser));
           return refreshedTokens.accessToken; // Return the new access token
         } catch (error) {
           console.error("Error during token refresh:", error);
@@ -128,7 +128,7 @@ const useVehicleFormStore = create(
       }, // Function to make API calls with automatic token refresh
 
       apiCallWithRetry: async (url, options, retryCount = 0) => {
-        const storedUser = localStorage.getItem("customer");
+        const storedUser = localStorage.getItem("admin");
         const user = storedUser ? JSON.parse(storedUser) : null;
         let accessToken = user?.AccessToken;
 

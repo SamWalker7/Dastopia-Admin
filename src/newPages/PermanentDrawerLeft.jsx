@@ -28,6 +28,7 @@ import BookingApproval from "./BookingApproval";
 import RoleSettings from "./RoleSettings";
 import UserSettings from "./UserSettings";
 import FinancialDashboard from "./FinancialDashboard";
+import ChatApp from "./chat";
 const drawerWidth = 300;
 
 const PermanentDrawerLeft = () => {
@@ -64,6 +65,8 @@ const PermanentDrawerLeft = () => {
         return <RoleSettings />;
       case "User Settings":
         return <UserSettings />;
+      case "Chat":
+        return <ChatApp />;
 
       default:
         return <Box p={2}>Select an item to view details</Box>;
@@ -355,7 +358,12 @@ const PermanentDrawerLeft = () => {
             </ListItemButton>
           </li>
           {/* Nested (Child) Items */}
-          <Collapse in={open} timeout="auto" unmountOnExit>
+          <Collapse
+            in={open}
+            timeout="auto"
+            sx={{ marginBottom: 4 }}
+            unmountOnExit
+          >
             <List component="div" disablePadding>
               <ListItemButton
                 sx={{ py: 1 }}
@@ -415,11 +423,12 @@ const PermanentDrawerLeft = () => {
           bottom={0}
           width="300px"
           px={2}
-          py={1}
+          py={0}
           bgcolor="#001E3C"
           color="white"
         >
-          <div
+          <ListItemButton
+            onClick={() => handleMenuClick("Chat")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -431,7 +440,7 @@ const PermanentDrawerLeft = () => {
             <Badge badgeContent={0} color="error">
               <ChatBubbleIcon />
             </Badge>
-          </div>
+          </ListItemButton>
         </Box>
       </Drawer>
 

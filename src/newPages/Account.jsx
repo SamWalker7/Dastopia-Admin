@@ -98,25 +98,37 @@ const Account = () => {
 
       // Convert dates to Date objects for comparison if sorting by date
       if (sortConfig.key === "startDate" || sortConfig.key === "endDate") {
-           const parseDate = (dateStr) => {
-               if (!dateStr || dateStr === "NA") return (sortConfig.direction === "ascending" ? new Date('0001-01-01') : new Date('9999-12-31'));
-               const parts = dateStr.split('/');
-               if (parts.length === 3) {
-                    const [day, month, year] = parts.map(Number);
-                    if (!isNaN(day) && !isNaN(month) && !isNaN(year) && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                         return new Date(year, month - 1, day); // Month is 0-indexed
-                    }
-               }
-                return (sortConfig.direction === "ascending" ? new Date('0001-01-01') : new Date('9999-12-31'));
-            };
-            aValue = parseDate(aValue);
-            bValue = parseDate(bValue);
-      } else if (typeof aValue === 'string') {
-          // Case-insensitive string comparison
-          aValue = aValue.toLowerCase();
-          bValue = bValue.toLowerCase();
+        const parseDate = (dateStr) => {
+          if (!dateStr || dateStr === "NA")
+            return sortConfig.direction === "ascending"
+              ? new Date("0001-01-01")
+              : new Date("9999-12-31");
+          const parts = dateStr.split("/");
+          if (parts.length === 3) {
+            const [day, month, year] = parts.map(Number);
+            if (
+              !isNaN(day) &&
+              !isNaN(month) &&
+              !isNaN(year) &&
+              month >= 1 &&
+              month <= 12 &&
+              day >= 1 &&
+              day <= 31
+            ) {
+              return new Date(year, month - 1, day); // Month is 0-indexed
+            }
+          }
+          return sortConfig.direction === "ascending"
+            ? new Date("0001-01-01")
+            : new Date("9999-12-31");
+        };
+        aValue = parseDate(aValue);
+        bValue = parseDate(bValue);
+      } else if (typeof aValue === "string") {
+        // Case-insensitive string comparison
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
       }
-
 
       if (aValue === bValue) return 0;
 
@@ -233,15 +245,13 @@ const Account = () => {
                     className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
                     onClick={() => handleSort("endDate")}
                   >
-                    Rent end date{" "}
-                    <HiMiniArrowsUpDown className="inline ml-1" />
+                    Rent end date <HiMiniArrowsUpDown className="inline ml-1" />
                   </th>
                   <th
                     className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
                     onClick={() => handleSort("carName")}
                   >
-                    Car Name{" "}
-                    <HiMiniArrowsUpDown className="inline ml-1" />
+                    Car Name <HiMiniArrowsUpDown className="inline ml-1" />
                   </th>
                   <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                     Car Owner
@@ -275,7 +285,7 @@ const Account = () => {
                     <td className="px-6 py-4">
                       <span
                         className={`px-3 py-2 rounded-xl text-sm ${
-                          statusColors[rental.status] || 'text-gray-700'
+                          statusColors[rental.status] || "text-gray-700"
                         }`}
                       >
                         {rental.status}
