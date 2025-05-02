@@ -384,7 +384,8 @@ const UserManagment = () => {
           </div>
         ) : selectedUser ? ( // Ensure selectedUser data exists before rendering Account
           // Pass the fetched selectedUser object to the Account component
-          <Account selectedUser={selectedUser} />
+          <Account selectedUser={selectedUser} paginatedUsers={paginatedUsers}/>
+        
         ) : (
           // Fallback if somehow not loading, no error, but also no selectedUser
           <div className="text-center py-8 text-gray-500">
