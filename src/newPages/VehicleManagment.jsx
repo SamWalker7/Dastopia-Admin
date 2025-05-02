@@ -31,13 +31,41 @@ import AddCarModal from "./AddCarModal"; // Import the new AddCarModal component
 
 const VehicleManagment = () => {
   const [rentals, setRentals] = useState([]);
+  const admin = JSON.parse(localStorage.getItem("admin")); // Ensure this loads correctly
+  const [adminToken, setAdminToken] = useState(null); // State for fetched users, loading, and error
+  useEffect(() => {
+    const storedAdminJson = localStorage.getItem("admin");
+    if (storedAdminJson) {
+      try {
+        const adminData = JSON.parse(storedAdminJson); // Assuming the token is stored as AccessToken property
+        if (adminData && adminData.AccessToken) {
+          setAdminToken(adminData.AccessToken);
+          // Initial fetch will be triggered by the effect below which watches adminToken
+        } else {
+          console.warn(
+            "localStorage 'admin' found, but AccessToken property is missing."
+          );
+        }
+      } catch (error) {
+        console.error("Failed to parse admin data from localStorage:", error);
+      }
+    } else {
+      console.warn("No 'admin' data found in localStorage.");
+    }
+  }, []); // Empty dependency array means this runs only once on mount // --- Effect to fetch users when token is available and view is list ---
+
   const apiUrl =
-    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/vehicle";
+    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
 
   useEffect(() => {
     const fetchRentals = async () => {
       try {
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, {
+          headers: {
+            // Include Authorization header
+            Authorization: `Bearer ${admin.AccessToken}`,
+          },
+        });
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -49,7 +77,7 @@ const VehicleManagment = () => {
           plate: vehicle.licensePlateNumber || null, // Use actual plate if available, otherwise null
           YearManufactured: vehicle.year, // Assuming year is in the response
           carModel: vehicle.model,
-          status: vehicle.isActive === "active" ? "Active" : "Inactive", // Adjust status mapping as needed
+          status: vehicle.isApproved === "approved" ? "Active" : "Inactive", // Adjust status mapping as needed
           carType: vehicle.category, // Assuming category maps to carType
         }));
         setRentals(formattedRentals);
