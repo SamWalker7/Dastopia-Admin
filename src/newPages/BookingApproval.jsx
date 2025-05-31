@@ -1,6 +1,9 @@
+// src/newPages/BookingApproval.jsx
+
 import { HiMiniArrowsUpDown } from "react-icons/hi2";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
+  // Material UI components
   TextField,
   Select,
   MenuItem,
@@ -11,685 +14,392 @@ import {
   InputLabel,
   Modal,
   IconButton,
-  InputAdornment,
-  inputBaseClasses,
+  Typography,
+  Link,
+  Breadcrumbs,
+  CircularProgress,
+  Alert,
+  Dialog, // Keeping Dialog imports just in case the main component uses them later
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
+// Icons used in the parent component (summary boxes, table headers)
 import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
-import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
-import AssignmentLateOutlinedIcon from "@mui/icons-material/AssignmentLateOutlined";
-import Breadcrumbs from "@mui/material/Breadcrumbs";
-import Typography from "@mui/material/Typography";
-import Link from "@mui/material/Link";
-import Stack from "@mui/material/Stack";
+import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+
+// Material UI icons used in breadcrumbs
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import { FaRegCircle } from "react-icons/fa";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+
+// Note: FontAwesome and other specific icons are only used in BookingDetailsView now
+/*
+import { FaRegCircle, FaStar, FaSpinner, FaCheckCircle, FaTimesCircle, FaClock } from "react-icons/fa";
 import image from "./avatar.png";
 import image1 from "./avatar1.png";
-import {
-  IoChatboxOutline,
-  IoLocationOutline,
-  IoPersonOutline,
-} from "react-icons/io5";
+import { IoChatboxOutline, IoLocationOutline, IoPersonOutline } from "react-icons/io5";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
 import GridViewIcon from "@mui/icons-material/GridView";
-import { FaStar } from "react-icons/fa";
 import { MdOutlineLocalPhone, MdOutlineMail } from "react-icons/md";
-import { ETH } from "react-world-flags";
 import CloseIcon from "@mui/icons-material/Close";
-
-import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
-import CarRentalOutlinedIcon from "@mui/icons-material/CarRentalOutlined";
-import DirectionsCarFilledOutlinedIcon from "@mui/icons-material/DirectionsCarFilledOutlined";
-import CarCrashOutlinedIcon from "@mui/icons-material/CarCrashOutlined";
-import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
-import { Grid } from "@mui/material";
-import { Search, UploadFile } from "@mui/icons-material";
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-const Account = () => {
-  const [rentals, setRentals] = useState([
-    {
-      startDate: "23/3/2022",
-      endDate: "24/3/2022",
-      carName: "Bekele Mamo",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-    {
-      startDate: "24/3/2022",
-      endDate: "23/3/2022",
-      carName: "Addis Ababa",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Active",
-    },
-    {
-      startDate: "25/3/2022",
-      endDate: "22/3/2022",
-      carName: "Zeina Haile",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Canceled",
-    },
-    {
-      startDate: "26/3/2022",
-      endDate: "NA",
-      carName: "Teddy Worku",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-    {
-      startDate: "27/3/2022",
-      endDate: "21/3/2022",
-      carName: "Biruk Tadesse",
-      carOwner: "Bekele Mamo",
-      phone: "+251 93432124",
-      status: "Completed",
-    },
-  ]);
+*/
 
-  const [filters, setFilters] = useState({
-    search: "",
-    role: "",
-    status: "",
-  });
+// --- Import Hooks ---
+import { useNavigate } from "react-router-dom"; // Import useNavigate here
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
+// --- Import the separated BookingDetailsView component ---
+import BookingDetailsView from "./BookingDetailsView"; // <-- !!! ENSURE THIS PATH IS CORRECT relative to BookingApproval.jsx!!!
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters({
-      ...filters,
-      [name]: value,
-    });
-  };
+// Base API URL (Keep outside)
+const API_BASE_URL =
+  "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1";
 
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
-
-  const [sortConfig, setSortConfig] = useState({
-    key: null,
-    direction: "ascending",
-  });
-
-  const statusColors = {
-    Completed: "bg-blue-950 text-white",
-    Active: "bg-green-100 text-green-700",
-    Canceled: "bg-red-100 text-red-600",
-  };
-
-  const sortedRentals = [...rentals].sort((a, b) => {
-    if (sortConfig.key) {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-
-      // Convert dates to Date objects for comparison if sorting by date
-      if (sortConfig.key === "startDate" || sortConfig.key === "endDate") {
-        aValue =
-          aValue === "NA"
-            ? null
-            : new Date(aValue.split("/").reverse().join("/"));
-        bValue =
-          bValue === "NA"
-            ? null
-            : new Date(bValue.split("/").reverse().join("/"));
-      }
-
-      if (aValue === bValue) return 0;
-
-      if (sortConfig.direction === "ascending") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
+// Helper function to get the access token (Can stay outside as it's a utility)
+const getAccessToken = () => {
+  try {
+    const adminData = localStorage.getItem("admin");
+    if (adminData) {
+      const admin = JSON.parse(adminData);
+      return admin.AccessToken;
     }
-    return 0;
-  });
-
-  const handleSort = (key) => {
-    let direction = "ascending";
-    if (sortConfig.key === key && sortConfig.direction === "ascending") {
-      direction = "descending";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  return (
-    <div className=" flex flex-col">
-      <div className="flex w-full  gap-4">
-        {" "}
-        <section className="h-fit bg-white p-6 space-y-6 w-1/2 px-10 shadow-blue-300  rounded-xl drop-shadow-xs shadow-xs">
-          <div className=" items-center flex gap-8">
-            <img
-              src={image1}
-              alt="Renter Profile"
-              className="w-32 h-32 rounded-full"
-            />
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg  font-semibold text-[#00113D] mb-2">
-                Owner Details
-              </h2>
-              <h3 className="flex gap-4 text-sm  text-[#38393D]">
-                <IoPersonOutline size={18} /> Steven Gerard
-              </h3>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineLocalPhone size={18} />
-                <p>+251 9243212</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineMail size={18} />
-                <p>jandoe@gmail.com</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <IoLocationOutline size={18} />
-                <p>Addis Ababa, Ethiopia</p>
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm  border rounded-full border-[#00113D] text-[#00113D] bg-white">
-                <IoChatboxOutline size={16} />
-                <button>Chat With Renter</button>
-              </div>
-            </div>
-          </div>
-        </section>
-        {/* Rentee Details */}
-        <section className="h-fit bg-white p-6 space-y-6 w-1/2 px-10 shadow-blue-300  rounded-xl drop-shadow-ms shadow-xs">
-          <div className=" items-center flex gap-8">
-            <img
-              src={image}
-              alt="Renter Profile"
-              className="w-32 h-32 rounded-full"
-            />
-            <div className="flex flex-col gap-2">
-              <h2 className="text-lg  font-semibold text-[#00113D] mb-2">
-                Renter Details
-              </h2>
-              <h3 className="flex gap-4 text-sm  text-[#38393D]">
-                <IoPersonOutline size={18} /> Steven Gerard
-              </h3>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineLocalPhone size={18} />
-                <p>+251 9243212</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <MdOutlineMail size={18} />
-                <p>jandoe@gmail.com</p>
-              </div>
-              <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                <IoLocationOutline size={18} />
-                <p>Addis Ababa, Ethiopia</p>
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm  border rounded-full border-[#00113D] text-[#00113D] bg-white">
-                <IoChatboxOutline size={16} />
-                <button>Chat With Renter</button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-      <div className="flex w-full pt-8 gap-4">
-        <section className="w-1/2 bg-white p-6 h-fit shadow-blue-300  rounded-xl drop-shadow-xs shadow-xs">
-          <h2 className="text-lg font-semibold text-[#00113D] mb-4">
-            Booking Details
-          </h2>
-          <div className="flex flex-col  text-sm text-[#38393D]">
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="pr-4">Status</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    Active
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="pr-4">Registration Date</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    12/11/2025 | 12:05 am
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <div>
-                <p className="flex items-center ">
-                  <span className="px-r">Rent Amount</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    1,453 Birr/Day
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 mt-7 px-4 py-2 text-sm  border rounded-full border-[#00113D] text-[#00113D] bg-white">
-              <CalendarMonthOutlinedIcon fontSize="small" />
-              <button>Available Dates</button>
-            </div>
-          </div>
-        </section>{" "}
-        <section className="w-1/2 bg-white p-6 h-fit  shadow-blue-300  rounded-xl drop-shadow-xs shadow-xs">
-          <h2 className="text-lg font-semibold text-[#00113D] mb-4">
-            Payment Details
-          </h2>
-          <div className="flex flex-col  text-sm text-[#38393D]">
-            <div className="flex items-start gap-2 w-full">
-              <div className="w-full">
-                <p className="flex items-center justify-between ">
-                  <span className="pr-4">Payment Method</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    Telebirr
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 w-full">
-              <div className="w-full">
-                <p className="flex items-center justify-between ">
-                  <span className="pr-4">Insurance Amount</span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    2,000 <span className="font-normal">Birr</span>
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 w-full">
-              <div className="w-full">
-                <p className="flex items-center justify-between ">
-                  <span className="px-r">Daily Rent </span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    1,453 <span className="font-normal">Birr/Day</span>
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 w-full">
-              <div className="w-full">
-                <p className="flex items-center justify-between ">
-                  <span className="px-r"> Rent Duration </span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    3 <span className="font-normal">days</span>
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex border-t border-gray-300 py-1 mt-4 items-start gap-2 w-full">
-              <div className="w-full">
-                <p className="flex items-center justify-between ">
-                  <span className="px-r">Daily Rent </span>
-                  <span className="px-4 font-semibold text-sky-950">
-                    3,453 <span className="font-normal">Birr/Day</span>
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-      {/* Table */}
-      <div className="p-10 bg-white w-full flex flex-col  drop-shadow-sm shadow-blue-200 shadow mt-8 rounded-lg">
-        <div className=" text-xl font-semibold mb-8">Vehicle Overview</div>
-        <div className="grid grid-cols-1 sm:grid-cols-4  p-4 gap-4 ">
-          <div className="flex items-center">
-            Vehicle Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Sedan</span>
-          </div>
-          <div className="flex items-center">
-            Vehicle Make{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">BYD</span>
-          </div>
-          <div className="flex items-center">
-            License Plate Number{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">AD D3990</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Year of Manufacture{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">2007</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Mileage{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">2000 KM</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Vehicle Model{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Segull</span>
-          </div>{" "}
-          <div className="flex items-center">
-            Fuel Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Benzene</span>
-          </div>
-          <div className="flex items-center">
-            Transmission Type{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">Automatic</span>
-          </div>
-          <div className="flex items-center">
-            Vehicle ID{" "}
-            <span className="mx-2 bg-blue-100 rounded-md p-2 ">AA D90032</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-8">
-        <div className="p-10 bg-white w-1/2 flex flex-col mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
-          <div className=" text-xl font-semibold mb-8">
-            Documents and Compliance
-          </div>
-          <div className=" w-full  justify-between   flex ">
-            <div className="flex flex-col items-center">
-              Libre Document{" "}
-              <span className="my-2 bg-blue-100 underline rounded-md  p-2 ">
-                {" "}
-                <AttachFileIcon />
-                Libre Document{" "}
-              </span>
-            </div>
-            <div className="flex flex-col items-center">
-              Insurance Document{" "}
-              <span className="my-2 bg-blue-100 underline rounded-md p-2 ">
-                <AttachFileIcon />
-                Insurance Document
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-10 bg-white w-1/2 flex flex-col mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
-          <div className=" text-xl font-semibold mb-8">Photos and Media</div>
-          <div className=" w-full  justify-between   flex ">
-            <div className=" w-full  justify-between   flex ">
-              <div className="flex flex-col items-center">
-                Vehicle Photos{" "}
-                <span className="my-2 bg-blue-100 underline rounded-md  p-2 ">
-                  {" "}
-                  <GridViewIcon /> View Photos{" "}
-                </span>
-              </div>
-              <div className="flex flex-col items-center">
-                Insurance Document{" "}
-                <span className="my-2 bg-blue-100 underline rounded-md p-2 ">
-                  <AttachFileIcon />
-                  Insurance Document
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  } catch (e) {
+    console.error("Error parsing admin data from localStorage:", e);
+    return null;
+  }
+  return null;
 };
 
+// BookingApproval Component (Main Component)
 const BookingApproval = () => {
-  const [rentals] = useState([
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Assigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Unassigned",
-      payment: "Failed",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Assigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Unassigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Assigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Review",
-      payment: "Failed",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Assigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Unassigned",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Assigned",
-      payment: "Failed",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Unassigned",
-      payment: "Failed",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Toyota",
-      vehicleID: "B78965",
-      bookingID: "B78965",
-      plate: "A78544",
-      YearManufactured: "23/3/2022",
-      Assigned: "Admin2",
-      status: "Review",
-      payment: "Pending",
-      price: "1,450 birr",
-    },
-    {
-      carMake: "Honda",
-      vehicleID: "B78966",
-      bookingID: "B78966",
-      plate: "A78545",
-      YearManufactured: "24/3/2022",
-      Assigned: "Admin1",
-      status: "Unassigned",
-      payment: "Failed",
-      price: "1,450 birr",
-    },
-    // Add more mock data as needed
-  ]);
+  // --- Import Hooks INSIDE the component ---
+  const navigate = useNavigate(); // Declare useNavigate hook
 
+  // State for the main bookings list
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true); // Loading for the main booking list fetch
+  const [error, setError] = useState(null); // Error for the main booking list fetch
+
+  // State for summary counts
+  const [pendingCount, setPendingCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
+  const [inReviewCount, setInReviewCount] = useState(0);
+
+  // State for filtering the list
   const [filters, setFilters] = useState({
     search: "",
-    carType: "",
-    status: "",
+    carType: "", // This filter remains in state but doesn't filter API data here
+    status: "", // Maps to API approvedStatus
   });
 
+  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [showAccount, setShowAccount] = useState(false);
-  const [openModal, setOpenModal] = useState(false);
+  // State for the booking selected from the table (to show details view)
+  const [selectedBooking, setSelectedBooking] = useState(null);
 
-  const statusColors = {
-    Review: "bg-[#F6DE95] text-[#816204] font-bold",
-    Assigned: "bg-[#A0E6BA] text-[#136C34] font-bold",
-    Unassigned: "bg-[#A4C9F9] text-[#00173C] font-bold",
-  };
-  const paymentColors = {
-    Pending: "bg-[#A0E6BA] text-[#136C34] font-bold",
-    Failed: "bg-[#FFDAD6] text-[#410002] font-bold",
+  // State to control showing the detailed view vs the list view
+  const [showDetailsView, setShowDetailsView] = useState(false);
+
+  // Status color maps (used in the table)
+  const paymentStatusColors = {
+    pending: "bg-[#F6DE95] text-[#816204] font-bold",
+    failed: "bg-[#FFDAD6] text-[#410002] font-bold",
+    paid: "bg-[#A0E6BA] text-[#136C34] font-bold",
   };
 
+  const approvedStatusColors = {
+    approved: "bg-[#A0E6BA] text-[#136C34] font-bold",
+    pending: "bg-[#F6DE95] text-[#816204] font-bold",
+    rejected: "bg-[#FFDAD6] text-[#410002] font-bold",
+    review: "bg-[#A4C9F9] text-[#00173C] font-bold",
+  };
+
+  // --- Fetch Bookings on Mount ---
+  const fetchBookings = useCallback(async () => {
+    // Wrap in useCallback
+    console.log("Fetching all admin bookings.");
+    setLoading(true); // Start loading
+    setError(null); // Clear previous error
+
+    const accessToken = getAccessToken();
+
+    if (!accessToken) {
+      const authError = new Error(
+        "Authentication token not found. Please log in."
+      );
+      setError(authError);
+      setLoading(false); // Stop loading on auth error
+      console.error(authError);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/bookings`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        const fetchError = new Error(
+          `Failed to fetch bookings: ${response.status} ${response.statusText} - ${errorBody}`
+        );
+        console.error("Error fetching bookings:", fetchError);
+        throw fetchError; // Throw the error to be caught below
+      }
+
+      const data = await response.json();
+      console.log("Successfully fetched bookings data:", data);
+
+      if (data && Array.isArray(data.body)) {
+        // Sort by createdAt date descending by default
+        const sortedData = data.body.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0; // Handle missing dates
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Descending sort
+        });
+        setBookings(sortedData); // Update bookings state
+        setError(null); // Clear error on success
+      } else {
+        console.warn(
+          "API returned unexpected data structure for bookings:",
+          data
+        );
+        setBookings([]); // Set to empty array on unexpected structure
+        setError(new Error("Received unexpected data format from API."));
+      }
+    } catch (err) {
+      console.error("Caught error in fetchBookings:", err);
+      setError(err); // Set error state
+      setBookings([]); // Clear bookings on error
+    } finally {
+      setLoading(false); // Stop loading
+      console.log("fetchBookings finished.");
+    }
+  }, []); // Empty dependency array, this callback is stable
+
+  useEffect(() => {
+    fetchBookings(); // Call the memoized fetch function when the component mounts
+  }, [fetchBookings]); // Dependency array includes the memoized fetchBookings function
+
+  // --- Calculate Summary Counts ---
+  useEffect(() => {
+    console.log("Calculating summary counts...");
+    // Calculate counts whenever the 'bookings' state changes
+    if (bookings.length > 0) {
+      const pending = bookings.filter(
+        (b) => b.approvedStatus === "pending"
+      ).length;
+      const approved = bookings.filter(
+        (b) => b.approvedStatus === "approved"
+      ).length;
+      const inReview = bookings.filter(
+        (b) => b.approvedStatus === "review"
+      ).length;
+
+      setPendingCount(pending);
+      setApprovedCount(approved);
+      setInReviewCount(inReview);
+    } else {
+      // Reset counts if bookings array is empty
+      setPendingCount(0);
+      setApprovedCount(0);
+      setInReviewCount(0);
+    }
+    console.log("Summary counts updated:", {
+      pending: pendingCount,
+      approved: approvedCount,
+      inReview: inReviewCount,
+    });
+  }, [bookings]); // This effect runs when the 'bookings' state updates
+
+  // --- Filter Logic ---
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters({
       ...filters,
       [name]: value,
     });
+    setCurrentPage(1); // Reset pagination when filters change
   };
 
-  const filteredRentals = rentals.filter((rental) => {
-    const carMake = rental.carMake || "";
-    const carModel = rental.carModel || "";
-    const searchTerm = filters.search || "";
+  const filteredBookings = bookings.filter((booking) => {
+    const searchTerm = filters.search.toLowerCase();
+    // Convert properties to string defensively before filtering
+    const bookingId = String(booking.id ?? "").toLowerCase();
+    const carId = String(booking.carId ?? "").toLowerCase();
+    const ownerId = String(booking.ownerId ?? "").toLowerCase();
+    const renteeId = String(booking.renteeId ?? "").toLowerCase();
+    const amount = String(booking.amount ?? "").toLowerCase(); // Ensure amount is stringified safely
+    const startDate = String(booking.startDate ?? "").toLowerCase();
+    const endDate = String(booking.endDate ?? "").toLowerCase();
+    const approvedStatus = String(booking.approvedStatus ?? "").toLowerCase();
+    const isPayed = String(booking.isPayed ?? "").toLowerCase(); // <-- FIX Applied Here
 
-    const combinedMakeModel = `${carMake} ${carModel}`.toLowerCase();
+    const matchesSearch =
+      bookingId.includes(searchTerm) ||
+      carId.includes(searchTerm) ||
+      ownerId.includes(searchTerm) ||
+      renteeId.includes(searchTerm) ||
+      amount.includes(searchTerm) ||
+      startDate.includes(searchTerm) ||
+      endDate.includes(searchTerm) ||
+      approvedStatus.includes(searchTerm) ||
+      isPayed.includes(searchTerm);
 
-    return (
-      (carMake.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        carModel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        combinedMakeModel.includes(searchTerm.toLowerCase())) &&
-      (filters.carType ? rental.carType === filters.carType : true) &&
-      (filters.status ? rental.status === filters.status : true)
-    );
+    // Filter by approval status
+    const matchesStatus = filters.status
+      ? booking.approvedStatus === filters.status
+      : true;
+
+    return matchesSearch && matchesStatus;
   });
 
+  // --- Sorting Logic ---
+  // Sort config state is declared at the top
+  const [sortConfig, setSortConfig] = useState({
+    key: "createdAt",
+    direction: "descending",
+  });
+
+  const handleSort = useCallback(
+    (key) => {
+      let direction = "ascending";
+      if (sortConfig.key === key && sortConfig.direction === "ascending") {
+        direction = "descending";
+      } else if (
+        sortConfig.key === key &&
+        sortConfig.direction === "descending"
+      ) {
+        // Cycle back to ascending if already descending
+        direction = "ascending";
+      } else {
+        // Default to ascending when changing columns
+        direction = "ascending";
+      }
+      setSortConfig({ key, direction });
+    },
+    [sortConfig]
+  );
+
+  // Sorting logic applied directly when rendering, using a copy of filteredBookings
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    if (!sortConfig.key) {
+      // Default sort if no key is set (e.g., initial load, sortConfig empty)
+      // Defaulting to createdAt descending based on initial fetch sort
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA; // Default descending sort
+    }
+
+    let aValue = a[sortConfig.key];
+    let bValue = b[sortConfig.key];
+
+    // Handle null or undefined values - treat them as smaller
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return sortConfig.direction === "ascending" ? -1 : 1; // Null comes first in ascending
+    if (bValue == null) return sortConfig.direction === "ascending" ? 1 : -1; // Null comes last in ascending
+
+    // Handle specific data types for sorting
+    if (["createdAt", "startDate", "endDate"].includes(sortConfig.key)) {
+      // Attempt to parse dates, fall back to string comparison if dates are invalid
+      const dateA = new Date(aValue);
+      const dateB = new Date(bValue);
+
+      // Corrected date/string comparison logic for sorting
+      if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) {
+        // Both invalid dates, compare as strings
+        const stringA = String(aValue ?? "");
+        const stringB = String(bValue ?? "");
+        return sortConfig.direction === "ascending"
+          ? stringA.localeCompare(stringB)
+          : stringB.localeCompare(stringA);
+      } else if (isNaN(dateA.getTime())) {
+        // A is invalid, B is valid. Invalid dates come first in ascending.
+        return sortConfig.direction === "ascending" ? -1 : 1;
+      } else if (isNaN(dateB.getTime())) {
+        // B is invalid, A is valid. Invalid dates come first in ascending.
+        return sortConfig.direction === "ascending" ? 1 : -1;
+      } else {
+        // Both are valid dates, compare timestamps
+        return sortConfig.direction === "ascending"
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      }
+    } else if (sortConfig.key === "amount") {
+      // Attempt to parse amounts, fall back to 0 if invalid
+      const numA = parseFloat(aValue) || 0;
+      const numB = parseFloat(bValue) || 0;
+      return sortConfig.direction === "ascending" ? numA - numB : numB - numA;
+    } else {
+      // Default to string comparison for other keys
+      // Convert to string defensively before comparison
+      const stringA = String(aValue ?? "").toLowerCase();
+      const stringB = String(bValue ?? "").toLowerCase();
+      return sortConfig.direction === "ascending"
+        ? stringA.localeCompare(stringB)
+        : stringB.localeCompare(stringA);
+    }
+  });
+
+  // --- Pagination Logic ---
   const handlePageChange = (event, value) => {
     setCurrentPage(value);
   };
 
-  const handleRowClick = (user) => {
-    setSelectedUser(user);
-    setShowAccount(true);
+  const paginatedBookings = sortedBookings.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // --- Row Click Handler ---
+  const handleRowClick = (booking) => {
+    setSelectedBooking(booking);
+    setShowDetailsView(true); // Show the detailed view
   };
 
-  const breadcrumbs = showAccount
+  // --- Back Button Handler ---
+  const handleBackToList = () => {
+    setShowDetailsView(false); // Hide the detailed view
+    setSelectedBooking(null); // Clear the selected booking when going back to list
+  };
+
+  // --- Breadcrumbs ---
+  const breadcrumbs = showDetailsView
     ? [
-        <Link underline="hover" key="1" color="inherit" href="/">
-          <HomeOutlinedIcon />
+        <Link underline="hover" key="1" color="inherit" href="#">
+          <HomeOutlinedIcon /> {/* Or navigate home */}
         </Link>,
         <button
           key="2"
           color="inherit"
           className="cursor-pointer hover:text-blue-800"
-          onClick={() => setShowAccount(false)}
+          onClick={handleBackToList}
         >
           Booking Approval
         </button>,
         <Typography key="3" sx={{ color: "text.primary" }}>
-          Car Details
+          Booking Details
         </Typography>,
       ]
     : [
-        <Link underline="hover" key="1" color="inherit" href="/">
-          <HomeOutlinedIcon />
+        <Link underline="hover" key="1" color="inherit" href="#">
+          <HomeOutlinedIcon /> {/* Or navigate home */}
         </Link>,
         <Typography key="2" sx={{ color: "text.primary" }}>
           Booking Approval
         </Typography>,
       ];
-  const handleOpenModal = () => {
-    setOpenModal(true);
-  };
 
-  const handleCloseModal = () => {
-    setOpenModal(false);
-  };
-
+  // Modal state for the upload modal (Seems unrelated to main functionality, keeping as is)
+  const [openModal, setOpenModal] = useState(false);
   const [file, setFile] = useState(null);
-
-  const handleFileUpload = (e) => {
-    setFile(e.target.files[0]);
-  };
-
-  const [sortConfig, setSortConfig] = useState({
-    key: null,
-    direction: "ascending",
-  });
-
-  const sortedRentals = [...filteredRentals].sort((a, b) => {
-    if (sortConfig.key) {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-
-      if (sortConfig.key === "registrationDate") {
-        aValue = new Date(aValue.split("/").reverse().join("/"));
-        bValue = new Date(bValue.split("/").reverse().join("/"));
-      }
-
-      if (aValue === bValue) return 0;
-
-      if (sortConfig.direction === "ascending") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    }
-    return 0;
-  });
-
-  const handleSort = (key) => {
-    let direction = "ascending";
-    if (sortConfig.key === key && sortConfig.direction === "ascending") {
-      direction = "descending";
-    }
-    setSortConfig({ key, direction });
-  };
-  const paginatedRentals = sortedRentals.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+  const handleFileUpload = (e) => setFile(e.target.files[0]);
 
   return (
     <div className="flex flex-col">
@@ -697,6 +407,8 @@ const BookingApproval = () => {
         <span className="text-xl">Booking Approval</span>
       </Box>
       <div className="m-4 mb-12">
+        {" "}
+        {/* Adjust margin as needed */}
         <Breadcrumbs
           separator={<NavigateNextIcon fontSize="small" />}
           aria-label="breadcrumb"
@@ -705,189 +417,281 @@ const BookingApproval = () => {
         </Breadcrumbs>
       </div>
 
-      {showAccount ? (
-        <Account selectedUser={selectedUser} />
+      {/* --- Conditional Rendering: Show Details View or List --- */}
+      {showDetailsView ? (
+        // Render the separated BookingDetailsView component
+        // selectedBooking prop is passed from this component's state
+        // Note: adminToken is retrieved within BookingDetailsView now using getAccessToken()
+        <BookingDetailsView selectedBooking={selectedBooking} />
       ) : (
+        // --- Booking List View ---
         <div>
-          {" "}
-          <div className="gap-8 grid grid-cols-3 mb-10">
+          {/* Summary Boxes (Now using real counts) */}
+          <div className="gap-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-10">
             {" "}
+            {/* Responsive grid */}
+            {/* Pending Listings */}
             <div>
-              <div className="bg-white w-full drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
-                <PendingActionsOutlinedIcon />
-
-                <Typography variant="h6">200</Typography>
-                <Typography variant="body8">Pending Listing</Typography>
+              <div className="bg-white w-full drop-shadow-xs p-4 shadow-xs flex items-center justify-between shadow-blue-100 rounded-2xl">
+                <Box>
+                  <Typography variant="h6">{pendingCount}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Pending Bookings
+                  </Typography>
+                </Box>
+                <PendingActionsOutlinedIcon
+                  sx={{ color: "#F6DE95", fontSize: 40 }}
+                />
               </div>
             </div>
+            {/* Approved Listings */}
             <div>
-              <div className="bg-white w-full drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
-                <AssignmentLateOutlinedIcon />
-                <Typography variant="h6">50</Typography>
-                <Typography variant="body8">Unassigned Listings</Typography>
+              <div className="bg-white w-full drop-shadow-xs p-4 shadow-xs flex items-center justify-between shadow-blue-100 rounded-2xl">
+                <Box>
+                  <Typography variant="h6">{approvedCount}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Approved Bookings
+                  </Typography>
+                </Box>
+                <CheckCircleOutlineOutlinedIcon
+                  sx={{ color: "#A0E6BA", fontSize: 40 }}
+                />
               </div>
             </div>
+            {/* In-Review Listings */}
             <div>
-              <div className="bg-white w-full drop-shadow-xs pr-32 shadow-xs flex flex-col shadow-blue-100 rounded-2xl p-4">
-                <AssignmentOutlinedIcon />
-                <Typography variant="h6">12</Typography>
-                <Typography variant="body8"> In-Review Listings</Typography>
+              <div className="bg-white w-full drop-shadow-xs p-4 shadow-xs flex items-center justify-between shadow-blue-100 rounded-2xl">
+                <Box>
+                  <Typography variant="h6">{inReviewCount}</Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    In-Review Bookings
+                  </Typography>
+                </Box>
               </div>
             </div>
           </div>
+
+          {/* Table Section */}
           <div className="bg-white w-full drop-shadow-xs shadow-blue-200 py-4 shadow-xs rounded-lg">
             <div className="px-2 rounded-lg">
               <div className="flex">
                 <Box
-                  className="flex justify-between px-2 w-full"
+                  className="flex justify-between px-2 w-full flex-wrap md:flex-nowrap"
                   display="flex"
                   gap={2}
                   mb={2}
                 >
-                  <h2 className="text-sm font-semibold pl-2 my-4">
-                    Vehicle Listing
+                  <h2 className="text-base font-semibold pl-2 my-4">
+                    Bookings List
                   </h2>
-                  <div className="flex gap-4">
+                  <Box display="flex" gap={2} flexWrap="wrap">
                     <TextField
-                      label="Search Car"
+                      label="Search"
                       variant="outlined"
                       name="search"
                       value={filters.search}
                       onChange={handleFilterChange}
                       size="small"
-                      fullWidth
+                      sx={{ minWidth: 180 }}
                     />
-                    <FormControl fullWidth>
-                      <InputLabel size="small">Car Type</InputLabel>
+                    <FormControl
+                      variant="outlined"
+                      size="small"
+                      sx={{ minWidth: 120 }}
+                    >
+                      <InputLabel size="small">Approval Status</InputLabel>
                       <Select
-                        label="Car Type"
-                        name="carType"
-                        value={filters.carType}
-                        onChange={handleFilterChange}
-                        size="small"
-                      >
-                        <MenuItem value="">All Car Types</MenuItem>
-                        <MenuItem value="Sedan">Sedan</MenuItem>
-                        <MenuItem value="SUV">SUV</MenuItem>
-                        <MenuItem value="Hatchback">Hatchback</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <FormControl variant="outlined" sx={{ minWidth: 120 }}>
-                      <InputLabel size="small">Status</InputLabel>
-                      <Select
-                        label="Status"
+                        label="Approval Status"
                         name="status"
                         value={filters.status}
                         onChange={handleFilterChange}
                         size="small"
                       >
                         <MenuItem value="">All Statuses</MenuItem>
-                        <MenuItem value="Assigned">Assigned</MenuItem>
-                        <MenuItem value="Unassigned">Unassigned</MenuItem>
-                        <MenuItem value="Review">Review</MenuItem>
+                        <MenuItem value="pending">Pending</MenuItem>
+                        <MenuItem value="approved">Approved</MenuItem>
+                        <MenuItem value="review">In-Review</MenuItem>
+                        <MenuItem value="rejected">Rejected</MenuItem>
                       </Select>
                     </FormControl>
-                  </div>
+                  </Box>
                 </Box>
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-x-0 border-t-0 border-gray-100 rounded-lg">
-                  <thead>
-                    <tr className="bg-gray-50 font-semibold">
-                      <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                        Booking ID
-                      </th>
-                      <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
-                        // onClick={() => handleSort("carModel")}
-                      >
-                        Vehicle ID{" "}
-                        {/* <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" /> */}
-                      </th>
-                      <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                        Submission Date
-                      </th>
-                      <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                        Daily Pricing
-                      </th>
-                      <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                        Assigned To
-                      </th>
-                      <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
-                        onClick={() => handleSort("status")}
-                      >
-                        Status{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
-                      </th>{" "}
-                      <th
-                        className="px-6 text-left text-sm font-semibold py-4 text-gray-600"
-                        onClick={() => handleSort("payment")}
-                      >
-                        Payment Status{" "}
-                        <HiMiniArrowsUpDown className="inline ml-1 cursor-pointer" />
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedRentals.map((rental, index) => (
-                      <tr
-                        key={index}
-                        className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleRowClick(rental)}
-                      >
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {rental.bookingID}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {rental.vehicleID}
-                        </td>
 
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {rental.YearManufactured}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {rental.price}
-                        </td>
-
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {rental.Assigned}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-2 rounded-xl text-xs ${
-                              statusColors[rental.status]
-                            }`}
-                          >
-                            {rental.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span
-                            className={`px-3 py-2 rounded-xl text-xs ${
-                              paymentColors[rental.payment]
-                            }`}
-                          >
-                            {rental.payment}
-                          </span>
-                        </td>
+              {loading ? (
+                <Box
+                  display="flex"
+                  justifyContent="center"
+                  alignItems="center"
+                  minHeight="200px"
+                >
+                  <CircularProgress />
+                  <Typography variant="h6" sx={{ ml: 2 }}>
+                    Loading bookings...
+                  </Typography>
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ m: 2 }}>
+                  Error loading bookings: {error.message}
+                </Alert>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white border border-x-0 border-t-0 border-gray-100 rounded-lg">
+                    <thead>
+                      <tr className="bg-gray-50 font-semibold">
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("id")}
+                        >
+                          Booking ID
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("carId")}
+                        >
+                          Vehicle ID
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("createdAt")}
+                        >
+                          Submission Date
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("amount")}
+                        >
+                          Total Amount
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("approvedStatus")}
+                        >
+                          Approval Status
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
+                        <th
+                          className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer"
+                          onClick={() => handleSort("isPayed")}
+                        >
+                          Payment Status
+                          <HiMiniArrowsUpDown className="inline ml-1" />
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <Box display="flex" justifyContent="center" mt={4}>
-                  <Pagination
-                    count={Math.ceil(filteredRentals.length / itemsPerPage)}
-                    page={currentPage}
-                    onChange={handlePageChange}
-                    color="primary"
-                  />
-                </Box>
-              </div>
+                    </thead>
+                    <tbody>
+                      {paginatedBookings.map((booking) => (
+                        <tr
+                          key={booking.id}
+                          className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
+                          onClick={() => handleRowClick(booking)}
+                        >
+                          <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {booking.id || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {booking.carId || "N/A"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {booking.createdAt
+                              ? new Date(booking.createdAt).toLocaleDateString()
+                              : "N/A"}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap">
+                            {booking.amount
+                              ? `${parseFloat(
+                                  booking.amount
+                                ).toLocaleString()} Birr`
+                              : "N/A"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-3 py-2 rounded-xl text-xs ${
+                                approvedStatusColors[booking.approvedStatus] ||
+                                "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {booking.approvedStatus || "N/A"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`px-3 py-2 rounded-xl text-xs ${
+                                paymentStatusColors[booking.isPayed] ||
+                                "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {booking.isPayed || "N/A"}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <Box display="flex" justifyContent="center" mt={4}>
+                    <Pagination
+                      count={Math.ceil(filteredBookings.length / itemsPerPage)}
+                      page={currentPage}
+                      onChange={handlePageChange}
+                      color="primary"
+                      disabled={
+                        loading || error || filteredBookings.length === 0
+                      }
+                    />
+                  </Box>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
+
+      <Modal
+        open={openModal}
+        onClose={handleCloseModal}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <IconButton
+            aria-label="close"
+            onClick={handleCloseModal}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+            }}
+          >
+            X
+          </IconButton>
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            Modal Title
+          </Typography>
+          <Typography id="modal-modal-description" sx={{ mt: 2 }}>
+            Modal content goes here.
+          </Typography>
+          <input type="file" onChange={handleFileUpload} />
+          {file && (
+            <Typography sx={{ mt: 2 }}>Selected file: {file.name}</Typography>
+          )}
+        </Box>
+      </Modal>
     </div>
   );
 };

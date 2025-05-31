@@ -1,982 +1,1612 @@
-import React, { useState, useEffect } from "react";
-import image from "../assets/avatar.png"; // Assuming this path is correct for a placeholder image
-import { useLocation } from "react-router-dom"; // Assuming react-router-dom is installed
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Typography, Box, CircularProgress } from "@mui/material"; // Using MUI for loading/error indicators
+import { v4 as uuidv4 } from "uuid"; // Import uuid for temporary client-side IDs
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
+// Define a color palette using CSS variables or Tailwind config if needed
+// For simplicity, using direct Tailwind colors here
 
 const ChatApp = () => {
-  const location = useLocation(); // Hook to access URL parameters
-  const [activeTab, setActiveTab] = useState("All"); // State for managing sidebar tabs
-  const [activeChat, setActiveChat] = useState(null); // State for the currently selected chat session
-  const [newMessage, setNewMessage] = useState(""); // State for the input field message
-  const [chats, setChats] = useState([]); // State for the list of chat sessions in the sidebar
-  const [messages, setMessages] = useState([]); // State for messages in the active chat
-  const [loading, setLoading] = useState(false); // State for general loading indicator
-  const [error, setError] = useState(null); // State for handling errors
-  const [socket, setSocket] = useState(null); // State for the WebSocket connection
-  const [renteeIdFromParams, setRenteeIdFromParams] = useState(null); // State to track if we came from a direct link
-  // State to temporarily hold the ID of the chat that should be active after fetching chats
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState("All");
+  const [activeChat, setActiveChat] = useState(null);
+  const [newMessage, setNewMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [directChatLoading, setDirectChatLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const [socket, setSocket] = useState(null);
   const [chatIdToActivate, setChatIdToActivate] = useState(null);
+  const [renteeIdFromParams, setRenteeIdFromParams] = useState(null);
+
+  const messagesEndRef = useRef(null);
+
+  const activeChatRef = useRef(activeChat);
+  const chatsRef = useRef(chats);
+  const messagesRef = useRef(messages);
+  const socketRef = useRef(socket);
+
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    socketRef.current = socket;
+  }, [socket]);
 
   // --- API and User Configuration ---
   const API_BASE_URL =
-    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod"; // Your API Gateway URL
+    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod";
+  const SEND_MESSAGE_ENDPOINT = `${API_BASE_URL}/v1/chat`;
+  const MARK_AS_READ_ENDPOINT = `${API_BASE_URL}/v1/vehicle/read_messages`;
 
-  // Assuming 'customer' object is stored in localStorage after login/auth
-  const customer = JSON.parse(localStorage.getItem("admin"));
+  const admin = JSON.parse(localStorage.getItem("admin"));
 
-  // Extract user ID from customer object (adjust based on your auth structure)
   const USER_ID =
-    customer?.userAttributes?.find((attr) => attr.Name === "sub")?.Value || "";
-  // Extract user name details (adjust based on your auth structure)
+    admin?.username ||
+    admin?.userAttributes?.find((attr) => attr.Name === "sub")?.Value ||
+    "";
   const USER_FIRST_NAME =
-    customer?.userAttributes?.find((attr) => attr.Name === "given_name")
-      ?.Value || "";
+    admin?.userAttributes?.find((attr) => attr.Name === "given_name")?.Value ||
+    "Admin";
   const USER_LAST_NAME =
-    customer?.userAttributes?.find((attr) => attr.Name === "family_name")
-      ?.Value || "";
-  // Placeholder bio - replace with actual user profile data if available
-  const USER_BIO = "Rentee"; // Example placeholder
+    admin?.userAttributes?.find((attr) => attr.Name === "family_name")?.Value ||
+    "User";
+  const USER_BIO = "Admin";
 
-  // WebSocket URL with user ID
   const WEBSOCKET_URL = `wss://0a1xxqdv9b.execute-api.us-east-1.amazonaws.com/production/?id=${USER_ID}`;
 
-  // --- Effects ---
+  // --- Helper to format fetched messages ---
+  const formatFetchedMessages = useCallback((messagesArray) => {
+    if (!Array.isArray(messagesArray)) return [];
+    const formatted = messagesArray.map((msg) => ({
+      id: msg.id,
+      senderId: msg.sender?.id,
+      content: msg.message,
+      timestamp: new Date(msg.created_at).getTime(),
+      media_url: msg.media_url,
+      is_read: msg.is_read,
+      ttl: msg.ttl,
+      status: "sent",
+    }));
+    formatted.sort((a, b) => a.timestamp - b.timestamp);
+    return formatted;
+  }, []);
 
-  // Effect to handle initial load and URL parameter changes
-  useEffect(() => {
-    // Ensure USER_ID is available before proceeding
-    if (!USER_ID) {
-      console.warn(
-        "USER_ID is not available. Cannot fetch chats or setup WebSocket."
+  // --- Helper to format messages received via WebSocket ---
+  const formatWebSocketMessage = useCallback((messageData) => {
+    if (
+      !messageData ||
+      messageData.messageContent === undefined ||
+      !messageData.senderId
+    )
+      return null;
+    return {
+      id: messageData.id || `ws-msg-${Date.now()}-${Math.random()}`,
+      senderId: messageData.senderId,
+      content: messageData.messageContent,
+      timestamp: new Date(messageData.timestamp).getTime(),
+      media_url: messageData.media_url || "",
+      is_read: messageData.is_read || false,
+      ttl: messageData.ttl,
+      status: "delivered",
+    };
+  }, []);
+
+  // --- API Functions ---
+
+  const fetchChatSessions = useCallback(
+    async (userId) => {
+      console.log("Fetching chat sessions for user:", userId);
+      if (chatsRef.current.length === 0) setLoading(true);
+      setError(null);
+
+      if (!admin?.AccessToken) {
+        console.warn(
+          "Authentication token not found during fetchChatSessions."
+        );
+        setError("User not authenticated.");
+        setLoading(false);
+        setDirectChatLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/v1/chat/sessions/${userId}`,
+          { headers: { Authorization: `Bearer ${admin.AccessToken}` } }
+        );
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: "Failed to parse error response" }));
+          console.error(
+            "Failed to fetch chat sessions:",
+            response.status,
+            errorData
+          );
+          throw new Error(
+            `Failed to load chats: ${response.status} - ${
+              errorData.message || "Unknown Error"
+            }`
+          );
+        }
+
+        const result = await response.json();
+        console.log("Chat sessions data received:", result);
+
+        if (result && result.success && Array.isArray(result.data)) {
+          const chatsWithFormattedMessages = result.data.map((chat) => ({
+            ...chat,
+            messages: formatFetchedMessages(chat.messages),
+          }));
+          setChats(chatsWithFormattedMessages);
+          console.log(
+            "Chats state updated successfully after fetch with formatted messages."
+          );
+        } else {
+          console.warn(
+            "Fetch chat sessions response ok but 'data' field is not an array or success is false:",
+            result
+          );
+          setChats([]);
+          console.log("Chats state set to empty array after fetch issue.");
+        }
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching chat sessions:", err);
+        setError(err.message);
+        setChats([]);
+        console.log("Chats state set to empty array after fetch error.");
+      } finally {
+        setLoading(false);
+        setDirectChatLoading(false);
+        console.log("fetchChatSessions finished.");
+      }
+    },
+    [admin?.AccessToken, USER_ID, formatFetchedMessages]
+  );
+
+  const fetchChatSessionWithTargetUser = useCallback(
+    async (
+      initiatorId,
+      initiatorFirst_name,
+      initiatorLast_name,
+      initiatorBio,
+      targetId,
+      targetFirst_name,
+      targetLast_name,
+      targetBio,
+      reservationId
+    ) => {
+      setDirectChatLoading(true);
+      setError(null);
+      let foundOrCreatedChat = null;
+
+      try {
+        console.log("Attempting to fetch or create direct chat session:", {
+          initiatorId,
+          targetId,
+          reservationId,
+        });
+
+        if (!admin?.AccessToken) {
+          console.warn(
+            "Authentication token not found during fetchChatSessionWithTargetUser."
+          );
+          setError("User not authenticated.");
+          setDirectChatLoading(false);
+          setChatIdToActivate(null);
+          console.log(
+            "fetchChatSessionWithTargetUser aborted due to missing auth token."
+          );
+          return;
+        }
+
+        if (!targetId) {
+          console.error(
+            "Target user ID is missing. Cannot check for existing chat."
+          );
+          setError("Target user ID missing. Cannot start chat.");
+          setDirectChatLoading(false);
+          setChatIdToActivate(null);
+          console.log(
+            "fetchChatSessionWithTargetUser aborted due to missing target ID."
+          );
+          return;
+        }
+        // --- Step 1: Check for an existing direct session ---
+        console.log(
+          `Checking for existing direct session between ${initiatorId} and ${targetId}`
+        );
+        const existingSessionResponse = await fetch(
+          `${API_BASE_URL}/v1/chat/sessions/direct?participant1=${initiatorId}&participant2=${targetId}`,
+          { headers: { Authorization: `Bearer ${admin.AccessToken}` } }
+        );
+
+        if (existingSessionResponse.ok) {
+          const result = await existingSessionResponse.json();
+          console.log("Existing session check response:", result);
+
+          if (
+            result &&
+            result.success &&
+            Array.isArray(result.data) &&
+            result.data.length > 0
+          ) {
+            foundOrCreatedChat = result.data[0];
+            console.log("Existing chat session found:", foundOrCreatedChat.id);
+            setChatIdToActivate(foundOrCreatedChat.id);
+            console.log(
+              "Chat ID marked for activation:",
+              foundOrCreatedChat.id
+            );
+          } else {
+            console.log("No existing session found.");
+          }
+        } else if (existingSessionResponse.status === 404) {
+          console.log(
+            "Existing session check returned 404. No existing session found."
+          );
+        } else {
+          const errorData = await existingSessionResponse
+            .json()
+            .catch(() => ({ message: "Failed to parse error response." }));
+          console.error(
+            "Error checking for existing chat session (non-404, non-2xx error):",
+            existingSessionResponse.status,
+            errorData
+          );
+          setError(
+            `Failed to check for existing chat: ${
+              errorData.message || existingSessionResponse.status
+            }`
+          );
+          setDirectChatLoading(false);
+          setChatIdToActivate(null);
+          console.log(
+            "fetchChatSessionWithTargetUser aborted due to existing chat check error."
+          );
+          return;
+        }
+
+        // --- Step 2: Create a new session ONLY IF one was not found ---
+        if (!foundOrCreatedChat) {
+          console.log(
+            "No existing session found, attempting to create a new one."
+          );
+          const requestBody = {
+            type: "direct",
+            participantIds: [initiatorId, targetId],
+            reservation_id: reservationId,
+          };
+
+          const newSessionResponse = await fetch(
+            `${API_BASE_URL}/v1/chat/create/chatSessions`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${admin.AccessToken}`,
+              },
+              body: JSON.stringify(requestBody),
+            }
+          );
+
+          if (!newSessionResponse.ok) {
+            const errorData = await newSessionResponse
+              .json()
+              .catch(() => ({ message: "Failed to parse error response" }));
+            console.error(
+              "Failed to create new chat session:",
+              newSessionResponse.status,
+              errorData
+            );
+            throw new Error(
+              `Failed to create chat: ${newSessionResponse.status} - ${
+                errorData.message || "Unknown Error"
+              }`
+            );
+          }
+
+          const result = await newSessionResponse.json();
+          console.log("New session created response:", result);
+
+          if (
+            result &&
+            result.success &&
+            result.session &&
+            typeof result.session === "object" &&
+            result.session !== null
+          ) {
+            foundOrCreatedChat = result.session;
+            console.log("Newly created chat session:", foundOrCreatedChat.id);
+            setChatIdToActivate(foundOrCreatedChat.id);
+            console.log(
+              "New chat ID marked for activation:",
+              foundOrCreatedChat.id
+            );
+          } else {
+            console.error(
+              "New session response ok but 'session' field is missing or success is false:",
+              result
+            );
+            throw new Error(
+              "Failed to get new chat session data from response."
+            );
+          }
+        }
+
+        // --- Step 3: After finding or creating the chat, fetch all chats ---
+        console.log("Fetching all chat sessions after handling direct chat.");
+        await fetchChatSessions(USER_ID);
+        console.log(
+          "fetchChatSessionWithTargetUser finished, fetchChatSessions completed."
+        );
+      } catch (err) {
+        console.error("Error in fetchChatSessionWithTargetUser:", err);
+        setError(err.message);
+        setDirectChatLoading(false);
+        setChatIdToActivate(null);
+        console.log("fetchChatSessionWithTargetUser finished with error.");
+      } finally {
+        setDirectChatLoading(false);
+        console.log("fetchChatSessionWithTargetUser finally block.");
+      }
+    },
+    [admin?.AccessToken, USER_ID, fetchChatSessions]
+  );
+
+  const deleteChatSession = useCallback(
+    async (chatId) => {
+      if (!window.confirm("Are you sure you want to delete this chat?")) {
+        return;
+      }
+
+      try {
+        console.log("Deleting chat session with ID:", chatId);
+        setError(null);
+
+        if (!admin?.AccessToken) {
+          console.warn(
+            "Authentication token not found during deleteChatSession."
+          );
+          setError("User not authenticated.");
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/v1/chat/${chatId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${admin.AccessToken}` },
+        });
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: "Failed to parse error response" }));
+          console.error(
+            "Failed to delete chat session:",
+            response.status,
+            errorData
+          );
+          throw new Error(
+            `Failed to delete chat session: ${response.status} - ${
+              errorData.message || "Unknown Error"
+            }`
+          );
+        }
+
+        console.log("Chat session deleted successfully:", chatId);
+        await fetchChatSessions(USER_ID);
+        console.log("deleteChatSession finished, fetchChatSessions completed.");
+
+        if (activeChatRef.current?.id === chatId) {
+          console.log("Deleted active chat, clearing activeChat state.");
+          setActiveChat(null);
+          setMessages([]);
+          setChatIdToActivate(null);
+          console.log("Active chat cleared after deletion.");
+        } else {
+          console.log(
+            "Deleted non-active chat. No need to change activeChat state."
+          );
+        }
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+        console.error("Error deleting chat session:", err);
+        alert(`Failed to delete chat: ${err.message}`);
+        console.log("deleteChatSession finished with error.");
+      }
+    },
+    [admin?.AccessToken, USER_ID, fetchChatSessions]
+  );
+
+  // --- Mark Chat As Read Function ---
+  const markChatAsRead = useCallback(
+    async (chatId) => {
+      if (!chatId || !USER_ID || !admin?.AccessToken) {
+        console.warn(
+          "Cannot mark chat as read: Missing chat ID, user ID, or auth token."
+        );
+        return;
+      }
+      console.log(
+        `Attempting to mark chat session ${chatId} as read for user ${USER_ID}.`
       );
-      setError("User not authenticated."); // Set an error state
-      return; // Exit the effect if user ID is missing
+      try {
+        const response = await fetch(`${MARK_AS_READ_ENDPOINT}/${chatId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${admin.AccessToken}`,
+          },
+          body: JSON.stringify({ currentUserId: USER_ID }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: "Failed to parse error response" }));
+          console.error(
+            `Failed to mark chat ${chatId} as read:`,
+            response.status,
+            errorData
+          );
+        } else {
+          console.log(`Chat session ${chatId} marked as read successfully.`);
+          // Refetch sessions to update unread counts in the sidebar
+          // Do NOT await here if we want the UI to feel responsive
+          fetchChatSessions(USER_ID).catch((err) =>
+            console.error("Error refetching chats after marking as read:", err)
+          );
+        }
+      } catch (err) {
+        console.error(`Network error marking chat ${chatId} as read:`, err);
+      }
+    },
+    [admin?.AccessToken, USER_ID, fetchChatSessions, MARK_AS_READ_ENDPOINT]
+  );
+
+  // --- WebSocket Setup Effect (Remains for Receiving Messages) ---
+  useEffect(() => {
+    console.log("WebSocket useEffect triggered.");
+
+    if (!USER_ID) {
+      console.warn("USER_ID not available. Cannot setup WebSocket.");
+      if (
+        socketRef.current &&
+        socketRef.current.readyState < WebSocket.CLOSING
+      ) {
+        console.log("Closing WebSocket due to missing USER_ID.");
+        socketRef.current.close(1000, "User ID missing");
+      }
+      return;
+    }
+
+    const connectWebSocket = () => {
+      console.log(`Attempting to connect WebSocket to ${WEBSOCKET_URL}`);
+      if (
+        socketRef.current &&
+        (socketRef.current.readyState === WebSocket.CONNECTING ||
+          socketRef.current.readyState === WebSocket.OPEN)
+      ) {
+        console.log(
+          "WebSocket already exists and is connecting or open via ref. Skipping creation attempt."
+        );
+        return;
+      }
+
+      console.log(
+        `Attempting to create NEW WebSocket instance to ${WEBSOCKET_URL}`
+      );
+      const newSocket = new WebSocket(WEBSOCKET_URL);
+
+      newSocket.onopen = () => {
+        console.log("WebSocket connected successfully");
+        setSocket(newSocket);
+        setError(null);
+      };
+
+      newSocket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log("WebSocket message received:", message);
+
+          // Handle incoming new messages from *other* users
+          // We are using HTTP POST for sending our own messages now
+          if (
+            message.type === "message" &&
+            message.event === "NEW" &&
+            message.data &&
+            message.data.chatId &&
+            message.data.senderId &&
+            message.data.messageContent !== undefined &&
+            message.data.senderId !== USER_ID // <<< IMPORTANT: Only process messages from others
+          ) {
+            const newMessageData = message.data;
+            const targetChatId = newMessageData.chatId;
+
+            // Format the incoming WS message
+            const formattedNewMessage = formatWebSocketMessage(newMessageData);
+            if (!formattedNewMessage) {
+              console.warn(
+                "Received invalid message structure from WS:",
+                newMessageData
+              );
+              return;
+            }
+
+            // Check if the message is for the currently active chat using ref
+            if (
+              activeChatRef.current &&
+              targetChatId === activeChatRef.current.id
+            ) {
+              console.log(
+                "New message for active chat received via WS, appending:",
+                formattedNewMessage
+              );
+              setMessages((prevMessages) => {
+                // Check if the message is already present (shouldn't be if senderId !== USER_ID filter works)
+                if (
+                  formattedNewMessage.id &&
+                  prevMessages.some((msg) => msg.id === formattedNewMessage.id)
+                ) {
+                  console.log(
+                    `Duplicate WS message ID ${formattedNewMessage.id} received (or senderId filter issue), skipping append.`
+                  );
+                  return prevMessages;
+                }
+                const updatedMessages = [...prevMessages, formattedNewMessage];
+                updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                return updatedMessages;
+              });
+              // If a new message arrives for the *active* chat from another user, mark it as read
+              markChatAsRead(targetChatId);
+            } else {
+              console.log(
+                `New message received via WS for chat ID ${targetChatId}. This is not the active chat. Refetching sessions to update sidebar.`
+              );
+              // Refetch sessions to update unread counts when a new message arrives for a non-active chat
+              fetchChatSessions(USER_ID).catch(console.error);
+            }
+          } else if (message.data?.senderId === USER_ID) {
+            console.log(
+              "Received WS message from self, ignoring as HTTP POST handles sends:",
+              message
+            );
+          } else {
+            console.log(
+              "Received non-message or unexpected message structure via WS:",
+              message
+            );
+            if (message.message === "Internal server error") {
+              console.error(
+                "Backend reported Internal server error over WebSocket."
+              );
+            }
+          }
+        } catch (e) {
+          console.error(
+            "Error processing WebSocket message:",
+            e,
+            "Raw Data:",
+            event.data
+          );
+        }
+      };
+
+      newSocket.onclose = (event) => {
+        console.log("WebSocket disconnected", event.code, event.reason);
+        setSocket(null);
+
+        if (!event.wasClean && event.code !== 1000) {
+          console.warn(
+            "WebSocket closed uncleanly or due to error. Attempting to reconnect in 3s..."
+          );
+          if (!directChatLoading) {
+            setError("Chat connection lost. Reconnecting...");
+          }
+          setTimeout(connectWebSocket, 3000);
+        } else {
+          console.log("WebSocket closed cleanly.");
+          setError(null);
+        }
+      };
+
+      newSocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        if (!directChatLoading) {
+          setError("Chat connection error. Please wait for reconnect...");
+        }
+      };
+
+      return newSocket;
+    };
+
+    const socketInstanceForCleanup = connectWebSocket();
+
+    return () => {
+      console.log("WebSocket useEffect cleanup: Closing socket if needed.");
+      if (
+        socketInstanceForCleanup &&
+        socketInstanceForCleanup.readyState !== WebSocket.CLOSING &&
+        socketInstanceForCleanup.readyState !== WebSocket.CLOSED
+      ) {
+        console.log("Closing WebSocket cleanly during cleanup.");
+        socketInstanceForCleanup.close(
+          1000,
+          "Component Unmount/Dependency Change"
+        );
+      }
+      console.log("WebSocket useEffect cleanup finished.");
+    };
+  }, [
+    USER_ID,
+    WEBSOCKET_URL,
+    fetchChatSessions, // fetchChatSessions is called in WS handler
+    directChatLoading,
+    markChatAsRead, // markChatAsRead is called in WS handler
+    formatWebSocketMessage,
+  ]);
+
+  // --- Send Message Via HTTP POST (Handles Optimistic Update) ---
+  const sendMessageViaHttp = useCallback(
+    async (chatId, senderId, text, tempId, mediaUrl = "") => {
+      console.log(
+        `Attempting to send message via HTTP POST to chat ${chatId} with tempId ${tempId}:`,
+        text
+      );
+
+      if (!admin?.AccessToken) {
+        console.warn(
+          "Authentication token not found during sendMessageViaHttp."
+        );
+        setError("User not authenticated. Cannot send message.");
+        // Mark the optimistic message as failed
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === tempId
+              ? { ...msg, status: "failed", error: "Authentication Error" }
+              : msg
+          )
+        );
+        return;
+      }
+
+      try {
+        const response = await fetch(SEND_MESSAGE_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${admin.AccessToken}`,
+          },
+          body: JSON.stringify({
+            chatId: chatId,
+            senderId: senderId,
+            messageContent: text,
+            mediaUrl: mediaUrl,
+          }),
+        });
+
+        if (response.status !== 201) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ message: "Failed to parse error response" }));
+          console.error(
+            `Failed to send message (HTTP status ${response.status}) for tempId ${tempId}:`,
+            errorData
+          );
+          const errorMessage =
+            errorData.message ||
+            `Failed to send message (status ${response.status})`;
+          setError(errorMessage);
+          setMessages((prevMessages) =>
+            prevMessages.map((msg) =>
+              msg.id === tempId
+                ? { ...msg, status: "failed", error: errorMessage }
+                : msg
+            )
+          );
+        } else {
+          const result = await response.json();
+          console.log(
+            `Message sent successfully via HTTP for tempId ${tempId}:`,
+            result
+          );
+
+          if (result && result.success && result.data) {
+            const serverMessageData = result.data;
+            const formattedServerMessage = {
+              id: serverMessageData.id,
+              senderId: serverMessageData.sender?.id || senderId,
+              content: serverMessageData.message,
+              timestamp: new Date(serverMessageData.created_at).getTime(),
+              media_url: serverMessageData.media_url,
+              is_read: serverMessageData.is_read,
+              ttl: serverMessageData.ttl,
+              status: "sent",
+            };
+
+            setMessages((prevMessages) => {
+              const index = prevMessages.findIndex((msg) => msg.id === tempId);
+              if (index > -1) {
+                console.log(
+                  `Replacing optimistic message ${tempId} with server message ${formattedServerMessage.id}.`
+                );
+                const updatedMessages = [...prevMessages];
+                updatedMessages[index] = formattedServerMessage;
+                updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                return updatedMessages;
+              } else {
+                if (
+                  formattedServerMessage.id &&
+                  prevMessages.some(
+                    (msg) => msg.id === formattedServerMessage.id
+                  )
+                ) {
+                  console.log(
+                    `Server message ${formattedServerMessage.id} already exists in state (tempId ${tempId} not found). Skipping append.`
+                  );
+                  return prevMessages;
+                }
+                console.warn(
+                  `Optimistic message with tempId ${tempId} not found in state. Appending server message ${formattedServerMessage.id} as fallback.`
+                );
+                const updatedMessages = [
+                  ...prevMessages,
+                  formattedServerMessage,
+                ];
+                updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                return updatedMessages;
+              }
+            });
+            setError(null);
+
+            // --- Call fetchChatSessions here on successful send ---
+            console.log("Message sent successfully, refetching chat sessions.");
+            fetchChatSessions(USER_ID).catch((err) =>
+              console.error(
+                "Error refetching chats after successful send:",
+                err
+              )
+            );
+          } else {
+            console.error(
+              "Message sent response ok but 'data' field missing or success is false:",
+              result
+            );
+            const errorMessage =
+              "Failed to get sent message data from response.";
+            setError(errorMessage);
+            setMessages((prevMessages) =>
+              prevMessages.map((msg) =>
+                msg.id === tempId
+                  ? { ...msg, status: "failed", error: errorMessage }
+                  : msg
+              )
+            );
+          }
+        }
+      } catch (err) {
+        console.error(
+          `Error sending message via HTTP for tempId ${tempId}:`,
+          err
+        );
+        const errorMessage = err.message || "Failed to send message.";
+        setError(errorMessage);
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === tempId
+              ? { ...msg, status: "failed", error: errorMessage }
+              : msg
+          )
+        );
+      }
+    },
+    [admin?.AccessToken, USER_ID, SEND_MESSAGE_ENDPOINT, fetchChatSessions] // Added fetchChatSessions dependency
+  );
+
+  const sendMessage = useCallback(
+    (message) => {
+      const trimmedMessage = message.trim();
+      if (trimmedMessage && activeChat?.id && USER_ID) {
+        const tempId = `client:${uuidv4()}`; // Generate a unique client-side ID
+
+        // 1. Add message to state optimistically
+        const optimisticMessage = {
+          id: tempId,
+          senderId: USER_ID,
+          content: trimmedMessage,
+          timestamp: Date.now(), // Use client timestamp for immediate display
+          media_url: "",
+          is_read: true, // Your message is read by you
+          ttl: undefined,
+          status: "sending",
+        };
+
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages, optimisticMessage];
+          updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+          return updatedMessages;
+        });
+        setNewMessage(""); // Clear input field immediately
+        setError(null); // Clear any previous error when starting a new send
+
+        // 2. Send message via HTTP POST asynchronously
+        sendMessageViaHttp(activeChat.id, USER_ID, trimmedMessage, tempId);
+      } else if (!activeChat?.id) {
+        setError("Please select a chat to send messages.");
+      } else if (!USER_ID) {
+        setError("User ID is not available. Cannot send message.");
+      }
+    },
+    [sendMessageViaHttp, activeChat?.id, USER_ID]
+  );
+
+  useEffect(() => {
+    console.log("Main data fetching useEffect triggered based on URL/User.");
+    if (!USER_ID) {
+      console.warn("USER_ID is not available. Cannot fetch chats.");
+      setError("User not authenticated. Please log in as admin.");
+      setLoading(false);
+      setDirectChatLoading(false);
+      setChats([]);
+      setActiveChat(null);
+      setMessages([]);
+      setChatIdToActivate(null);
+      setRenteeIdFromParams(null);
+      console.log("Main data fetching useEffect aborted: USER_ID missing.");
+      return;
     }
 
     const params = new URLSearchParams(location.search);
-    const renteeId = params.get("renteeId");
+    const targetUserId = params.get("renteeId");
     const reservationId = params.get("reservationId");
-    const given_name = params.get("given_name");
-    const family_name = params.get("family_name");
+    const targetUserFirstName = params.get("given_name");
+    const targetUserLastName = params.get("family_name");
 
-    setRenteeIdFromParams(renteeId); // Keep track if we came from a direct link
+    console.log("targetUserId (from renteeId param):", targetUserId);
 
-    if (renteeId) {
-      // *** IMPORTANT: You MUST fetch the details (first_name, last_name, bio) of the renteeId here ***
-      // This is crucial for the POST request to create a new chat session if one doesn't exist.
-      // Replace this placeholder logic with an actual API call to get rentee details.
-      const renteeDetails = {
-        id: renteeId,
-        first_name: given_name, // Placeholder - REPLACE with actual data fetch
-        last_name: family_name, // Placeholder - REPLACE with actual data fetch
-        bio: "Rentee", // Placeholder - REPLACE with actual data fetch
-      };
+    setChatIdToActivate(null);
+    setRenteeIdFromParams(targetUserId);
 
-      // Call the function to fetch or create the direct chat session
-      fetchChatSessionWithRentee(
+    if (targetUserId) {
+      console.log(`Direct chat requested with target ID: ${targetUserId}`);
+      fetchChatSessionWithTargetUser(
         USER_ID,
         USER_FIRST_NAME,
         USER_LAST_NAME,
-        USER_BIO, // Current user's details
-        renteeDetails.id,
-        renteeDetails.first_name,
-        renteeDetails.last_name,
-        renteeDetails.bio, // Rentee's details
-        reservationId // Reservation ID
+        USER_BIO,
+        targetUserId,
+        targetUserFirstName,
+        targetUserLastName,
+        "User",
+        reservationId
       );
     } else {
-      // If no renteeId param, just fetch all sessions for the current user
+      console.log(
+        "No renteeId param found. Fetching all chat sessions for admin."
+      );
       fetchChatSessions(USER_ID);
     }
 
-    // Setup WebSocket connection
-    setupWebSocket();
-
-    // Cleanup function for WebSocket connection when the component unmounts or dependencies change
     return () => {
-      if (socket && socket.readyState === WebSocket.OPEN) {
-        console.log("Cleaning up WebSocket connection.");
-        socket.close();
+      console.log("Main data fetching useEffect cleanup.");
+      if (!USER_ID) {
+        console.log(
+          "Main data fetching useEffect cleanup: Clearing state due to missing USER_ID."
+        );
+        setChats([]);
+        setActiveChat(null);
+        setMessages([]);
+        setChatIdToActivate(null);
+        setRenteeIdFromParams(null);
+        setError(null);
       }
     };
+  }, [
+    location.search,
+    USER_ID,
+    USER_FIRST_NAME,
+    USER_LAST_NAME,
+    USER_BIO,
+    admin?.AccessToken,
+    fetchChatSessions,
+    fetchChatSessionWithTargetUser,
+  ]);
 
-    // Dependencies for this effect:
-    // location.search: To react to changes in URL parameters
-    // USER_ID, USER_FIRST_NAME, USER_LAST_NAME, USER_BIO: Needed for fetching/creating chats
-    // socket: To ensure the cleanup function is correct if the socket instance changes
-    // renteeIdFromParams: The logic inside depends on this state
-  }, [location.search, USER_ID, USER_FIRST_NAME, USER_LAST_NAME, USER_BIO]); // Removed socket from dependencies to prevent unnecessary reconnects
-
-  // Effect to set the active chat after the chats list is updated
   useEffect(() => {
+    console.log("Chat activation useEffect triggered.");
     console.log(
-      "useEffect [chats, chatIdToActivate, renteeIdFromParams, activeChat] triggered."
-    );
-    console.log(
-      "Current chats state:",
+      "Current chats state IDs:",
       chats.map((c) => c.id)
     );
     console.log("Current chatIdToActivate:", chatIdToActivate);
-    console.log("Current renteeIdFromParams:", renteeIdFromParams);
     console.log("Current activeChat ID:", activeChat?.id);
 
-    // If there's a chat ID we intended to activate from a direct link
-    if (chatIdToActivate && chats.length > 0) {
-      console.log(`Attempting to activate chat with ID: ${chatIdToActivate}`);
-      // Find the chat object in the updated chats list
+    if (chatIdToActivate && Array.isArray(chats) && chats.length > 0) {
+      console.log(
+        `Attempting to find chat with ID ${chatIdToActivate} in chats list.`
+      );
       const chatToSet = chats.find((chat) => chat.id === chatIdToActivate);
       if (chatToSet) {
-        console.log("Found chat to activate:", chatToSet.id);
-        setActiveChat(chatToSet); // Set it as the active chat
-        setMessages(chatToSet.messages || []); // Set its messages
-        // Clear the temporary state after setting the active chat
-        setChatIdToActivate(null);
-      } else {
-        // If the specific chat wasn't found (e.g., deleted before fetching completed)
-        console.warn(
-          `Chat with ID ${chatIdToActivate} not found in the fetched chats.`
-        );
-        // Decide on fallback: activate the first chat, or clear active chat
-        if (chats.length > 0 && !activeChat) {
-          // Only activate first if no chat is currently active
-          console.log("Activating the first chat in the list as fallback.");
-          setActiveChat(chats[0]);
-          setMessages(chats[0].messages || []);
-        } else if (!activeChat) {
-          // If no chats available at all, ensure active chat is null
-          setActiveChat(null);
-          setMessages([]);
-        }
-        setChatIdToActivate(null); // Clear the temporary state
-      }
-    } else if (!renteeIdFromParams && chats.length > 0 && !activeChat) {
-      // If we did NOT come from a direct link AND there are chats AND no chat is currently active
-      // Automatically activate the first chat in the list
-      console.log("Activating the first chat by default.");
-      setActiveChat(chats[0]);
-      setMessages(chats[0].messages || []);
-    } else if (!renteeIdFromParams && chats.length === 0) {
-      // If we did NOT come from a direct link AND there are NO chats available
-      // Ensure no chat is active
-      console.log("No chats available, clearing active chat.");
-      setActiveChat(null);
-      setMessages([]);
-    }
-
-    // Dependencies for this effect:
-    // chats: To react when the list of chats is updated
-    // chatIdToActivate: To react when a specific chat is marked for activation
-    // renteeIdFromParams: The logic depends on whether we came from a direct link
-    // activeChat: To avoid unnecessarily resetting the active chat if one is already selected
-  }, [chats, chatIdToActivate, renteeIdFromParams, activeChat]);
-
-  // Effect to update messages state when activeChat changes
-  // This effect is less critical now as messages are set when activeChat is determined in the effect above,
-  // but it can be useful if activeChat is set directly elsewhere.
-  useEffect(() => {
-    console.log("Active Chat changed:", activeChat?.id);
-    // Set messages based on the messages array within the activeChat object
-    setMessages(activeChat?.messages || []);
-  }, [activeChat]); // Dependency: activeChat
-
-  // --- API Call Functions ---
-
-  // Function to fetch all chat sessions for the current user
-  const fetchChatSessions = async (userId) => {
-    setLoading(true); // Start loading indicator
-    setError(null); // Clear previous errors
-    try {
-      console.log("Fetching chat sessions for user:", userId);
-      const response = await fetch(
-        `${API_BASE_URL}/v1/chat/sessions/${userId}`, // Endpoint to get all sessions for a user
-        {
-          headers: {
-            // Include Authorization header
-            Authorization: `Bearer ${customer.AccessToken}`,
-          },
-        }
-      );
-
-      // Check if the response was successful
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(
-          "Failed to fetch chat sessions:",
-          response.status,
-          errorData
-        );
-        // Throw an error to be caught by the catch block
-        throw new Error(
-          `Failed to fetch chat sessions: ${response.status} - ${
-            errorData.message || "Unknown Error"
-          }`
-        );
-      }
-
-      const result = await response.json(); // Assume result has { success: true, data: [...] }
-      console.log("Chat sessions data received:", result);
-
-      // Check if the API call was successful and 'data' is an array
-      if (result && result.success && Array.isArray(result.data)) {
-        // Corrected: Use result.data
-        // Set the chats state with the array of chat sessions from the 'data' field
-        setChats(result.data); // Corrected: Use result.data
-      } else {
-        // Corrected warning message
-        console.warn(
-          "Fetch chat sessions response ok but 'data' field is not an array or success is false:",
-          result
-        );
-        setChats([]); // Set chats to empty array if data is not as expected
-      }
-
-      // Logic for setting active chat is now primarily handled in the effect above
-      // which waits for `chats` to be updated.
-    } catch (err) {
-      // Handle errors during the fetch
-      setError(err.message);
-      console.error("Error fetching chat sessions:", err);
-      setChats([]); // Clear chats on error
-      setActiveChat(null); // Clear active chat on error
-      setMessages([]); // Clear messages on error
-    } finally {
-      // Stop loading indicator regardless of success or failure
-      setLoading(false);
-    }
-  };
-
-  // Function to fetch or create a direct chat session with a specific rentee
-  const fetchChatSessionWithRentee = async (
-    ownerId,
-    ownerFirstName,
-    ownerLastName,
-    ownerBio, // Current user's details (owner in this context)
-    renteeId,
-    renteeFirstName,
-    renteeLastName,
-    renteeBio, // Other participant's details (rentee)
-    reservationId // Associated reservation ID
-  ) => {
-    setLoading(true); // Start loading indicator
-    setError(null); // Clear previous errors
-    let foundOrCreatedChat = null; // Variable to hold the session object once found or created
-
-    try {
-      console.log("Attempting to fetch or create direct chat session:", {
-        ownerId,
-        renteeId,
-        reservationId,
-      });
-
-      // --- Step 1: Check for an existing direct session ---
-      // Assuming this endpoint checks for a direct chat between two specific participants
-      const existingSessionResponse = await fetch(
-        `${API_BASE_URL}/v1/chat/sessions/direct?participant1=${ownerId}&participant2=${renteeId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${customer.AccessToken}`,
-          },
-        }
-      );
-
-      if (existingSessionResponse.ok) {
-        const result = await existingSessionResponse.json(); // Assume result has { success: true, session: {...} | null }
-        console.log("Existing session check response:", result);
-
-        // Check if the API call was successful and 'session' is an object
-        if (result && result.success && result.session) {
-          foundOrCreatedChat = result.session; // Get the single chat session object
-          console.log("Existing chat session found:", foundOrCreatedChat.id);
-          setChatIdToActivate(foundOrCreatedChat.id); // Mark this chat's ID to be activated later
-        } else if (existingSessionResponse.status !== 404) {
-          // Log potential issues if response is 200 but success/session is unexpected (e.g., session is null)
-          console.warn(
-            "Existing session response ok but 'session' field is null or success is false:",
-            result
-          );
-        }
-      } else if (existingSessionResponse.status !== 404) {
-        // Handle errors other than 404 (Not Found) during the check
-        const errorData = await existingSessionResponse.json();
-        console.error(
-          "Error checking for existing chat session (status not 404):",
-          existingSessionResponse.status,
-          errorData
-        );
-        // Decide whether to throw an error here or attempt to create a new one anyway.
-        // For now, we log the error and proceed to try creating if foundOrCreatedChat is still null.
-      } else {
-        console.log("No existing session found (status 404).");
-      }
-
-      // --- Step 2: Create a new session if one was not found ---
-      if (!foundOrCreatedChat) {
-        // Only create if we didn't find an existing one
         console.log(
-          "No existing session found, attempting to create a new one."
+          `Attempting to activate chat with ID: ${chatIdToActivate}. Found it.`
         );
-        const newSessionResponse = await fetch(
-          `${API_BASE_URL}/v1/chat/create/chatSessions`, // Endpoint to create a new session
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${customer.AccessToken}`,
-            },
-            body: JSON.stringify({
-              type: "direct", // Type of chat session
-              participants: [
-                // Array of participants
-                {
-                  id: ownerId,
-                  firstName: ownerFirstName,
-                  lastName: ownerLastName,
-                  bio: ownerBio,
-                },
-                {
-                  id: renteeId,
-                  firstName: renteeFirstName, // *** REPLACE with actual data fetch ***
-                  lastName: renteeLastName, // *** REPLACE with actual data fetch ***
-                  bio: renteeBio, // *** REPLACE with actual data fetch ***
-                },
-              ],
-              reservation_id: reservationId, // Associated reservation ID
-            }),
-          }
-        );
-
-        // Check if the response for creating a new session was successful
-        if (!newSessionResponse.ok) {
-          const errorData = await newSessionResponse.json();
-          console.error(
-            "Failed to create new chat session:",
-            newSessionResponse.status,
-            errorData
-          );
-          // Throw an error to be caught by the catch block
-          throw new Error(
-            `Failed to create new chat session: ${
-              newSessionResponse.status
-            } - ${errorData.message || "Unknown Error"}`
-          );
-        }
-
-        const result = await newSessionResponse.json(); // Assume result has { success: true, session: {...} }
-        console.log("New session created response:", result);
-
-        // Check if the API call was successful and 'session' contains the new chat session object
-        if (result && result.success && result.session) {
-          foundOrCreatedChat = result.session; // Get the new chat session object
-          console.log("Newly created chat session:", foundOrCreatedChat.id);
-          setChatIdToActivate(foundOrCreatedChat.id); // Mark this new chat's ID to be activated later
-        } else {
-          console.error(
-            "New session response ok but 'session' field is missing or success is false:",
-            result
-          );
-          throw new Error("Failed to get new chat session data from response.");
-        }
-      }
-
-      // --- Step 3: After finding or creating the chat, fetch all chats ---
-      // This is crucial to ensure the sidebar is updated with the new/existing chat
-      // and that the chat object we want to activate exists within the 'chats' state.
-      console.log("Fetching all chat sessions after handling direct chat.");
-      await fetchChatSessions(USER_ID); // Wait for this fetch to complete
-    } catch (err) {
-      // Handle any errors that occurred during the process
-      setError(err.message);
-      console.error("Error in fetchChatSessionWithRentee:", err);
-      // Ensure loading is false and active chat is cleared on error
-      setLoading(false);
-      setActiveChat(null);
-      setMessages([]);
-      setChatIdToActivate(null); // Clear activation intent on error
-    } finally {
-      // Loading state is primarily managed by fetchChatSessions called within this function,
-      // or set to false immediately if an error occurs.
-      // This finally block might not be strictly necessary for loading state if fetchChatSessions handles it.
-      // If fetchChatSessions fails or isn't called, ensure loading is set to false here.
-      if (loading) setLoading(false);
-    }
-  };
-
-  // Function to delete a chat session
-  const deleteChatSession = async (chatId) => {
-    // Optional: Add a confirmation dialog before deleting
-    if (!window.confirm("Are you sure you want to delete this chat?")) {
-      return; // If user cancels, do nothing
-    }
-
-    try {
-      console.log("Deleting chat session with ID:", chatId);
-      // You might want to set a loading state specifically for deletion here
-      // setLoadingDeleting(true);
-      const response = await fetch(`${API_BASE_URL}/v1/chat/${chatId}`, {
-        method: "DELETE", // Use DELETE method
-        headers: {
-          Authorization: `Bearer ${customer.AccessToken}`, // Include Authorization header
-        },
-      });
-
-      // Check if the response was successful
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(
-          "Failed to delete chat session:",
-          response.status,
-          errorData
-        );
-        // Throw an error to be caught by the catch block
-        throw new Error(
-          `Failed to delete chat session: ${response.status} - ${
-            errorData.message || "Unknown Error"
-          }`
-        );
-      }
-
-      console.log("Chat session deleted successfully:", chatId);
-
-      // After deletion, refetch the updated list of chat sessions to update the sidebar
-      fetchChatSessions(USER_ID);
-
-      // If the deleted chat was the active one, clear the active chat and messages
-      if (activeChat?.id === chatId) {
-        console.log("Deleted active chat, clearing activeChat state.");
-        setActiveChat(null);
-        setMessages([]);
-      }
-    } catch (err) {
-      // Handle errors during deletion
-      setError(err.message);
-      console.error("Error deleting chat session:", err);
-      alert(`Failed to delete chat: ${err.message}`); // Provide user feedback
-    } finally {
-      // Stop deletion loading indicator if used
-      // setLoadingDeleting(false);
-    }
-  };
-
-  // --- WebSocket Setup ---
-
-  const setupWebSocket = () => {
-    // Ensure only one socket connection is open at a time
-    if (socket && socket.readyState !== WebSocket.CLOSED) {
-      console.log(
-        "Existing WebSocket found and is not closed, closing before creating new."
-      );
-      socket.close();
-    }
-
-    const newSocket = new WebSocket(WEBSOCKET_URL);
-
-    // Event handler for when the WebSocket connection is opened
-    newSocket.onopen = () => {
-      console.log("WebSocket connected successfully");
-      // You might want to send an initial message or presence update here
-    };
-
-    // Event handler for receiving messages from the WebSocket
-    newSocket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        console.log("WebSocket message received:", message);
-
-        // Assuming new message events have type 'message', event 'NEW', and message data in 'data' field
-        if (
-          message.type === "message" &&
-          message.event === "NEW" &&
-          message.data
-        ) {
-          const newMessageData = message.data; // The actual message object
-          const targetChatId = message.chatId; // The ID of the chat this message belongs to
-
-          // Check if the new message belongs to the currently active chat
-          if (activeChat && targetChatId === activeChat.id) {
-            console.log(
-              "New message for active chat, appending to messages state:",
-              newMessageData
-            );
-            // Append the new message to the messages state for the active chat
-            setMessages((prevMessages) => {
-              // Prevent duplicate messages if the API also returns the new message
-              if (prevMessages.some((msg) => msg.id === newMessageData.id)) {
-                console.log("Duplicate message received, not appending.");
-                return prevMessages;
-              }
-              return [...prevMessages, newMessageData];
-            });
-            // Optional: Scroll to the bottom of the chat window
-            // You would need a ref for the messages container div to do this.
-          } else {
-            // If the message is for a different chat or no chat is active, refetch sessions
-            // This updates the sidebar to show the new message and potentially an unread indicator
-            console.log(
-              `New message for chat ID ${targetChatId}. Refetching sessions.`
-            );
-            fetchChatSessions(USER_ID);
-          }
+        if (activeChat?.id !== chatToSet.id) {
+          console.log("Setting active chat and messages from found chat.");
+          setActiveChat(chatToSet);
+          setMessages(chatToSet.messages || []);
+          setError(null);
+          markChatAsRead(chatToSet.id);
         } else {
           console.log(
-            "Received non-message or unexpected message structure:",
-            message
+            "Chat ID to activate is already the active chat. No state change needed."
           );
+          const currentActiveChatInList = chats.find(
+            (chat) => chat.id === activeChat.id
+          );
+          if (currentActiveChatInList) {
+            if (
+              currentActiveChatInList.messages.length !== messages.length ||
+              currentActiveChatInList.messages.some((msg, i) =>
+                messages[i] ? msg.id !== messages[i].id : true
+              )
+            ) {
+              console.log(
+                "Updating messages for the currently active chat based on latest fetch."
+              );
+              setMessages(currentActiveChatInList.messages || []);
+            }
+          }
+          setError(null);
         }
-      } catch (e) {
-        console.error(
-          "Error processing WebSocket message:",
-          e,
-          "Raw Data:",
-          event.data
+        console.log(`Clearing chatIdToActivate (${chatIdToActivate}).`);
+        setChatIdToActivate(null);
+      } else {
+        console.warn(
+          `Chat with ID ${chatIdToActivate} not found in the fetched chats. Cannot auto-activate.`
         );
+        console.log(
+          `Clearing chatIdToActivate (${chatIdToActivate}) because chat was not found in the list.`
+        );
+        setChatIdToActivate(null);
       }
-    };
-
-    // Event handler for when the WebSocket connection is closed
-    newSocket.onclose = (event) => {
-      console.log("WebSocket disconnected", event.code, event.reason);
-      // You might want to implement a reconnect logic here after a delay
-      setSocket(null); // Clear socket state on close
-    };
-
-    // Event handler for WebSocket errors
-    newSocket.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      // Close the socket on error to trigger the onclose handler
-      if (newSocket.readyState === WebSocket.OPEN) {
-        newSocket.close();
-      }
-      setError("Chat connection error. Please try refreshing."); // Inform the user
-    };
-
-    // Set the new socket instance in state
-    setSocket(newSocket);
-
-    // The cleanup function is now handled in the main useEffect
-  };
-
-  // --- Message Sending ---
-
-  // Function to send a message via WebSocket
-  const sendWebSocketMessage = (message) => {
-    console.log("Attempting to send message via WebSocket.");
-    console.log("Active Chat:", activeChat);
-    console.log(
-      "WebSocket readyState:",
-      socket ? socket.readyState : "Socket not initialized"
-    );
-
-    // Check if socket is open and an active chat is selected
-    if (
-      socket &&
-      socket.readyState === WebSocket.OPEN &&
-      activeChat &&
-      activeChat.id
+    } else if (
+      chatIdToActivate === null &&
+      Array.isArray(chats) &&
+      chats.length > 0 &&
+      !activeChat
     ) {
-      const messageObject = {
-        action: "v1/chat", // Assuming this is the correct action for sending messages
-        chatId: activeChat.id, // ID of the active chat
-        senderId: USER_ID, // ID of the current user (sender)
-        messageContent: message, // The message content
-        // You might need to include a timestamp or other fields depending on your backend
-        // timestamp: new Date().toISOString(),
-      };
-      console.log("Message object being sent:", messageObject);
-      socket.send(JSON.stringify(messageObject)); // Send the message as a JSON string
-      setNewMessage(""); // Clear the input field after sending
-    } else if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.warn("Cannot send message: WebSocket is not open.");
-      alert("Chat service not connected. Please try again later."); // User feedback
-    } else if (!activeChat || !activeChat.id) {
-      console.warn(
-        "Cannot send message: No active chat or chat ID is undefined."
+      console.log(
+        "No specific chat requested, no active chat. Activating the first chat by default."
       );
-      alert("Please select or open a chat session first."); // User feedback
+      const firstChat = chats[0];
+      setActiveChat(firstChat);
+      setMessages(firstChat.messages || []);
+      setError(null);
+      markChatAsRead(firstChat.id);
+    } else if (Array.isArray(chats) && chats.length === 0 && activeChat) {
+      console.log("Chats list is empty, clearing active chat.");
+      setActiveChat(null);
+      setMessages([]);
+      setChatIdToActivate(null);
+    } else if (Array.isArray(chats) && chats.length > 0 && activeChat) {
+      const currentActiveChatInList = chats.find(
+        (chat) => chat.id === activeChat.id
+      );
+      if (currentActiveChatInList) {
+        if (
+          currentActiveChatInList.messages.length !== messages.length ||
+          currentActiveChatInList.messages.some((msg, i) =>
+            messages[i] ? msg.id !== messages[i].id : true
+          )
+        ) {
+          console.log(
+            "Updating messages for the currently active chat based on latest fetch."
+          );
+          setMessages(currentActiveChatInList.messages || []);
+        }
+      }
+    } else {
+      console.log(
+        "Chat activation useEffect: No action needed based on current state."
+      );
     }
-  };
+  }, [chats, chatIdToActivate, activeChat, messages.length, markChatAsRead]);
 
-  // Handler for sending a message (triggered by button click or Enter key)
-  const sendMessage = (message) => {
-    // Prevent sending empty messages
-    if (message.trim()) {
-      sendWebSocketMessage(message);
+  useEffect(() => {
+    if (messagesEndRef.current && activeChat) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [messages, activeChat]);
+
+  const getChatDisplayName = useCallback(
+    (chat) => {
+      if (!chat) return "Loading Chat...";
+      if (!Array.isArray(chat.participants)) {
+        console.warn(
+          `Chat object for ID ${chat.id} has no valid participants array.`,
+          chat
+        );
+        return `Chat ${chat.id}` || "Unnamed Chat";
+      }
+      const otherParticipant = chat.participants.find((p) => p.id !== USER_ID);
+
+      if (!otherParticipant) {
+        if (chat.participants.length === 0) {
+          console.warn(
+            `Chat object for ID ${chat.id} has an empty participants array.`
+          );
+          return `Chat ${chat.id} (No Participants)` || "Unnamed Chat";
+        }
+        console.warn(
+          `Could not find participant other than USER_ID (${USER_ID}) in chat ID ${chat.id}. Assuming chat with self.`
+        );
+        const selfParticipant = chat.participants.find((p) => p.id === USER_ID);
+        if (selfParticipant?.first_name || selfParticipant?.last_name) {
+          const selfFullName = [
+            selfParticipant.first_name,
+            selfParticipant.last_name,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          if (selfFullName) return `${selfFullName} (You)`;
+        }
+        return `Chat ${chat.id} (Self)`;
+      }
+
+      const firstName = otherParticipant.first_name;
+      const lastName = otherParticipant.last_name;
+      const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+
+      if (fullName) {
+        return fullName;
+      }
+
+      console.warn(
+        `Participant names missing/empty for chat ID ${chat.id}, participant ID ${otherParticipant.id}. Falling back to ID.`
+      );
+      return otherParticipant.id;
+    },
+    [USER_ID]
+  );
+
+  const getParticipantById = useCallback(
+    (participantId) => {
+      if (!activeChat || !Array.isArray(activeChat.participants)) {
+        return null;
+      }
+      return activeChat.participants.find((p) => p.id === participantId);
+    },
+    [activeChat]
+  );
 
   // --- Render Logic ---
 
-  // Display loading indicator if chats are being fetched initially or during direct chat logic
-  // Use a more specific check to avoid showing "Loading chats..." indefinitely if there are no chats
-  if (loading && chats.length === 0 && !activeChat)
+  const showInitialLoading =
+    loading && chats.length === 0 && !activeChat && !directChatLoading;
+  const showDirectChatLoading = directChatLoading && !activeChat;
+  const showChatWindowPlaceholder = !activeChat && !showDirectChatLoading;
+
+  const isInputDisabled =
+    !socket ||
+    socket.readyState !== WebSocket.OPEN ||
+    !activeChat ||
+    directChatLoading;
+  const isSendDisabled = !newMessage.trim() || isInputDisabled;
+
+  if (showInitialLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        Loading chats...
-      </div>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        flexDirection="column"
+        className="bg-gray-50"
+      >
+        <CircularProgress />
+        <Typography sx={{ ml: 2, mt: 2 }} variant="h6" color="textSecondary">
+          Loading chats...
+        </Typography>
+      </Box>
     );
-  // Display error message if an error occurred
-  if (error)
+  }
+
+  if (
+    error &&
+    chats.length === 0 &&
+    !loading &&
+    !directChatLoading &&
+    !activeChat
+  ) {
     return (
-      <div className="flex justify-center items-center h-screen text-red-600">
-        Error: {error}
-      </div>
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+        flexDirection="column"
+        color="error.main"
+        className="bg-gray-50"
+      >
+        <Typography variant="h6">Error Loading Chats</Typography>
+        <Typography color="error">{error}</Typography>
+        <button
+          onClick={() => fetchChatSessions(USER_ID)}
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || directChatLoading}
+        >
+          Retry Loading Chats
+        </button>
+      </Box>
     );
+  }
 
   return (
-    // Main container with flex layout for sidebar and chat window
-    <div className="flex   pb-10 h-screen gap-10">
+    <div className="flex h-screen bg-gray-50 -p-40 border rounded-xl overflow-hidden shadow-xl">
+      {" "}
+      {/* Main Container Styling */}
       {/* Sidebar - Chat List */}
-      <div className="w-1/4 bg-white shadow-lg rounded-xl p-4 flex flex-col">
+      <div className="w-1/4 bg-white rounded-l-xl p-4 flex flex-col border-r border-gray-200">
         {" "}
-        {/* Added flex-col */}
-        {/* Tabs */}
-        <div className="flex justify-between mb-4  pb-2">
+        {/* Sidebar Styling */}
+        <div className="flex items-center justify-between mb-4  pb-3">
           {" "}
-          {/* Added border-b */}
+          {/* Title */}
           <button
-            className={`flex-1 text-center p-2 ${
+            className="p-1 text-gray-500 hover:text-gray-700 rounded-md hover:bg-gray-100 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => fetchChatSessions(USER_ID)}
+            disabled={loading || directChatLoading}
+            title="Refresh Chats"
+          >
+            <ArrowPathIcon className="w-6 h-6 text-gray-600 " />
+          </button>
+        </div>
+        {/* Optional Tab Section - Keeping for now */}
+        <div className="flex justify-between mb-4 border-b pb-2">
+          <button
+            className={`flex-1 text-center p-2 text-sm ${
               activeTab === "All"
-                ? "text-black font-bold border-b-2 border-black ``"
-                : "text-gray-500"
+                ? "text-black font-semibold "
+                : "text-gray-600 hover:text-gray-800"
             }`}
             onClick={() => setActiveTab("All")}
           >
-            All
+            All Chats
           </button>
-          <button
-            className={`flex-1 text-center p-2 ${
-              activeTab === "Chat Support"
-                ? "text-black font-bold border-b-2 border-black"
-                : "text-gray-500"
-            }`}
-            onClick={() => setActiveTab("Chat Support")}
-          >
-            Chat Support
-          </button>
+          {/* Add other tabs like "Groups" here if needed */}
         </div>
-        {/* Chat List Scrollable Area */}
-        {/* Added overflow-y-auto and height calculation to make the chat list scrollable */}
-        <div className="flex-1 overflow-y-auto pr-2">
+        {(loading || (directChatLoading && chats.length === 0)) && !error && (
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            minHeight="100px"
+          >
+            <CircularProgress size={20} />
+          </Box>
+        )}
+        {error &&
+          !loading &&
+          !directChatLoading &&
+          Array.isArray(chats) &&
+          chats.length > 0 && (
+            <div className="text-center text-red-500 text-sm mb-4">
+              Error listing chats: {error}
+            </div>
+          )}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {" "}
-          {/* Added pr-2 for scrollbar space */}
-          {/* Check if chats is an array before mapping */}
-          {Array.isArray(chats) ? (
-            chats.length > 0 ? (
-              chats.map((chat) => {
-                // Find the other participant in the chat
+          {/* Added custom-scrollbar class */}
+          {Array.isArray(chats) && chats.length > 0
+            ? chats.map((chat) => {
+                if (!chat || !chat.id) {
+                  console.warn("Skipping chat item due to missing ID:", chat);
+                  return null;
+                }
+                if (!Array.isArray(chat.participants)) {
+                  console.warn(
+                    `Skipping chat ${chat.id} in list render: participants is not an array.`,
+                    chat
+                  );
+                  return null;
+                }
+
                 const otherParticipant = chat.participants.find(
                   (p) => p.id !== USER_ID
                 );
-                // Determine the chat name (use other participant's name or a default)
-                // Use first_name and last_name based on the provided structure
-                const chatName = otherParticipant
-                  ? `${otherParticipant.first_name || ""} ${
-                      otherParticipant.last_name || ""
-                    }`.trim()
-                  : `Chat ${chat.id}`;
-                // Use a default name if the combined name is empty
-                const displayChatName = chatName || `Chat ${chat.id}`;
+                const avatarUrl = otherParticipant?.avatar;
+                const displayChat_name = getChatDisplayName(chat);
 
-                // Safely access last message content and timestamp from the messages array
-                const lastMessage =
-                  chat.messages && chat.messages.length > 0
-                    ? chat.messages[chat.messages.length - 1] // Get the last message object
+                const latestMessage =
+                  Array.isArray(chat.messages) && chat.messages.length > 0
+                    ? chat.messages[chat.messages.length - 1]
                     : null;
-                const lastMessageContent = lastMessage
-                  ? lastMessage.messageContent
+
+                const lastMessageContent = latestMessage
+                  ? latestMessage.content
                   : "No messages yet";
-                const lastMessageTimestamp = lastMessage
-                  ? lastMessage.timestamp
+                const lastMessageTimestamp = latestMessage
+                  ? latestMessage.timestamp
                   : null;
 
+                const hasUnread =
+                  Array.isArray(chat.messages) &&
+                  chat.messages.some(
+                    (msg) => msg.senderId !== USER_ID && !msg.is_read
+                  );
+
                 return (
-                  // Individual chat item in the list
                   <div
-                    key={chat.id} // Use chat.id as the unique key for list items
-                    className={`flex items-center p-3 mb-2 rounded-lg cursor-pointer hover:bg-gray-100 transition duration-150 ease-in-out ${
-                      // Added transition
-                      activeChat?.id === chat.id ? "bg-gray-200" : ""
+                    key={chat.id}
+                    className={`flex items-center p-3 mb-3 rounded-lg cursor-pointer transition duration-200 ease-in-out ${
+                      activeChat?.id === chat.id
+                        ? "bg-blue-100"
+                        : "bg-gray-50 hover:bg-gray-100"
                     }`}
-                    style={{ height: "65px" }}
-                    onClick={() => setActiveChat(chat)} // Set this chat as active when clicked
+                    onClick={() => {
+                      console.log("Chat sidebar clicked:", chat.id);
+                      if (activeChat?.id !== chat.id) {
+                        setActiveChat(chat);
+                        setMessages(chat.messages || []);
+                        setError(null);
+                        markChatAsRead(chat.id);
+                      } else {
+                        setMessages(chat.messages || []);
+                        console.log(
+                          "Clicked active chat, messages state should already be up-to-date from fetch."
+                        );
+                      }
+                      setChatIdToActivate(null);
+                    }}
                   >
-                    {/* User Avatar */}
-                    <img
-                      src={otherParticipant?.profilePictureUrl || image} // Use participant's image if available, fallback to default
-                      alt={displayChatName} // Alt text for accessibility
-                      style={{ height: "40px" }}
-                      className=" rounded-full mr-3 object-cover flex-shrink-0" // Added object-cover and flex-shrink-0
-                    />
-                    {/* Chat Name and Last Message */}
+                    {/* Profile Picture / Avatar */}
+                    <div className="w-12 h-12 rounded-full mr-4 object-cover flex-shrink-0 shadow-sm">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={displayChat_name || "Avatar"}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-blue-500 flex items-center justify-center text-white font-bold text-xl rounded-full">
+                          {displayChat_name
+                            ? displayChat_name.charAt(0).toUpperCase()
+                            : "?"}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex-1 overflow-hidden">
-                      {" "}
-                      {/* Added overflow-hidden to truncate text */}
-                      {/* Display the chat name */}
-                      <div className="font-semibold text-sm ml-4">
-                        {displayChatName}
-                      </div>{" "}
-                      {/* Added truncate */}
-                      {/* Display the last message content */}
-                      <div className="text-gray-500 text-xs ml-4">
-                        {" "}
-                        {/* Added truncate */}
+                      <div className="font-semibold text-sm text-gray-800 truncate flex items-center">
+                        {displayChat_name}
+                        {hasUnread && (
+                          <span className="ml-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+                            New
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-gray-500 text-xs truncate mt-0.5">
                         {lastMessageContent}
                       </div>
                     </div>
-                    {/* Display the time of the last message if available */}
                     {lastMessageTimestamp && (
-                      <div className="text-gray-400 text-xs ml-2 flex-shrink-0">
-                        {" "}
-                        {/* Added flex-shrink-0 */}
-                        {/* Format timestamp */}
-                        {new Date(lastMessageTimestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                      <div className="text-gray-400 text-xs ml-2 flex-shrink-0 self-start">
+                        {!isNaN(new Date(lastMessageTimestamp).getTime())
+                          ? new Date(lastMessageTimestamp).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )
+                          : ""}
                       </div>
                     )}
-
-                    {/* Unread count - you'll need to implement tracking for this */}
-                    {/* {chat.unreadCount > 0 && (
-                          <div className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
-                            {chat.unreadCount}
-                          </div>
-                        )} */}
                   </div>
                 );
               })
-            ) : (
-              // Message displayed when there are no chats
-              <div className="text-center text-gray-500 mt-8">
-                No chats available
-              </div>
-            )
-          ) : (
-            // Message displayed while chats are loading initially
-            <div className="text-center text-gray-500 mt-8">
-              Loading chats...
-            </div>
-          )}
+            : !loading &&
+              !directChatLoading &&
+              Array.isArray(chats) &&
+              chats.length === 0 && (
+                <div className="text-center text-gray-500 mt-8 text-sm">
+                  No chats available
+                </div>
+              )}
         </div>
       </div>
-
-      {/* Chat Window - Render only if a chat is selected (activeChat is truthy) */}
-      {activeChat ? ( // Correct syntax: No parenthesis after ?
-        <div className="flex-1 bg-white shadow-lg rounded-xl p-6 flex flex-col">
-          {/* Chat Header */}
-          <div className="flex items-center mb-4 border-b pb-4">
-            {" "}
-            {/* Added border bottom */}
-            {/* Find the other participant in the active chat and display their name */}
-            <div className="text-lg font-semibold">
-              {
-                activeChat.participants.find((p) => p.id !== USER_ID)
-                  ? // Use first_name and last_name based on the provided structure
-                    `${
-                      activeChat.participants.find((p) => p.id !== USER_ID)
-                        .first_name || ""
-                    } ${
-                      activeChat.participants.find((p) => p.id !== USER_ID)
-                        .last_name || ""
-                    }`.trim()
-                  : `Chat ${activeChat.id}` // Fallback if other participant not found
-              }
-            </div>
-            {/* Optional: Add a delete button */}
-            {/* <button
-              className="ml-auto text-red-500 hover:text-red-700 text-sm p-1 rounded hover:bg-red-100 transition duration-150 ease-in-out" // Added styling
-              onClick={() => deleteChatSession(activeChat.id)}
-              title="Delete Chat" // Added tooltip
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-5 h-5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.924a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.14-2.006-2.292a48.078 48.078 0 0 0-1.91-.148 48.078 48.078 0 0 0-1.91.148C9.11 2.55 8.2 3.51 8.2 4.694v.916m12 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1-.75-.75m6.75 0H12"
-                />
-              </svg>
-            </button> */}
-          </div>
-
-          {/* Chat Messages Area - Scrollable */}
-          {/* Added overflow-y-auto and space-y for gap between messages */}
-          <div className="flex-1 overflow-y-auto mb-4 space-y-3 p-2">
-            {" "}
-            {/* Added p-2 */}
-            {messages.length > 0 ? (
-              // Map through messages and render each one
-              messages.map((msg) => (
-                // Individual message container
-                <div
-                  key={msg.id || messages.indexOf(msg)} // Use message ID as the key if available, fallback to index
-                  className={`flex ${
-                    msg.senderId === USER_ID ? "justify-end" : "justify-start" // Align messages based on sender
-                  }`}
-                >
-                  {/* Message Bubble */}
-                  <div
-                    className={`max-w-[70%] p-3 rounded-xl ${
-                      // Limit max width of the bubble
-                      msg.senderId === USER_ID
-                        ? "bg-blue-500 text-white rounded-br-none" // Blue bubble for current user, tail effect
-                        : "bg-gray-200 text-gray-700 rounded-bl-none" // Gray bubble for others, tail effect
-                    } break-words shadow`} // Added break-words and shadow
-                  >
-                    {msg.messageContent} {/* Display the message content */}
-                    {/* Optional: Add timestamp below the message */}
-                    {msg.timestamp && (
-                      <div
-                        className={`text-[10px] mt-1 ${
-                          msg.senderId === USER_ID
-                            ? "text-blue-200"
-                            : "text-gray-500"
-                        } text-right`}
-                      >
-                        {/* Format and display timestamp */}
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              // Message displayed when there are no messages in the active chat
-              <div className="text-center text-gray-500 italic mt-8">
-                No messages yet. Start the conversation!
-              </div>
-            )}
-          </div>
-
-          {/* Predefined Quick Replies */}
-          {/* Added overflow-x-auto for horizontal scrolling on small screens */}
-          <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 text-sm flex-shrink-0 transition duration-150 ease-in-out"
-              onClick={() => sendMessage("Let's do it!")}
-            >
-              Let's do it!
-            </button>
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 text-sm flex-shrink-0 transition duration-150 ease-in-out"
-              onClick={() => sendMessage("Great!")}
-            >
-              Great!
-            </button>
-            {/* Add more quick replies as needed */}
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 text-sm flex-shrink-0 transition duration-150 ease-in-out"
-              onClick={() => sendMessage("When are you available?")}
-            >
-              When are you available?
-            </button>
-          </div>
-
-          {/* Chat Input Area */}
-          <div className="flex items-center bg-gray-100 p-2 rounded-full shadow-inner">
-            {" "}
-            {/* Adjusted padding */}
-            <input
-              type="text"
-              placeholder="Type a message..."
-              style={{
-                backgroundColor: "#F8F0F0",
-                padding: "14px",
-                width: "100%",
-                borderRadius: "10px",
-              }} // Adjusted background color
-              className="flex-1 bg-transparent outline-none px-3 text-sm" // Adjusted padding and text size
-              value={newMessage} // Controlled input value
-              onChange={(e) => setNewMessage(e.target.value)} // Update state on change
-              onKeyDown={(e) => e.key === "Enter" && sendMessage(newMessage)} // Send on Enter key press
-              disabled={!socket || socket.readyState !== WebSocket.OPEN} // Disable input if socket is not open
-            />
-            <button
-              className="ml-2 p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out" // Added disabled styles and transition
-              onClick={() => sendMessage(newMessage)} // Send message on button click
-              disabled={
-                !newMessage.trim() ||
-                !socket ||
-                socket.readyState !== WebSocket.OPEN
-              } // Disable button if input is empty or socket not open
-              title="Send Message" // Added tooltip
-            >
-              {/* Send Icon (example using inline SVG) */}
-              {/* <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5 transform rotate-90"
-              >
-                <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 109.817 109.817 0 0 0 3.58-1.139L15.15 18a.75.75 0 0 0 1.404-.128 9.74 9.74 0 0 0 5.634-4.35.75.75 0 0 0 0-.752 9.74 9.74 0 0 0-5.634-4.35.75.75 0 0 0-1.404-.128L7.065 3.544a109.817 109.817 0 0 0-3.58-1.139Z" />
-              </svg> */}
-            </button>
-          </div>
-        </div>
-      ) : (
-        // Correct syntax: No parenthesis after :
-        // Display a message when no chat is selected
-        <div className="flex-1 bg-white shadow-lg rounded-xl p-6 flex flex-col items-center justify-center text-gray-500">
-          {/* Show loading indicator if the direct chat logic is still running */}
-          {loading ? (
+      {/* Chat Window */}
+      {showChatWindowPlaceholder ? (
+        <div className="flex-1 bg-white rounded-r-xl p-6 flex flex-col items-center justify-center text-gray-500 border-l border-gray-200">
+          {showDirectChatLoading ? (
             <div className="flex flex-col items-center">
-              <svg
-                className="animate-spin h-8 w-8 text-gray-500 mb-4"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l2-2.647z"
-                ></path>
-              </svg>
-              <div>Loading chat...</div>
+              <CircularProgress className="mb-4" />
+              <Typography variant="h6" color="textSecondary">
+                Loading or creating chat...
+              </Typography>
+              {error && renteeIdFromParams && (
+                <Typography
+                  variant="body2"
+                  color="error"
+                  className="mt-4 text-center"
+                >
+                  Error setting up chat with rentee: {error}
+                </Typography>
+              )}
+              {error && !renteeIdFromParams && (
+                <Typography
+                  variant="body2"
+                  color="error"
+                  className="mt-4 text-center"
+                >
+                  Error: {error}
+                </Typography>
+              )}
             </div>
           ) : (
-            // Show guidance message if not loading and no chat is active
             <>
-              {/* Chat Icon */}
-              {/* <svg
+              <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-16 h-16 mb-4"
+                className="w-16 h-16 mb-4 text-gray-400"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H15.75m2.25-4.125a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H18m2.25 4.125c0 1.15-.19 2.23-.53 3.219L16.5 18a2.25 2.25 0 0 1-1.875 1.039V21.75l-1.581-1.581a1.5 1.5 0 0 0-1.14-.44L9.75 20.25a3.733 3.733 0 0 0-.45-1.495l-1.413 1.413zm-1.413-1.413L5.416 16.17A9.75 9.75 0 0 1 3 12.375V4.5c0-1.036.84-1.875 1.875-1.875h15C20.16 2.625 21 3.464 21 4.5v7.875c0 1.035-.84 1.875-1.875 1.875h-4.5Z"
                 />
-              </svg> */}
-              <div>Select a chat from the sidebar to view messages</div>
-              {/* Show an error message if we came from a direct link but couldn't find/create the chat */}
-              {renteeIdFromParams && !activeChat && !loading && (
-                <div className="mt-4 text-center text-red-500">
-                  Could not find or create a chat with the specified user.
-                  Please try selecting from the list.
-                </div>
-              )}
+              </svg>
+              <Typography
+                variant="h6"
+                color="textSecondary"
+                className="text-center"
+              >
+                Select a chat from the sidebar to view messages
+              </Typography>
+              {error &&
+                renteeIdFromParams &&
+                !loading &&
+                !directChatLoading &&
+                !activeChat &&
+                Array.isArray(chats) &&
+                chats.length > 0 && (
+                  <Typography
+                    variant="body2"
+                    color="error"
+                    className="mt-4 text-center"
+                  >
+                    Could not find or create a chat with the specified user.
+                    Error: {error}. Please try selecting an existing chat.
+                  </Typography>
+                )}
+              {error &&
+                renteeIdFromParams &&
+                !loading &&
+                !directChatLoading &&
+                !activeChat &&
+                Array.isArray(chats) &&
+                chats.length === 0 && (
+                  <Typography
+                    variant="body2"
+                    color="error"
+                    className="mt-4 text-center"
+                  >
+                    Could not set up chat with the specified user. Error:{" "}
+                    {error}. No other chats available.
+                  </Typography>
+                )}
             </>
           )}
+        </div>
+      ) : (
+        // Chat Window - Active Chat View
+        <div className="flex-1 bg-white rounded-r-xl p-6 flex flex-col border-l border-gray-200">
+          {error && !showDirectChatLoading && (
+            <div className="text-center text-red-500 mb-4 text-sm">
+              Error: {error}
+            </div>
+          )}
+          <div className="flex items-center mb-4 border-b pb-4">
+            <div className="text-xl font-bold text-gray-800 flex-1">
+              {getChatDisplayName(activeChat)}
+            </div>
+            {/* {activeChat?.id && (
+              <button
+                className="ml-auto text-red-500 hover:text-red-700 text-sm p-1 rounded-md hover:bg-red-100 transition duration-150 ease-in-out"
+                onClick={() => deleteChatSession(activeChat.id)}
+                title="Delete Chat"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.924a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.14-2.006-2.292a48.078 48.078 0 0 0-1.91-.148 48.078 48.078 0 0 0-1.91.148C9.11 2.55 8.2 3.51 8.2 4.694v.916m12 0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-.75.75H5.25a.75.75 0 0 1-.75-.75v-1.5a.75.75 0 0 1-.75-.75m6.75 0H12"
+                  />
+                </svg>
+              </button>
+            )} */}
+          </div>
+
+          {/* Messages Display Area */}
+          <div className="flex-1 overflow-y-auto mb-4 space-y-4 p-2 custom-scrollbar">
+            {messages.length > 0 ? (
+              messages.map((msg, index) => {
+                const senderId = msg.senderId;
+                const isSentByCurrentUser = senderId === USER_ID;
+                const senderParticipant = getParticipantById(senderId);
+                const senderName = senderParticipant
+                  ? [senderParticipant.first_name, senderParticipant.last_name]
+                      .filter(Boolean)
+                      .join(" ") || senderId
+                  : senderId || "Unknown Sender";
+
+                return (
+                  <div
+                    key={msg.id || `msg-${index}`}
+                    className={`flex my-4 ${
+                      isSentByCurrentUser ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`flex items-end ${
+                        isSentByCurrentUser ? "" : "flex-row-reverse"
+                      }`}
+                    >
+                      {" "}
+                      {/* Reverse flex for received message layout */}
+                      {/* Avatar */}
+                      {(isSentByCurrentUser
+                        ? getParticipantById(USER_ID)?.avatar
+                        : senderParticipant?.avatar) && (
+                        <img
+                          src={
+                            isSentByCurrentUser
+                              ? getParticipantById(USER_ID)?.avatar
+                              : senderParticipant?.avatar
+                          }
+                          alt={isSentByCurrentUser ? "You" : senderName}
+                          className={`w-8 h-8 rounded-full object-cover shadow-sm flex-shrink-0 ${
+                            isSentByCurrentUser ? "ml-2" : "mr-2"
+                          }`}
+                        />
+                      )}
+                      <div
+                        className={`max-w-[50%] p-3 bg-blue-500  rounded-xl shadow-sm break-words flex flex-col ${
+                          // Applied max-w-[50%], added flex-col for status below
+                          isSentByCurrentUser
+                            ? "bg-[#04FFBB] text-white rounded-br-none" // Darker blue for sent
+                            : "bg-gray-200 text-gray-800 rounded-bl-none" // Lighter gray for received, darker text
+                        } ${
+                          msg.status === "failed" ? "border border-red-500" : ""
+                        }`}
+                      >
+                        {msg.content} {/* Use standardized content field */}
+                        {/* Sending status */}
+                        {msg.status === "sending" && (
+                          <div className="text-[10px] mt-1 text-blue-200 self-end">
+                            Sending...
+                          </div> // Status aligned to end
+                        )}
+                        {msg.status === "failed" && (
+                          <div
+                            className="text-[10px] mt-1 text-red-300 self-end"
+                            title={msg.error}
+                          >
+                            Failed!
+                          </div> // Status aligned to end
+                        )}
+                        {/* Timestamp */}
+                        {msg.timestamp &&
+                          !isNaN(new Date(msg.timestamp).getTime()) && (
+                            <div
+                              className={`text-[10px] mt-1 ${
+                                isSentByCurrentUser
+                                  ? "text-blue-300" // Lighter timestamp for sent
+                                  : "text-gray-500" // Darker timestamp for received
+                              } self-end`}
+                            >
+                              {new Date(msg.timestamp).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center text-gray-500 italic mt-8 text-sm">
+                No messages yet. Start the conversation!
+              </div>
+            )}
+            {/* Ref for auto-scrolling */}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick Reply Buttons */}
+          <div className="flex space-x-2 mb-4 overflow-x-auto pb-2">
+            {[
+              "Let's do it!",
+              "Great!",
+              "When are you available?",
+              "Sounds good",
+            ].map((reply, index) => (
+              <button
+                key={index}
+                className="bg-blue-100 text-blue-700 px-4 py-2 rounded-full hover:bg-blue-200 text-sm flex-shrink-0 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => sendMessage(reply)}
+                disabled={isSendDisabled}
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+
+          {/* Message Input Area */}
+          <div className="flex items-center bg-gray-100 p-3 rounded-lg shadow-inner">
+            {" "}
+            {/* Adjusted padding/rounding */}
+            <input
+              type="text"
+              placeholder={
+                isInputDisabled
+                  ? !socket ||
+                    (socket.readyState !== WebSocket.OPEN &&
+                      socket.readyState !== WebSocket.CONNECTING)
+                    ? "Chat service unavailable"
+                    : "Connecting to chat service..."
+                  : !activeChat
+                  ? "Select a chat to type"
+                  : "Type your message..."
+              }
+              className="flex-1 bg-transparent outline-none px-3 text-sm text-gray-800 placeholder-gray-500"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage(newMessage)}
+              disabled={isInputDisabled}
+            />
+            <button
+              className="ml-3 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition duration-150 ease-in-out"
+              onClick={() => sendMessage(newMessage)}
+              disabled={isSendDisabled}
+              title="Send Message"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-5 h-5 transform rotate-90"
+              >
+                <path d="M3.478 2.405a.75.75 0 0 0-.926.94l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 109.817 109.817 0 0 0 3.58-1.139L15.15 18a.75.75 0 0 0 1.404-.128 9.74 9.74 0 0 0 5.634-4.35.75.75 0 0 0 0-.752 9.74 9.74 0 0 0-5.634-4.35.75.75 0 0 0-1.404-.128L7.065 3.544a109.817 109.817 0 0 0-3.58-1.139Z" />
+              </svg>
+            </button>
+          </div>
         </div>
       )}
     </div>

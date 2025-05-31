@@ -1,4 +1,3 @@
-import Dropdown from "./Dropdown";
 import makesData from "../../api/makes.json";
 import modelsData from "../../api/models.json";
 import { useEffect, useState } from "react";
@@ -167,6 +166,15 @@ const Step1 = ({ nextStep }) => {
             value={vehicleData.year}
             onChange={handleChange}
             type="number"
+            size="small"
+            fullWidth
+          />
+          <TextField
+            label="Plate Region"
+            variant="outlined"
+            name="plateRegion"
+            value={vehicleData.plateRegion}
+            onChange={handleChange}
             size="small"
             fullWidth
           />

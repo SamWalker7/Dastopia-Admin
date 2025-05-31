@@ -13,6 +13,7 @@ import Step2 from "./newPages/Add Car/Step2";
 import Step3 from "./newPages/Add Car/Step3";
 import Step4 from "./newPages/Add Car/Step4";
 import Step5 from "./newPages/Add Car/Step5";
+import ChatApp from "./newPages/chat";
 function App() {
   const [user, setUser] = useState(() => {
     // Retrieve user data from localStorage on initial load
@@ -58,6 +59,7 @@ function App() {
         <Route path="/dashboard" element={<PermanentDrawerLeft />} />
         <Route index path="/otp" element={<OTP />} />
         <Route index path="/usermanagment" element={<UserManagment />} />
+        <Route path="chat" element={<ChatApp />} />
       </Routes>
     </Provider>
   );
