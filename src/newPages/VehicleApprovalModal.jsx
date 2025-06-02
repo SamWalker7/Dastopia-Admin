@@ -840,8 +840,10 @@ const VehicleApprovalModal = ({
 
         {/* Approval/Reject Buttons & Status */}
         {/* Only show buttons if a vehicle is selected/passed */}
-        {vehicleDetails &&
-          vehicleDetails?.isApproved === "pending" && ( // Use fetched vehicleDetails status
+        {
+          // vehicleDetails &&
+          //   vehicleDetails?.isApproved === "pending"
+          true && ( // Use fetched vehicleDetails status
             <Box className="flex py-4 px-10 gap-4 w-full flex-wrap sticky top-[50px] bg-white z-10 border-b">
               {" "}
               {/* Adjusted top for sticky */}
@@ -872,7 +874,8 @@ const VehicleApprovalModal = ({
                 </Typography>
               )}
             </Box>
-          )}
+          )
+        }
         {/* Display status if not pending, or if loading/error and status is known */}
         {vehicleDetails &&
           vehicleDetails?.isApproved !== "pending" && ( // Use fetched vehicleDetails status
