@@ -610,7 +610,7 @@ const Dashboard = () => {
         ))}
 
         {/* Vehicle Listings by Car Make Bar Chart */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={8}>
           {" "}
           {/* Use responsive grid */}
           <div className="bg-white shadow-[#dee2fe] drop-shadow-md p-4 px-8 rounded-2xl">
@@ -667,7 +667,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* NEW CHART: Vehicles Created Over Time Line Chart */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={9}>
           {" "}
           {/* Use responsive grid */}
           <div className="bg-white shadow-[#dee2fe] drop-shadow-md p-4 px-8 rounded-2xl">

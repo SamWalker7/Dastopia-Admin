@@ -153,8 +153,8 @@ const FinancialDashboard = () => {
             console.error(
               "Authentication failed. Token might be expired or invalid."
             );
-            setAdminToken(null);
-            localStorage.removeItem("admin");
+            // setAdminToken(null);
+            // localStorage.removeItem("admin");
           }
           throw new Error(`HTTP error! status: ${response.status}`);
         }
