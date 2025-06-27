@@ -24,7 +24,7 @@ export const login = (phone_number, password) => async (dispatch) => {
       localStorage.setItem("admin", JSON.stringify(json.body));
       localStorage.setItem("tokenExpiry", expiryTime); // Store the expiry time
 
-      alert("You have successfully logged in");
+      //  alert("You have successfully logged in");
       dispatch(loginSuccess(json.body));
       console.log(json); // Start the token refresh interval (refresh every 45 minutes)
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -29,6 +31,8 @@ import RoleSettings from "./RoleSettings";
 import UserSettings from "./UserSettings";
 import FinancialDashboard from "./FinancialDashboard";
 import ChatApp from "./chat";
+import LogoutIcon from "@mui/icons-material/Logout";
+import { useNavigate } from "react-router-dom";
 const drawerWidth = 300;
 
 const PermanentDrawerLeft = () => {
@@ -72,7 +76,12 @@ const PermanentDrawerLeft = () => {
         return <Box p={2}>Select an item to view details</Box>;
     }
   };
+  const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("admin");
+    navigate("/");
+  };
   return (
     <Box className="text-sm" display="flex">
       {/* Drawer */}
@@ -239,7 +248,7 @@ const PermanentDrawerLeft = () => {
             </ListItemButton>
           </li>
 
-          <li>
+          {/* <li>
             <ListItemButton
               className=" gap-4"
               onClick={() => handleMenuClick("Car Listing Approval")}
@@ -265,7 +274,7 @@ const PermanentDrawerLeft = () => {
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>
-          </li>
+          </li> */}
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className=" gap-4"
@@ -418,6 +427,31 @@ const PermanentDrawerLeft = () => {
             </List>
           </Collapse>
         </ul>
+        <Box
+          onClick={handleLogout}
+          position="fixed"
+          top={40}
+          right={40}
+          px={3}
+          py={2}
+          bgcolor="#d32f2f"
+          color="white"
+          borderRadius={2}
+          boxShadow={3}
+          display="flex"
+          alignItems="center"
+          gap={1}
+          sx={{
+            cursor: "pointer",
+            transition: "0.2s",
+            "&:hover": { opacity: 0.9 },
+          }}
+        >
+          <LogoutIcon />
+          <Typography variant="body1" fontWeight={500}>
+            Log Out
+          </Typography>
+        </Box>
         <Box
           position="fixed"
           bottom={0}
