@@ -25,10 +25,10 @@ const fileToBase64 = (file) => {
 // Define the initial state of the vehicle data form
 const initialVehicleData = {
   advanceNoticePeriod: "",
-  calendar: "", // Keep calendar as string for now, parsing logic in submit
+  unavailableDates: [], // Store array of ISO date strings for unavailable dates
   carFeatures: [],
   instantBooking: false,
-  price: "",
+  price: "", // Already a string
   city: "",
   category: "",
   make: "",
@@ -42,38 +42,36 @@ const initialVehicleData = {
   color: "",
   transmission: "",
   modelSpecification: "",
-  isPostedByOwner: "", // Keep isPostedByOwner as string, adjust submit logic if needed
+  isPostedByOwner: "",
   representativeFirstName: "",
   representativeLastName: "",
   representativePhone: "",
   representativeEmail: "",
-  vehicleImageKeys: [], // Store S3 object keys for vehicle images - PERSISTED
-  adminDocumentKeys: [], // Store S3 object keys for admin documents - PERSISTED
+  vehicleImageKeys: [],
+  adminDocumentKeys: [],
   id: "",
   location: [],
   mileage: "",
-  pickUp: [], // Changed to pickUp to match schema
-  dropOff: [], // Changed to dropOff to match schema
+  pickUp: [],
+  dropOff: [],
   plateRegion: "",
 };
 
 // Define the initial state for uploaded photos (temporary previews)
 const initialUploadedPhotos = {
-  // Store preview data (base64) and S3 object keys for uploaded photos - NOT PERSISTED (TEMPORARY PREVIEWS ONLY)
-  front: null, // { base64: '...', key: 's3-key' }
-  back: null, // { base64: '...', key: 's3-key' }
-  left: null, // { base64: '...', key: 's3-key' }
-  right: null, // { base64: '...', key: 's3-key' }
-  interior: null, // { base64: '...', key: 's3-key' }
-  additional: [], // [{ base64: '...', key: 's3-key' }]
+  front: null,
+  back: null,
+  left: null,
+  right: null,
+  interior: null,
+  additional: [],
 };
 
 // Define the initial state for uploaded documents (temporary previews)
 const initialUploadedDocuments = {
-  // Store preview data (name, size) and S3 object keys for uploaded documents - NOT PERSISTED (TEMPORARY PREVIEWS ONLY)
-  libre: null, // { name: '...', size: ..., key: 's3-key' }
-  license: null, // { name: '...', size: ..., key: 's3-key' }
-  insurance: null, // { name: '...', size: ..., key: 's3-key' }
+  libre: null,
+  license: null,
+  insurance: null,
 };
 
 const generateUniqueId = () => {
@@ -83,11 +81,11 @@ const generateUniqueId = () => {
 const useVehicleFormStore = create(
   persist(
     (set, get) => ({
-      vehicleData: { ...initialVehicleData, id: generateUniqueId() }, // Initialize with a unique ID
+      vehicleData: { ...initialVehicleData, id: generateUniqueId() },
       uploadedPhotos: { ...initialUploadedPhotos },
       uploadedDocuments: { ...initialUploadedDocuments },
 
-      // --- Token Refresh Logic ---
+      // --- Token Refresh Logic --- (EXACTLY AS PROVIDED ORIGINALLY)
       refreshAccessToken: async () => {
         const storedUser = localStorage.getItem("admin");
         const user = storedUser ? JSON.parse(storedUser) : null;
@@ -116,21 +114,62 @@ const useVehicleFormStore = create(
               refreshResponse.status,
               await refreshResponse.text()
             );
-            localStorage.removeItem("admin"); // Clear stored user data on refresh failure
+            localStorage.removeItem("admin");
             throw new Error("Failed to refresh access token");
           }
 
           const refreshedTokens = await refreshResponse.json();
           const updatedUser = { ...user, ...refreshedTokens };
           localStorage.setItem("admin", JSON.stringify(updatedUser));
-          return refreshedTokens.accessToken; // Return the new access token
+          return refreshedTokens.accessToken;
         } catch (error) {
           console.error("Error during token refresh:", error);
           throw error;
         }
       },
+      uploadImageForEditing: async (vehicleId, file) => {
+        try {
+          if (!vehicleId) {
+            throw new Error("Vehicle ID is required for image upload.");
+          }
 
-      // Function to make API calls with automatic token refresh
+          // Get all necessary helper functions from the store's instance
+          const {
+            getPresignedUrl,
+            uploadToPreSignedUrl,
+            compressImage,
+            fileToBase64,
+          } = get();
+
+          // 1. Get Presigned URL for the new file
+          const preSignedData = await getPresignedUrl(
+            vehicleId,
+            file.name,
+            file.type,
+            "getPresignedUrl"
+          );
+          const newImageS3Key = preSignedData.key;
+
+          // 2. Compress and Upload the new file
+          const compressedFile = await compressImage(file);
+          await uploadToPreSignedUrl(
+            preSignedData.url,
+            compressedFile,
+            file.type
+          );
+
+          // 3. Get base64 for instant preview, just like in Step2.js
+          const base64 = await fileToBase64(compressedFile);
+
+          // 4. Return all necessary info to the calling component
+          return { success: true, newKey: newImageS3Key, base64: base64 };
+        } catch (error) {
+          console.error("Error in uploadImageForEditing:", error);
+          // Re-throw the error so the component can catch it
+          throw error;
+        }
+      },
+      // Function to make API calls with automatic token refresh (EXACTLY AS PROVIDED ORIGINALLY)
       apiCallWithRetry: async (url, options, retryCount = 0) => {
         const storedUser = localStorage.getItem("admin");
         const user = storedUser ? JSON.parse(storedUser) : null;
@@ -155,7 +194,7 @@ const useVehicleFormStore = create(
             if (retryCount < 1) {
               const newAccessToken = await get().refreshAccessToken();
               if (newAccessToken) {
-                return get().apiCallWithRetry(url, options, retryCount + 1); // Retry with new token
+                return get().apiCallWithRetry(url, options, retryCount + 1);
               }
             }
             throw new Error("Unauthorized or token expired and refresh failed");
@@ -175,7 +214,7 @@ const useVehicleFormStore = create(
             );
           }
 
-          return await response.json(); // Or response, depending on what you need
+          return await response.json();
         } catch (error) {
           console.error(
             "API call failed:",
@@ -189,23 +228,23 @@ const useVehicleFormStore = create(
 
       // --- Actions using apiCallWithRetry ---
 
-      // Action to update vehicle data
+      // Action to update vehicle data (EXACTLY AS PROVIDED ORIGINALLY)
       updateVehicleData: (newData) => {
         set((state) => ({
           vehicleData: { ...state.vehicleData, ...newData },
         }));
       },
 
-      // Action to get a pre-signed URL for file upload (images or documents)
+      // Action to get a pre-signed URL for file upload (images or documents) (EXACTLY AS PROVIDED ORIGINALLY)
       getPresignedUrl: async (vehicleId, filename, contentType, operation) => {
         const url =
-          "https://xo55y7ogyj.execute-api.us-east-1.amazonaws.com/prod/add_vehicle"; // Assuming this endpoint handles both image and document URL requests
+          "https://xo55y7ogyj.execute-api.us-east-1.amazonaws.com/prod/add_vehicle";
 
         const options = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            operation, // e.g., "getPresignedUrl" or maybe a specific one for docs if backend supports? Assuming "getPresignedUrl" works for both based on filename/context.
+            operation,
             vehicleId,
             filename,
             contentType,
@@ -218,13 +257,14 @@ const useVehicleFormStore = create(
           if (!data || !data.body || !data.body.url || !data.body.key) {
             throw new Error("Invalid presigned URL response structure");
           }
-          return { url: data.body.url, key: data.body.key }; // Return both URL & key
+          return { url: data.body.url, key: data.body.key };
         } catch (error) {
           console.error("Error fetching presigned URL:", error);
           throw error;
         }
       },
 
+      // (EXACTLY AS PROVIDED ORIGINALLY)
       uploadToPreSignedUrl: async (preSignedUrl, file, contentType) => {
         try {
           const response = await fetch(preSignedUrl, {
@@ -244,14 +284,14 @@ const useVehicleFormStore = create(
             );
           }
           console.log("Upload successful to presigned URL.");
-          return true; // Upload successful
+          return true;
         } catch (error) {
           console.error("Error uploading to presigned URL:", error);
           throw error;
         }
       },
 
-      // Action to upload a vehicle image
+      // Action to upload a vehicle image (EXACTLY AS PROVIDED ORIGINALLY)
       uploadVehicleImage: async (file, key) => {
         try {
           const vehicleId = get().vehicleData.id;
@@ -262,27 +302,23 @@ const useVehicleFormStore = create(
           const filename = file.name;
           const contentType = file.type;
 
-          // Get pre-signed URL and S3 key
           const preSignedData = await get().getPresignedUrl(
             vehicleId,
             filename,
             contentType,
-            "getPresignedUrl" // Assuming this operation works for images
+            "getPresignedUrl"
           );
           const preSignedUrl = preSignedData.url;
-          const imageS3Key = preSignedData.key; // S3 object key
+          const imageS3Key = preSignedData.key;
 
-          // Compress the image
           const compressedFile = await compressImage(file);
 
-          // Upload to S3 using pre-signed URL
           await get().uploadToPreSignedUrl(
-            preSignedUrl, // Correct variable name
+            preSignedUrl,
             compressedFile,
             contentType
           );
 
-          // Convert the compressed file to a base64 string for preview
           const base64 = await fileToBase64(compressedFile);
 
           set((state) => ({
@@ -290,7 +326,7 @@ const useVehicleFormStore = create(
               ...state.vehicleData,
               vehicleImageKeys: [
                 ...state.vehicleData.vehicleImageKeys,
-                imageS3Key, // Store S3 object key in vehicleImageKeys
+                imageS3Key,
               ],
             },
             uploadedPhotos: {
@@ -299,19 +335,18 @@ const useVehicleFormStore = create(
                 key === "additional"
                   ? [
                       ...state.uploadedPhotos.additional,
-                      { base64: base64, key: imageS3Key }, // Store S3 object key in uploadedPhotos preview
+                      { base64: base64, key: imageS3Key },
                     ]
-                  : { base64: base64, key: imageS3Key }, // Store S3 object key in uploadedPhotos preview
+                  : { base64: base64, key: imageS3Key },
             },
           }));
         } catch (error) {
           console.error("Error uploading vehicle image:", error);
-          // Handle error appropriately (e.g., show user feedback)
-          throw error; // Re-throw to allow calling component to catch
+          throw error;
         }
       },
 
-      // Action to upload an admin document
+      // Action to upload an admin document (EXACTLY AS PROVIDED ORIGINALLY)
       uploadAdminDocument: async (file, key) => {
         try {
           const vehicleId = get().vehicleData.id;
@@ -322,54 +357,48 @@ const useVehicleFormStore = create(
           const filename = file.name;
           const contentType = file.type;
 
-          // Get pre-signed URL and S3 key
           const preSignedData = await get().getPresignedUrl(
             vehicleId,
             filename,
             contentType,
-            "getPresignedUrl" // Assuming this operation works for documents too
+            "getPresignedUrl"
           );
           const preSignedUrl = preSignedData.url;
-          const documentS3Key = preSignedData.key; // S3 object key
+          const documentS3Key = preSignedData.key;
 
-          // Upload to S3 using pre-signed URL
-          // Documents are typically not compressed or converted to base64 for preview
           await get().uploadToPreSignedUrl(preSignedUrl, file, contentType);
 
-          // Update state with S3 key
           set((state) => ({
             vehicleData: {
               ...state.vehicleData,
               adminDocumentKeys: [
                 ...state.vehicleData.adminDocumentKeys,
-                documentS3Key, // Store S3 object key in adminDocumentKeys
+                documentS3Key,
               ],
             },
             uploadedDocuments: {
               ...state.uploadedDocuments,
-              [key]: { name: file.name, size: file.size, key: documentS3Key }, // Store S3 object key in uploadedDocuments preview
+              [key]: { name: file.name, size: file.size, key: documentS3Key },
             },
           }));
         } catch (error) {
           console.error("Error uploading admin document:", error);
-          // Handle error appropriately (e.g., show user feedback)
-          throw error; // Re-throw to allow calling component to catch
+          throw error;
         }
       },
 
-      // Action to delete a vehicle image (removes from store, not from S3 in this version)
+      // Action to delete a vehicle image (EXACTLY AS PROVIDED ORIGINALLY)
       deleteVehicleImage: (key, imageS3Key) => {
         set((state) => {
           const updatedPhotos = { ...state.uploadedPhotos };
           const updatedVehicleImageKeys =
-            state.vehicleData.vehicleImageKeys.filter((k) => k !== imageS3Key); // Filter by S3 key
+            state.vehicleData.vehicleImageKeys.filter((k) => k !== imageS3Key);
 
           if (key === "additional") {
             updatedPhotos.additional = updatedPhotos.additional.filter(
-              (img) => img.key !== imageS3Key // Filter additional by S3 key in preview state
+              (img) => img.key !== imageS3Key
             );
           } else {
-            // For main images, set to null if the key matches
             if (updatedPhotos[key]?.key === imageS3Key) {
               updatedPhotos[key] = null;
             }
@@ -385,16 +414,15 @@ const useVehicleFormStore = create(
         });
       },
 
-      // Action to delete an admin document (removes from store, not from S3 in this version)
+      // Action to delete an admin document (EXACTLY AS PROVIDED ORIGINALLY)
       deleteAdminDocument: (key, documentS3Key) => {
         set((state) => {
           const updatedDocuments = { ...state.uploadedDocuments };
           const updatedAdminDocumentKeys =
             state.vehicleData.adminDocumentKeys.filter(
-              (k) => k !== documentS3Key // Filter by S3 key
+              (k) => k !== documentS3Key
             );
 
-          // For main documents, set to null if the key matches
           if (updatedDocuments[key]?.key === documentS3Key) {
             updatedDocuments[key] = null;
           }
@@ -409,7 +437,7 @@ const useVehicleFormStore = create(
         });
       },
 
-      // Action to update a vehicle image (replaces existing one in store and S3)
+      // Action to update a vehicle image (EXACTLY AS PROVIDED ORIGINALLY)
       updateVehicleImage: async (file, key, oldImageS3Key) => {
         try {
           const vehicleId = get().vehicleData.id;
@@ -419,7 +447,6 @@ const useVehicleFormStore = create(
           const filename = file.name;
           const contentType = file.type;
 
-          // Get pre-signed URL for the new image and its S3 key
           const preSignedData = await get().getPresignedUrl(
             vehicleId,
             filename,
@@ -427,24 +454,20 @@ const useVehicleFormStore = create(
             "getPresignedUrl"
           );
           const preSignedUrl = preSignedData.url;
-          const newImageS3Key = preSignedData.key; // New S3 object key
+          const newImageS3Key = preSignedData.key;
 
-          // Compress the new image
           const compressedFile = await compressImage(file);
 
-          // Upload the new image to S3
           await get().uploadToPreSignedUrl(
-            preSignedUrl, // Correct variable name
+            preSignedUrl,
             compressedFile,
             contentType
           );
 
-          // Convert the compressed file to base64 for preview
           const base64 = await fileToBase64(compressedFile);
 
           set((state) => {
             const updatedPhotos = { ...state.uploadedPhotos };
-            // Remove the old S3 key and add the new S3 key to vehicleImageKeys
             const updatedVehicleImageKeys =
               state.vehicleData.vehicleImageKeys.filter(
                 (k) => k !== oldImageS3Key
@@ -453,32 +476,28 @@ const useVehicleFormStore = create(
             if (key === "additional") {
               updatedPhotos.additional = updatedPhotos.additional.map((img) =>
                 img.key === oldImageS3Key
-                  ? { base64: base64, key: newImageS3Key } // Update preview with new base64 and new S3 key
+                  ? { base64: base64, key: newImageS3Key }
                   : img
               );
             } else {
-              // Update main image preview with new base64 and new S3 key
               updatedPhotos[key] = { base64: base64, key: newImageS3Key };
             }
 
             return {
               vehicleData: {
                 ...state.vehicleData,
-                vehicleImageKeys: [...updatedVehicleImageKeys, newImageS3Key], // Add new S3 key
+                vehicleImageKeys: [...updatedVehicleImageKeys, newImageS3Key],
               },
               uploadedPhotos: updatedPhotos,
             };
           });
-
-          // Note: This version does not automatically delete the old file from S3.
-          // S3 cleanup logic might be needed separately or handled by backend.
         } catch (error) {
           console.error("Error updating vehicle image:", error);
-          throw error; // Re-throw
+          throw error;
         }
       },
 
-      // Action to update an admin document (replaces existing one in store and S3)
+      // Action to update an admin document (EXACTLY AS PROVIDED ORIGINALLY)
       updateAdminDocument: async (file, key, oldDocumentS3Key) => {
         try {
           const vehicleId = get().vehicleData.id;
@@ -488,28 +507,24 @@ const useVehicleFormStore = create(
           const filename = file.name;
           const contentType = file.type;
 
-          // Get pre-signed URL for the new document and its S3 key
           const preSignedData = await get().getPresignedUrl(
             vehicleId,
             filename,
             contentType,
-            "getPresignedUrl" // Assuming this operation works for documents
+            "getPresignedUrl"
           );
           const preSignedUrl = preSignedData.url;
-          const newDocumentS3Key = preSignedData.key; // New S3 object key
+          const newDocumentS3Key = preSignedData.key;
 
-          // Upload the new document to S3
           await get().uploadToPreSignedUrl(preSignedUrl, file, contentType);
 
           set((state) => {
             const updatedDocuments = { ...state.uploadedDocuments };
-            // Remove the old S3 key and add the new S3 key to adminDocumentKeys
             const updatedAdminDocumentKeys =
               state.vehicleData.adminDocumentKeys.filter(
                 (k) => k !== oldDocumentS3Key
               );
 
-            // Update document preview with new name, size, and new S3 key
             updatedDocuments[key] = {
               name: file.name,
               size: file.size,
@@ -522,17 +537,14 @@ const useVehicleFormStore = create(
                 adminDocumentKeys: [
                   ...updatedAdminDocumentKeys,
                   newDocumentS3Key,
-                ], // Add new S3 key
+                ],
               },
               uploadedDocuments: updatedDocuments,
             };
           });
-
-          // Note: This version does not automatically delete the old file from S3.
-          // S3 cleanup logic might be needed separately or handled by backend.
         } catch (error) {
           console.error("Error updating admin document:", error);
-          throw error; // Re-throw
+          throw error;
         }
       },
 
@@ -540,92 +552,70 @@ const useVehicleFormStore = create(
       submitVehicleListing: async () => {
         const vehicleData = get().vehicleData;
 
-        // Calendar parsing and transformation
-        let parsedCalendar = vehicleData.calendar;
-        if (typeof vehicleData.calendar === "string" && vehicleData.calendar) {
-          try {
-            parsedCalendar = JSON.parse(vehicleData.calendar);
-          } catch (e) {
-            console.error("Error parsing calendar string:", e);
-            parsedCalendar = [];
-          }
-        } else if (!vehicleData.calendar) {
-          parsedCalendar = [];
-        }
-        const transformedCalendarEvents = Array.isArray(parsedCalendar)
-          ? parsedCalendar.map(
-              // Ensure parsedCalendar is an array
-              (event, index) => ({
-                eventId: `evt-${index + 1}`, // Generate a simple event ID
-                startDate: event.start,
-                endDate: event.end,
-                status: event.status || "available",
-                source: event.source || "manual",
-              })
-            )
-          : []; // Default to empty array if parsing fails or is not an array
-
-        // Location transformation
+        // Location transformation (EXACTLY AS PROVIDED ORIGINALLY)
         const transformedPickUp = Array.isArray(vehicleData.pickUp)
-          ? vehicleData.pickUp.map(
-              // Ensure is array
-              (loc) => [loc.position.lat, loc.position.lng]
-            )
-          : []; // Default to empty array
+          ? vehicleData.pickUp.map((loc) => [
+              loc.position.lat,
+              loc.position.lng,
+            ])
+          : [];
         const transformedDropOff = Array.isArray(vehicleData.dropOff)
-          ? vehicleData.dropOff.map(
-              // Ensure is array
-              (loc) => [loc.position.lat, loc.position.lng]
-            )
-          : []; // Default to empty array
+          ? vehicleData.dropOff.map((loc) => [
+              loc.position.lat,
+              loc.position.lng,
+            ])
+          : [];
 
         // Prepare incoming data for the API request
         const incomingData = {
-          city: vehicleData.city || "string", // Use empty string defaults
+          city: vehicleData.city || "string",
           category: vehicleData.category || "string",
           make: vehicleData.make || "string",
           mileage: vehicleData.mileage || "string",
-          events: transformedCalendarEvents, // Use transformed calendar events array
-
+          unavailableDates: vehicleData.unavailableDates || [],
           carFeatures: vehicleData.carFeatures || [],
           advanceNoticePeriod: vehicleData.advanceNoticePeriod || "string",
           instantBooking: vehicleData.instantBooking || false,
-          price: vehicleData.price || "string",
+          // MODIFIED PRICE HANDLING:
+          price:
+            typeof vehicleData.price === "number"
+              ? String(vehicleData.price)
+              : vehicleData.price || "string",
           pickUp: transformedPickUp,
           dropOff: transformedDropOff,
           otherMake: vehicleData.otherMake || "string",
           model: vehicleData.model || "string",
           year: vehicleData.year || "string",
           vehicleNumber: vehicleData.vehicleNumber || "string",
-          doors: vehicleData.doors || "string", // Keep as string based on initial state
+          doors: vehicleData.doors || "string",
           fuelType: vehicleData.fuelType || "string",
-          seats: vehicleData.seats || "string", // Keep as string based on initial state
+          seats: vehicleData.seats || "string",
           color: vehicleData.color || "string",
           id: vehicleData.id || "string",
           transmission: vehicleData.transmission || "string",
           modelSpecification: vehicleData.modelSpecification || "string",
-          isPostedByOwner: vehicleData.isPostedByOwner || "false", // Keep as string
+          isPostedByOwner: vehicleData.isPostedByOwner || "false",
           representativeFirstName:
             vehicleData.representativeFirstName || "string",
           representativeLastName:
             vehicleData.representativeLastName || "string",
           representativePhone: vehicleData.representativePhone || "string",
           representativeEmail: vehicleData.representativeEmail || "string",
-          vehicleImageKeys: vehicleData.vehicleImageKeys || [], // These now hold S3 keys
-          adminDocumentKeys: vehicleData.adminDocumentKeys || [], // These now hold S3 keys
+          vehicleImageKeys: vehicleData.vehicleImageKeys || [],
+          adminDocumentKeys: vehicleData.adminDocumentKeys || [],
           location:
             Array.isArray(vehicleData.location) &&
             vehicleData.location.length > 0
               ? vehicleData.location
-              : [0, 0], // Ensure location array is valid or default
+              : [0, 0],
           plateRegion: vehicleData.plateRegion || "",
         };
 
-        console.log("Submitting vehicle data:", incomingData); // Log final payload
+        console.log("Submitting vehicle data:", incomingData);
 
         try {
           const responseData = await get().apiCallWithRetry(
-            "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/vehicle", // Replace with your actual API endpoint
+            "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/vehicle",
             {
               method: "POST",
               body: JSON.stringify(incomingData),
@@ -643,7 +633,7 @@ const useVehicleFormStore = create(
 
       resetStore: () => {
         set({
-          vehicleData: { ...initialVehicleData, id: generateUniqueId() }, // Generate new ID on reset
+          vehicleData: { ...initialVehicleData, id: generateUniqueId() },
           uploadedPhotos: { ...initialUploadedPhotos },
           uploadedDocuments: { ...initialUploadedDocuments },
         });
@@ -654,8 +644,8 @@ const useVehicleFormStore = create(
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         vehicleData: state.vehicleData,
-        uploadedPhotos: state.uploadedPhotos, // Persist photo previews (base64 + key)
-        uploadedDocuments: state.uploadedDocuments, // Persist document previews (name, size, key)
+        uploadedPhotos: state.uploadedPhotos,
+        uploadedDocuments: state.uploadedDocuments,
       }),
     }
   )

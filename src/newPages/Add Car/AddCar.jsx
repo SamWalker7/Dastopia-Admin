@@ -44,7 +44,7 @@ const AddCar = () => {
 
   return (
     <>
-      <div className="bg-[#F8F8FF] scale-90  ">
+      <div className="bg-[#F8F8FF]   ">
         {step === 1 && <Step1 nextStep={nextStep} />}
         {step === 2 && (
           <Step2
