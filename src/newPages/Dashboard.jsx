@@ -43,8 +43,8 @@ const lineChartSetting = {
 };
 
 const pieChartSetting = {
-  width: 350, // Increased width
-  height: 250, // Increased height
+  width: 450, // Increased width
+  height: 420, // Increased height
 };
 
 const Item = styled(Paper)(({ theme }) => ({
@@ -90,12 +90,11 @@ const renderCustomizedLabel = ({
       <text
         x={x}
         y={y}
-        fill="white"
+        fill="black"
         textAnchor={x > cx ? "start" : "end"}
         dominantBaseline="central"
       >
-        {`${name}: ${(percent * 100).toFixed(0)}%`} // Display name and
-        percentage
+        {`${name}: ${(percent * 100).toFixed(0)}%`}
       </text>
     );
   }
@@ -127,6 +126,7 @@ const Dashboard = () => {
   const [totalVehiclesCount, setTotalVehiclesCount] = useState(0); // To hold the total count from the API
   const [isLoading, setIsLoading] = useState(true); // Loading state for the overall fetch process
   const [error, setError] = useState(null); // Error state for fetch errors
+  const [showAllMakes, setShowAllMakes] = useState(false);
 
   // State for processed data derived from allVehicles (filtered or all)
   const [displayedVehicles, setDisplayedVehicles] = useState([]); // Vehicles currently displayed/filtered by date range
@@ -622,42 +622,58 @@ const Dashboard = () => {
             </div>
             {/* Ensure bar chart has data before rendering */}
             {vehiclesByMakeData.length > 0 ? (
-              <BarChart
-                dataset={vehiclesByMakeData}
-                yAxis={[
-                  {
-                    scaleType: "band",
-                    dataKey: "name",
-                    categoryGapRatio: 0.05,
-                    tickSize: 0,
-                  },
-                ]}
-                xAxis={[
-                  {
-                    label: "Number Of Vehicles",
-                    tickSize: 0,
-                    tickLabelStyle: {
-                      fontSize: 12,
-                      fill: "#666",
+              <>
+                <BarChart
+                  dataset={
+                    showAllMakes
+                      ? vehiclesByMakeData
+                      : vehiclesByMakeData.slice(0, 5)
+                  }
+                  yAxis={[
+                    {
+                      scaleType: "band",
+                      dataKey: "name",
+                      categoryGapRatio: 0.05,
+                      tickSize: 0,
                     },
-                  },
-                ]}
-                series={[
-                  {
-                    dataKey: "value",
-                    color: "#28457D",
-                    barWidth: 30, // Adjust bar width if needed
-                  },
-                ]}
-                grid={{
-                  horizontal: true,
-                  vertical: true,
-                  stroke: "#ddd",
-                  strokeWidth: 1,
-                }}
-                layout="horizontal"
-                {...chartSetting} // Use spread operator for chart settings
-              />
+                  ]}
+                  xAxis={[
+                    {
+                      label: "Number Of Vehicles",
+                      tickSize: 0,
+                      tickLabelStyle: {
+                        fontSize: 12,
+                        fill: "#666",
+                      },
+                    },
+                  ]}
+                  series={[
+                    {
+                      dataKey: "value",
+                      color: "#28457D",
+                      barWidth: 30, // Adjust bar width if needed
+                    },
+                  ]}
+                  grid={{
+                    horizontal: true,
+                    vertical: true,
+                    stroke: "#ddd",
+                    strokeWidth: 1,
+                  }}
+                  layout="horizontal"
+                  {...chartSetting} // Use spread operator for chart settings
+                />{" "}
+                <Box display="flex" justifyContent="flex-end" mt={2}>
+                  <Button
+                    variant="text"
+                    size="small"
+                    onClick={() => setShowAllMakes((prev) => !prev)}
+                    style={{ color: "#28457D", textTransform: "none" }}
+                  >
+                    {showAllMakes ? "Show Less" : "More Details"}
+                  </Button>
+                </Box>
+              </>
             ) : (
               <Typography variant="body2" sx={{ mt: 4 }}>
                 No make data available for this period.
@@ -667,7 +683,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* NEW CHART: Vehicles Created Over Time Line Chart */}
-        <Grid item xs={12} md={9}>
+        <Grid item xs={12} md={8}>
           {" "}
           {/* Use responsive grid */}
           <div className="bg-white shadow-[#dee2fe] drop-shadow-md p-4 px-8 rounded-2xl">
@@ -752,7 +768,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Vehicle Approval Status Pie Chart */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={8}>
           {" "}
           {/* Use responsive grid */}
           <Item>
@@ -769,7 +785,7 @@ const Dashboard = () => {
                   cy="50%"
                   labelLine={false}
                   label={renderCustomizedLabel} // Use the updated label renderer
-                  outerRadius={80} // Adjust size as needed
+                  outerRadius={180} // Adjust size as needed
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -791,7 +807,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* NEW CHART: Vehicles by Transmission Pie Chart */}
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={8}>
           {" "}
           {/* Use responsive grid */}
           <Item>
@@ -806,7 +822,7 @@ const Dashboard = () => {
                   cy="50%"
                   labelLine={false}
                   label={renderCustomizedLabel}
-                  outerRadius={80}
+                  outerRadius={180}
                   fill="#8884d8"
                   dataKey="value"
                 >
