@@ -34,12 +34,17 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Alert,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 
 const placeholderProfileImage = "https://via.placeholder.com/150";
 const placeholderVehicleImage =
   "https://via.placeholder.com/600x400.png?text=No+Image+Available";
+
+// --- API Base URL ---
+const API_BASE_URL =
+  "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod";
 
 // --- HELPER: Get a friendlier name from a document key ---
 const getDocumentName = (key) => {
@@ -107,6 +112,7 @@ function formatDateRange(group) {
 const Account = ({ vehicleId, adminToken }) => {
   const navigate = useNavigate();
 
+  // Component State
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -117,6 +123,7 @@ const Account = ({ vehicleId, adminToken }) => {
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [rentalRating, setRentalRating] = useState(0);
 
+  // Media and Document State
   const [imageUrls, setImageUrls] = useState([]);
   const [documentUrls, setDocumentUrls] = useState([]);
   const [loadingUrls, setLoadingUrls] = useState(false);
@@ -126,10 +133,155 @@ const Account = ({ vehicleId, adminToken }) => {
   const [isFullScreenView, setIsFullScreenView] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // Modal and Dialog State
   const [showEventsModal, setShowEventsModal] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState({
+    softDelete: false,
+    restore: false,
+    permanentDelete: false,
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   const admin = JSON.parse(localStorage.getItem("admin"));
   const adminId = admin?.username;
+
+  const fetchVehicleDetails = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const vehicleApiUrl = `${API_BASE_URL}/v1/vehicle/${vehicleId}`;
+      const vehicleResponse = await fetch(vehicleApiUrl, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (!vehicleResponse.ok)
+        throw new Error(`Failed to fetch vehicle: ${vehicleResponse.status}`);
+
+      const vehicleData = await vehicleResponse.json();
+      if (vehicleData && vehicleData.body) {
+        const vehicle = vehicleData.body;
+        setVehicleDetails(vehicle);
+
+        if (vehicle.ownerId) {
+          setIsImageLoading(true);
+          try {
+            const profileApiUrl = `${API_BASE_URL}/v1/user/${vehicle.ownerId}`;
+            const profileResponse = await fetch(profileApiUrl, {
+              headers: { Authorization: `Bearer ${adminToken}` },
+            });
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              setOwnerProfile(profileData);
+              const picKey = profileData["custom:profile_picture_key"];
+              if (picKey) {
+                const urlRes = await getDownloadUrl(picKey);
+                setProfileImageUrl(urlRes?.body || placeholderProfileImage);
+              }
+            }
+          } catch (e) {
+            console.error("Failed to fetch owner profile:", e);
+          } finally {
+            setIsImageLoading(false);
+          }
+        } else {
+          setIsImageLoading(false);
+        }
+
+        await fetchDownloadUrls(vehicle);
+        const rating = await fetchRentalRating(vehicle.id);
+        setRentalRating(rating);
+      } else {
+        setError("Invalid vehicle data structure.");
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [vehicleId, adminToken]);
+
+  // --- Admin Action Handlers ---
+
+  const handleSoftDelete = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/soft_delete_vehicle/${vehicleId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to soft delete.");
+      }
+      setDialogOpen((prev) => ({ ...prev, softDelete: false }));
+      await fetchVehicleDetails(); // Refresh data
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, fetchVehicleDetails]);
+
+  const handleRestore = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/restore_vehicle/${vehicleId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to restore vehicle.");
+      }
+      setDialogOpen((prev) => ({ ...prev, restore: false }));
+      await fetchVehicleDetails(); // Refresh data
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, fetchVehicleDetails]);
+
+  const handlePermanentDelete = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/permanently_delete_vehicle/${vehicleId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        // The API nests the actual message inside a 'body' object which is a stringified JSON
+        const body = errorData.body || "{}";
+        const message = body.message || "Failed to permanently delete.";
+        const details = body.daysRemaining
+          ? `Days remaining: ${body.daysRemaining}.`
+          : "";
+        throw new Error(`${message} ${details}`);
+      }
+
+      setDialogOpen((prev) => ({ ...prev, permanentDelete: false }));
+      alert("Vehicle permanently deleted.");
+      navigate("/vehicles"); // Navigate away after successful deletion
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, navigate]);
 
   const handleChatWithOwner = useCallback(
     (ownerId, ownerGivenName, ownerFamilyName, currentVehicleId) => {
@@ -148,74 +300,71 @@ const Account = ({ vehicleId, adminToken }) => {
     [navigate, adminId]
   );
 
-  const fetchDownloadUrls = useCallback(
-    async (vehicle) => {
-      setLoadingUrls(true);
+  const fetchDownloadUrls = useCallback(async (vehicle) => {
+    setLoadingUrls(true);
 
-      // --- Fetch Image URLs ---
-      const imageKeys = vehicle.vehicleImageKeys || [];
-      if (imageKeys.length > 0) {
-        const imagePromises = imageKeys.map(async (keyObj) => {
-          // Handle both string keys and {key: "..."} objects
-          const key = typeof keyObj === "string" ? keyObj : keyObj?.key;
-          if (!key) return null;
-          try {
-            const urlResponse = await getDownloadUrl(key);
-            return urlResponse?.body || null;
-          } catch (error) {
-            console.error(
-              `Failed to get download URL for image key ${key}:`,
-              error
-            );
-            return null;
-          }
-        });
-        const fetchedImageUrls = (await Promise.all(imagePromises)).filter(
-          Boolean
-        );
-
-        if (fetchedImageUrls.length > 0) {
-          setImageUrls(fetchedImageUrls);
-          setSelectedImageForDisplay(fetchedImageUrls[0]);
-        } else {
-          setImageUrls([placeholderVehicleImage]);
-          setSelectedImageForDisplay(placeholderVehicleImage);
+    // --- Fetch Image URLs ---
+    const imageKeys = vehicle.vehicleImageKeys || [];
+    if (imageKeys.length > 0) {
+      const imagePromises = imageKeys.map(async (keyObj) => {
+        // Handle both string keys and {key: "..."} objects
+        const key = typeof keyObj === "string" ? keyObj : keyObj?.key;
+        if (!key) return null;
+        try {
+          const urlResponse = await getDownloadUrl(key);
+          return urlResponse?.body || null;
+        } catch (error) {
+          console.error(
+            `Failed to get download URL for image key ${key}:`,
+            error
+          );
+          return null;
         }
+      });
+      const fetchedImageUrls = (await Promise.all(imagePromises)).filter(
+        Boolean
+      );
+
+      if (fetchedImageUrls.length > 0) {
+        setImageUrls(fetchedImageUrls);
+        setSelectedImageForDisplay(fetchedImageUrls[0]);
       } else {
         setImageUrls([placeholderVehicleImage]);
         setSelectedImageForDisplay(placeholderVehicleImage);
       }
+    } else {
+      setImageUrls([placeholderVehicleImage]);
+      setSelectedImageForDisplay(placeholderVehicleImage);
+    }
 
-      // --- Fetch Document URLs ---
-      const docKeys = vehicle.adminDocumentKeys || [];
-      if (docKeys.length > 0) {
-        const docPromises = docKeys.map(async (keyObj) => {
-          const key = typeof keyObj === "string" ? keyObj : keyObj?.key;
-          if (!key) return null;
-          try {
-            const urlResponse = await getDownloadUrl(key);
-            if (urlResponse?.body) {
-              return { url: urlResponse.body, name: getDocumentName(key) };
-            }
-            return null;
-          } catch (error) {
-            console.error(
-              `Failed to get download URL for doc key ${key}:`,
-              error
-            );
-            return null;
+    // --- Fetch Document URLs ---
+    const docKeys = vehicle.adminDocumentKeys || [];
+    if (docKeys.length > 0) {
+      const docPromises = docKeys.map(async (keyObj) => {
+        const key = typeof keyObj === "string" ? keyObj : keyObj?.key;
+        if (!key) return null;
+        try {
+          const urlResponse = await getDownloadUrl(key);
+          if (urlResponse?.body) {
+            return { url: urlResponse.body, name: getDocumentName(key) };
           }
-        });
-        const fetchedDocUrls = (await Promise.all(docPromises)).filter(Boolean);
-        setDocumentUrls(fetchedDocUrls);
-      } else {
-        setDocumentUrls([]);
-      }
+          return null;
+        } catch (error) {
+          console.error(
+            `Failed to get download URL for doc key ${key}:`,
+            error
+          );
+          return null;
+        }
+      });
+      const fetchedDocUrls = (await Promise.all(docPromises)).filter(Boolean);
+      setDocumentUrls(fetchedDocUrls);
+    } else {
+      setDocumentUrls([]);
+    }
 
-      setLoadingUrls(false);
-    },
-    [getDownloadUrl]
-  );
+    setLoadingUrls(false);
+  }, []);
 
   const fetchRentalRating = useCallback(async (carID) => {
     if (!carID) return 0;
@@ -229,72 +378,22 @@ const Account = ({ vehicleId, adminToken }) => {
       setError("Vehicle details cannot be loaded. Missing parameters.");
       return;
     }
+    fetchVehicleDetails();
+  }, [vehicleId, adminToken, fetchVehicleDetails]);
 
-    const fetchDetails = async () => {
-      setLoading(true);
-      setError(null);
-      setVehicleDetails(null);
-      setOwnerProfile(null);
-      setProfileImageUrl(placeholderProfileImage);
+  const handleOpenDialog = (dialog) => {
+    setActionError(null);
+    setDialogOpen((prev) => ({ ...prev, [dialog]: true }));
+  };
 
-      try {
-        const vehicleApiUrl = `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/vehicle/${vehicleId}`;
-        const vehicleResponse = await fetch(vehicleApiUrl, {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        });
-        if (!vehicleResponse.ok)
-          throw new Error(`Failed to fetch vehicle: ${vehicleResponse.status}`);
-
-        const vehicleData = await vehicleResponse.json();
-        if (vehicleData && vehicleData.body) {
-          const vehicle = vehicleData.body;
-          setVehicleDetails(vehicle);
-
-          if (vehicle.ownerId) {
-            setIsImageLoading(true);
-            try {
-              const profileApiUrl = `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/user/${vehicle.ownerId}`;
-              const profileResponse = await fetch(profileApiUrl, {
-                headers: { Authorization: `Bearer ${adminToken}` },
-              });
-              if (profileResponse.ok) {
-                const profileData = await profileResponse.json();
-                if (profileData && profileData.id === vehicle.ownerId) {
-                  setOwnerProfile(profileData);
-                  const picKey = profileData["custom:profile_picture_key"];
-                  if (picKey) {
-                    const urlRes = await getDownloadUrl(picKey);
-                    setProfileImageUrl(urlRes?.body || placeholderProfileImage);
-                  } else {
-                    setProfileImageUrl(placeholderProfileImage);
-                  }
-                }
-              }
-            } catch (e) {
-              console.error("Failed to fetch owner profile:", e);
-              setProfileImageUrl(placeholderProfileImage);
-            } finally {
-              setIsImageLoading(false);
-            }
-          } else {
-            setIsImageLoading(false);
-          }
-
-          await fetchDownloadUrls(vehicle);
-
-          const rating = await fetchRentalRating(vehicle.id);
-          setRentalRating(rating);
-        } else {
-          setError("Invalid vehicle data structure.");
-        }
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetails();
-  }, [vehicleId, adminToken, fetchDownloadUrls, fetchRentalRating]);
+  const handleCloseDialog = () => {
+    setDialogOpen({
+      softDelete: false,
+      restore: false,
+      permanentDelete: false,
+    });
+    setActionError(null);
+  };
 
   const handleOpenEventsModal = () => setShowEventsModal(true);
   const handleCloseEventsModal = () => setShowEventsModal(false);
@@ -380,7 +479,7 @@ const Account = ({ vehicleId, adminToken }) => {
 
   return (
     <div className="flex flex-col mt-8">
-      <div className="flex w-full gap-4">
+      <div className="flex flex-wrap w-full gap-4">
         {/* User Details Section */}
         <section className="h-fit bg-white p-6 space-y-6 w-fit px-10 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
           <div className="items-center flex gap-8">
@@ -455,6 +554,11 @@ const Account = ({ vehicleId, adminToken }) => {
             Vehicle Account Details
           </h2>
           <div className="flex flex-col text-sm text-[#38393D]">
+            {vehicleDetails.isDeleted && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                This vehicle is currently soft-deleted.
+              </Alert>
+            )}
             <div className="flex items-center mb-2">
               Status:
               <span className="ml-2 font-semibold text-sky-950">
@@ -489,6 +593,41 @@ const Account = ({ vehicleId, adminToken }) => {
               <CalendarMonthOutlinedIcon fontSize="small" />
               <button>Unavailable Dates</button>
             </div>
+          </div>
+        </section>
+
+        {/* Admin Actions Section - NEW */}
+        <section className="w-fit bg-white p-6 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
+          <h2 className="text-lg font-semibold text-[#00113D] mb-4">
+            Admin Actions
+          </h2>
+          <div className="flex flex-col space-y-4">
+            {!vehicleDetails.isDeleted ? (
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => handleOpenDialog("softDelete")}
+              >
+                Soft Delete Vehicle
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => handleOpenDialog("restore")}
+                >
+                  Restore Vehicle
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => handleOpenDialog("permanentDelete")}
+                >
+                  Permanently Delete
+                </Button>
+              </>
+            )}
           </div>
         </section>
 
@@ -750,6 +889,8 @@ const Account = ({ vehicleId, adminToken }) => {
         </div>
       </div>
 
+      {/* --- Dialogs Section --- */}
+
       {/* Unavailable Dates Dialog */}
       <Dialog
         open={showEventsModal}
@@ -801,40 +942,97 @@ const Account = ({ vehicleId, adminToken }) => {
         </DialogActions>
       </Dialog>
 
-      {/* FULL-SCREEN IMAGE VIEWER */}
-      {/* {isFullScreenView && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-90 p-4">
-          <button
-            onClick={closeFullScreen}
-            className="absolute top-5 right-5 z-10 text-white text-3xl hover:opacity-75"
-          >
-            <FaTimes />
-          </button>
-
-          <img
-            src={imageUrls[currentImageIndex]}
-            alt={`Fullscreen vehicle view ${currentImageIndex + 1}`}
-            className="max-w-[95vw] max-h-[95vh] object-contain"
-          />
-
-          {imageUrls.length > 1 && (
-            <>
-              <button
-                onClick={previousImage}
-                className="absolute top-1/2 left-5 -translate-y-1/2 text-white text-4xl hover:opacity-75"
-              >
-                <FaChevronLeft />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute top-1/2 right-5 -translate-y-1/2 text-white text-4xl hover:opacity-75"
-              >
-                <FaChevronRight />
-              </button>
-            </>
+      {/* Confirmation Dialogs for Admin Actions */}
+      <Dialog open={dialogOpen.softDelete} onClose={handleCloseDialog}>
+        <DialogTitle>Confirm Soft Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to mark this vehicle as deleted? The owner
+            will no longer see it, but it can be restored within 90 days.
+          </Typography>
+          {actionError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
           )}
-        </div>
-      )} */}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSoftDelete}
+            color="warning"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <CircularProgress size={24} /> : "Confirm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={dialogOpen.restore} onClose={handleCloseDialog}>
+        <DialogTitle>Confirm Vehicle Restoration</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to restore this vehicle? It will become active
+            and visible to the owner again.
+          </Typography>
+          {actionError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRestore}
+            color="success"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <CircularProgress size={24} /> : "Confirm"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={dialogOpen.permanentDelete} onClose={handleCloseDialog}>
+        <DialogTitle>Confirm Permanent Deletion</DialogTitle>
+        <DialogContent>
+          <Alert severity="error">
+            This action is irreversible and will permanently delete all data for
+            this vehicle.
+          </Alert>
+          <Typography sx={{ mt: 2 }}>
+            Please confirm you want to proceed.
+          </Typography>
+          {actionError && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePermanentDelete}
+            color="error"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <CircularProgress size={24} />
+            ) : (
+              "Confirm Permanent Delete"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
