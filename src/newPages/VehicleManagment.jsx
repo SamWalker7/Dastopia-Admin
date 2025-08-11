@@ -122,6 +122,10 @@ const VehicleManagment = () => {
                   : "Inactive",
               carType: vehicle.category,
               ownerId: vehicle.ownerId || vehicle.owenerId,
+              ownerFullName:
+                `${vehicle.ownerGivenName || ""} ${
+                  vehicle.ownerSurName || ""
+                }`.trim() || "N/A",
             }));
             setRentals(formattedRentals);
           } else {
@@ -184,10 +188,12 @@ const VehicleManagment = () => {
       const carMake = item.carMake || "";
       const carModel = item.carModel || "";
       const plate = item.plate || "";
+      const ownerName = item.ownerFullName || "";
       const searchMatch =
         carMake.toLowerCase().includes(searchTerm.toLowerCase()) ||
         carModel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        plate.toLowerCase().includes(searchTerm.toLowerCase());
+        plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ownerName.toLowerCase().includes(searchTerm.toLowerCase());
       const typeMatch = filters.carType
         ? item.carType === filters.carType
         : true;
@@ -387,7 +393,7 @@ const VehicleManagment = () => {
                   <TextField
                     label={
                       viewMode === "active"
-                        ? "Search by Make/Model/Plate"
+                        ? "Search by Make/Model/Plate/Owner"
                         : "Search by Make/Model/Email"
                     }
                     variant="outlined"
@@ -493,9 +499,28 @@ const VehicleManagment = () => {
                     {viewMode === "active" ? (
                       <thead>
                         <tr className="bg-gray-50 font-semibold">
+                          <th
+                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleSort("ownerFullName")}
+                          >
+                            Owner Name{" "}
+                            {sortConfig.key === "ownerFullName" ? (
+                              <HiMiniArrowsUpDown
+                                className={`inline ml-1 transform ${
+                                  sortConfig.direction === "descending"
+                                    ? "rotate-180"
+                                    : ""
+                                }`}
+                              />
+                            ) : (
+                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
+                            )}
+                          </th>
                           <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                             Vehicle ID
                           </th>
+                          {/* MODIFICATION: Owner Name header moved here */}
+
                           <th
                             className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort("carType")}
@@ -664,8 +689,13 @@ const VehicleManagment = () => {
                           {viewMode === "active" ? (
                             <>
                               <td className="px-6 py-4 text-sm text-gray-700">
+                                {item.ownerFullName}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-700">
                                 {item.vehicleID}
                               </td>
+                              {/* MODIFICATION: Owner Name data cell moved here */}
+
                               <td className="px-6 py-4 text-sm text-gray-700">
                                 {item.carType}
                               </td>
