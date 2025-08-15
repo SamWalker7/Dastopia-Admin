@@ -1,51 +1,38 @@
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  // Keep only the ones actually used or commonly needed in a list view container
-  TextField, // Used for search/filter (if implemented)
-  Select, // Used for filtering (if implemented)
-  MenuItem, // Used for Select
-  Button, // Used potentially for actions
-  Box, // General layout container
-  Typography, // Text elements
-  Link, // Navigation links
-  Breadcrumbs, // Navigation breadcrumbs
-  Avatar, // Used in ProfileCard
-  Grid, // Layout grid
-  CircularProgress, // Loading indicator
+  TextField,
+  Select,
+  MenuItem,
+  Button,
+  Box,
+  Typography,
+  Link,
+  Breadcrumbs,
+  Avatar,
+  Grid,
+  CircularProgress,
+  ButtonGroup, // Import ButtonGroup
 } from "@mui/material";
-
-// Keep only the icons actually used in the list container or ProfileCard
-import NavigateNextIcon from "@mui/icons-material/NavigateNext"; // Used in Breadcrumbs
-import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined"; // Used in Breadcrumbs
-import PersonOutlined from "@mui/icons-material/PersonOutlined"; // Used in ProfileCard
-import DirectionsCarOutlined from "@mui/icons-material/DirectionsCarOutlined"; // Used in ProfileCard
-import LocalOfferOutlined from "@mui/icons-material/LocalOfferOutlined"; // Used in ProfileCard price
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined"; // Used in ProfileCard date
-import PhoneOutlined from "@mui/icons-material/PhoneOutlined"; // Assuming this icon is desired for phone
-
-// Import the getDownloadUrl function
-import { getDownloadUrl } from "../api"; // Assuming this is the same function as in Account1.js
-
-// image is used in ProfileCard as a fallback
+import NavigateNextIcon from "@mui/icons-material/NavigateNext";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import PersonOutlined from "@mui/icons-material/PersonOutlined";
+import DirectionsCarOutlined from "@mui/icons-material/DirectionsCarOutlined";
+import LocalOfferOutlined from "@mui/icons-material/LocalOfferOutlined";
+import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
+import PhoneOutlined from "@mui/icons-material/PhoneOutlined";
+import { getDownloadUrl } from "../api";
 import image from "./avatar.png";
-
-// Import the modal component (assuming path is correct)
 import VehicleApprovalModal from "./VehicleApprovalModal";
 
-// Constants remain the same
 const API_STATUS_TO_COLUMN = {
   pending: "inReview",
   approved: "approved",
   denied: "rejected",
   null: "unassigned",
   "": "unassigned",
-  // Add any other potential statuses if needed
 };
 
-// Define the columns you want to display
 const DISPLAY_COLUMNS = ["inReview", "approved", "rejected"];
-// If you need an "Unassigned" column for vehicles with status null/""/unrecognized, add it here:
-// const DISPLAY_COLUMNS = ["unassigned", "inReview", "approved", "rejected"];
 
 const columnLabels = {
   unassigned: "Unassigned",
@@ -61,16 +48,10 @@ const cardBorderColors = {
   rejected: "border-red-500",
 };
 
-// Placeholder for profile image - only used as a fallback if getDownloadUrl fails
-// The local `image` import is the ultimate fallback in ProfileCard
-const placeholderProfileImage = "https://via.placeholder.com/150"; // Note: This is not used directly now, `image` import is the direct fallback
-
-// --- getColumnKey remains here as it's used in ProfileCard ---
 const getColumnKey = (apiStatus) => {
   return API_STATUS_TO_COLUMN[apiStatus] || "unassigned";
 };
 
-// ProfileCard component (remains largely the same, uses the passed renterAvatarUrl)
 const ProfileCard = ({
   vehicle,
   onClick,
@@ -78,7 +59,7 @@ const ProfileCard = ({
   renterPhone,
   rentalPrice,
   submissionDate,
-  renterAvatarUrl, // This prop now comes from the parent with the fetched URL
+  renterAvatarUrl,
 }) => {
   const columnKey = getColumnKey(vehicle?.isApproved);
   const borderColorClass = cardBorderColors[columnKey] || "border-gray-300";
@@ -94,23 +75,20 @@ const ProfileCard = ({
   const displaySubmissionDate = submissionDate
     ? new Date(submissionDate).toLocaleDateString()
     : "N/A";
-  // Use the enriched URL if available, otherwise local default (imported 'image')
   const displayRenterAvatar = renterAvatarUrl || image;
 
   return (
     <div className="p-2">
       <div
         className={`bg-[#FAF9FE] drop-shadow-xs shadow-xs flex flex-col shadow-blue-200 p-4 text-gray-600 text-sm rounded-2xl cursor-pointer border-l-4 ${borderColorClass}`}
-        onClick={() => onClick(vehicle)} // Pass the basic vehicle object to the modal handler
+        onClick={() => onClick(vehicle)}
       >
         <Box display="flex" alignItems="center" mb={2}>
-          {/* Use Avatar component with the passed URL */}
           <Avatar
             alt={displayRenterName}
-            src={displayRenterAvatar} // <-- Use the fetched URL here
+            src={displayRenterAvatar}
             sx={{ width: 56, height: 56, mr: 2 }}
           />
-
           <Box>
             <p>
               <PersonOutlined
@@ -120,7 +98,6 @@ const ProfileCard = ({
               {displayRenterName}
             </p>
             <p>
-              {/* Use PhoneOutlined icon for phone */}
               <PhoneOutlined
                 fontSize="small"
                 sx={{ verticalAlign: "middle", mr: 1 }}
@@ -172,23 +149,16 @@ const ProfileCard = ({
 };
 
 const MyApprovalListing = () => {
-  // State for the list view (basic enriched data)
   const [vehicles, setVehicles] = useState([]);
-  const [loadingList, setLoadingList] = useState(true); // Use for both initial and "Load More" loading
+  const [loadingList, setLoadingList] = useState(true);
+  const [isLoadingAll, setIsLoadingAll] = useState(false); // NEW state for "Load All"
   const [errorList, setErrorList] = useState(null);
-
-  // --- Pagination State ---
-  const [lastEvaluatedKey, setLastEvaluatedKey] = useState(null); // Store key for the next page
-  const [hasMorePages, setHasMorePages] = useState(true); // Flag if there are more pages
-
-  // State for the main react-modal
-  const [selectedVehicleForModal, setSelectedVehicleForModal] = useState(null); // Basic vehicle object from list
-  const [openModal, setOpenModal] = useState(false); // Controls the main react-modal
-
-  // Token state remains in the parent as it's needed for the initial list fetch
+  const [lastEvaluatedKey, setLastEvaluatedKey] = useState(null);
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [selectedVehicleForModal, setSelectedVehicleForModal] = useState(null);
+  const [openModal, setOpenModal] = useState(false);
   const [adminToken, setAdminToken] = useState(null);
 
-  // --- Token Fetch Effect ---
   useEffect(() => {
     const storedAdminJson = localStorage.getItem("admin");
     if (storedAdminJson) {
@@ -197,38 +167,26 @@ const MyApprovalListing = () => {
         if (adminData && adminData.AccessToken) {
           setAdminToken(adminData.AccessToken);
         } else {
-          console.warn(
-            "localStorage 'admin' found, but AccessToken property is missing."
-          );
           setErrorList("Authentication token missing.");
         }
       } catch (error) {
-        console.error("Failed to parse admin data from localStorage:", error);
         setErrorList("Failed to load authentication data.");
       }
     } else {
-      console.warn("No 'admin' data found in localStorage.");
       setErrorList("Admin not logged in.");
     }
   }, []);
 
-  // --- Fetch and Enrich Vehicle for the List View (Paginated) ---
-  // This function fetches basic vehicle data (a page) and then enriches it
-  // with owner name, phone, profile image URL for the list display.
-  // It accepts the key to fetch the *next* page.
   const fetchAndEnrichVehiclesList = useCallback(
     async (token, currentLastEvaluatedKey = null) => {
       if (!token) {
-        setLoadingList(false); // Stop loading if no token
-        // Error state already set in token effect or previous calls
+        setLoadingList(false);
         return;
       }
-
       setLoadingList(true);
-      setErrorList(null); // Clear error before fetching
+      setErrorList(null);
 
       try {
-        // 1. Construct the API URL with pagination parameter
         let apiUrlList =
           "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
         if (currentLastEvaluatedKey) {
@@ -236,330 +194,211 @@ const MyApprovalListing = () => {
             currentLastEvaluatedKey
           )}`;
         }
-
-        console.log("Fetching vehicle list from:", apiUrlList);
-
         const response = await fetch(apiUrlList, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!response.ok) {
-          const errorBody = await response.text();
-          console.error(
-            `HTTP error fetching list! status: ${response.status}`,
-            errorBody
-          );
-          if (response.status === 401 || response.status === 403) {
-            setErrorList(
-              "Authentication failed or expired. Please log in again."
-            );
-            // Optionally clear admin token here if needed
-          } else {
-            setErrorList(
-              `Failed to fetch vehicle list: ${
-                response.statusText
-              }. ${errorBody.substring(0, 100)}...`
-            );
-          }
-          throw new Error(
-            `Failed to fetch vehicle list: ${response.status} ${response.statusText}`
-          );
+          throw new Error(`Failed to fetch vehicle list: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log("Vehicle List API Response:", data);
-
-        // --- Extract Pagination Info ---
         const fetchedVehicles = data?.body;
         const nextLastEvaluatedKey = data?.lastEvaluatedKey || null;
-        const count = data?.count || 0;
-        const totalCount = data?.totalCount; // Total count might be inconsistent with pagination, rely on lastEvaluatedKey
 
         setLastEvaluatedKey(nextLastEvaluatedKey);
-        // Determine if there are more pages: If lastEvaluatedKey is present in the response
         setHasMorePages(!!nextLastEvaluatedKey);
 
         if (Array.isArray(fetchedVehicles)) {
           const basicVehicles = fetchedVehicles.filter((v) => v != null);
-
-          // 2. Fetch owner profile and image URL for each vehicle in parallel for list display
           const enrichmentPromises = basicVehicles.map(async (vehicle) => {
-            // --- START DEBUGGING LOGS ---
-            // console.log(
-            //   "--- Processing vehicle:",
-            //   vehicle.id,
-            //   "Owner ID:",
-            //   vehicle.ownerId,
-            //   "---"
-            // );
-            // --- END DEBUGGING LOGS ---
-
-            if (!vehicle?.id) {
-              console.warn(
-                "Skipping enrichment for vehicle with missing ID or null entry."
-              );
-              return { id: null, error: "Missing ID" }; // Return identifiable error object
-            }
-
+            if (!vehicle?.id) return null;
             let ownerProfileData = null;
-            let profileImageUrl = image; // Default to local image
+            let profileImageUrl = image;
 
-            // Fetch Owner Profile (if ownerId is available) for LIST CARD
-            // Using vehicle.ownerId || vehicle.owenerId for robustness as seen in previous code
             const ownerId = vehicle?.ownerId || vehicle?.owenerId;
             if (ownerId) {
               try {
                 const profileUrl = `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/user/${ownerId}`;
-                // --- START DEBUGGING LOGS ---
-                // console.log(
-                //   `Attempting to fetch owner profile for owner ${ownerId} from:`,
-                //   profileUrl
-                // );
-                // --- END DEBUGGING LOGS ---
                 const profileResponse = await fetch(profileUrl, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
-
-                // --- START DEBUGGING LOGS ---
-                // console.log(
-                //   `Owner profile response status for ${ownerId}:`,
-                //   profileResponse.status
-                // );
-                // --- END DEBUGGING LOGS ---
-
                 if (profileResponse.ok) {
                   ownerProfileData = await profileResponse.json();
-                  // --- START DEBUGGING LOGS ---
-                  // console.log(
-                  //   `Fetched owner profile data for ${ownerId}:`,
-                  //   ownerProfileData
-                  // );
-                  // --- END DEBUGGING LOGS ---
-
-                  // *** Use the same key extraction logic as Account1.js ***
                   const profilePictureKey =
                     ownerProfileData?.["custom:profile_picture_key"];
-
-                  // --- START DEBUGGING LOGS ---
-                  // console.log(
-                  //   `Profile picture key found for ${ownerId}:`,
-                  //   profilePictureKey
-                  // );
-                  // --- END DEBUGGING LOGS ---
-
                   if (profilePictureKey) {
                     try {
-                      // *** Use the imported getDownloadUrl function ***
-                      // --- START DEBUGGING LOGS ---
-                      // console.log(
-                      //   `Calling getDownloadUrl for key ${profilePictureKey} (owner ${ownerId})...`
-                      // );
-                      // --- END DEBUGGING LOGS ---
                       const imageUrlResult = await getDownloadUrl(
                         profilePictureKey
                       );
-                      // --- START DEBUGGING LOGS ---
-                      // console.log(
-                      //   `getDownloadUrl result for key ${profilePictureKey}:`,
-                      //   imageUrlResult
-                      // );
-                      // --- END DEBUGGING LOGS ---
-
-                      // Assuming getDownloadUrl returns { body: 'the-url' }
-                      profileImageUrl = imageUrlResult?.body || image; // Use fetched URL or local default
-                      if (!imageUrlResult?.body) {
-                        console.warn(
-                          `getDownloadUrl did not return a body/URL for key ${profilePictureKey} (owner ${ownerId})`
-                        );
-                      }
+                      profileImageUrl = imageUrlResult?.body || image;
                     } catch (imgUrlErr) {
-                      // --- START DEBUGGING LOGS ---
-                      console.error(
-                        `Error fetching profile image URL for key ${profilePictureKey} (owner ${ownerId}):`,
-                        imgUrlErr
-                      );
-                      // --- END DEBUGGING LOGS ---
-                      profileImageUrl = image; // Fallback on URL fetch error
+                      profileImageUrl = image;
                     }
-                  } else {
-                    // --- START DEBUGGING LOGS ---
-                    // console.warn(
-                    //   `Owner profile for ${ownerId} did not contain 'custom:profile_picture_key'.`
-                    // );
-                    // --- END DEBUGGING LOGS ---
-                    profileImageUrl = image; // Use default if key is missing
                   }
-                } else {
-                  // Log response text for debugging non-OK profile responses
-                  const profileErrorText = await profileResponse.text();
-                  console.warn(
-                    `HTTP error fetching owner profile during list enrichment: ${
-                      profileResponse.status
-                    } ${
-                      profileResponse.statusText
-                    } for owner ${ownerId}. Response body: ${profileErrorText.substring(
-                      0,
-                      100
-                    )}...`
-                  );
-                  profileImageUrl = image; // Fallback on profile fetch error
                 }
               } catch (profileError) {
-                // --- START DEBUGGING LOGS ---
-                console.error(
-                  `Error fetching owner profile during list enrichment for owner ${ownerId}:`,
-                  profileError
-                );
-                // --- END DEBUGGING LOGS ---
-                profileImageUrl = image; // Fallback on profile fetch error
+                /* empty */
               }
-            } else {
-              // --- START DEBUGGING LOGS ---
-              // console.log(
-              //   `No ownerId for vehicle ${vehicle?.id}. Skipping profile fetch.`
-              // );
-              // --- END DEBUGGING LOGS ---
             }
 
-            // Combine data for the list item
-            const renterName =
-              (ownerProfileData?.given_name ||
-                ownerProfileData?.firstName ||
-                "") +
-              " " +
-              (ownerProfileData?.family_name ||
-                ownerProfileData?.lastName ||
-                "");
-            const displayRenterName =
-              renterName.trim() ||
-              (vehicle.ownerGivenName && vehicle.ownerSurName // Fallback to vehicle data if profile name is empty
-                ? `${vehicle.ownerGivenName} ${vehicle.ownerSurName}`
-                : "N/A");
-
-            const displayRenterPhone =
-              ownerProfileData?.phone_number || vehicle.ownerPhone || "N/A"; // Fallback to vehicle data
-
+            const renterName = `${
+              ownerProfileData?.given_name || vehicle.ownerGivenName || ""
+            } ${ownerProfileData?.family_name || vehicle.ownerSurName || ""}`;
             return {
-              ...vehicle, // Keep original vehicle data
-              renterName: displayRenterName,
-              renterPhone: displayRenterPhone,
-              rentalPrice: vehicle?.price || "N/A", // Assuming price is in the basic vehicle data
-              submissionDate: vehicle?.createdAt || "N/A", // Assuming creation date is in basic vehicle data
-              renterAvatarUrl: profileImageUrl, // This should hold the fetched URL or fallback
+              ...vehicle,
+              renterName: renterName.trim() || "N/A",
+              renterPhone:
+                ownerProfileData?.phone_number || vehicle.ownerPhone || "N/A",
+              rentalPrice: vehicle?.price || "N/A",
+              submissionDate: vehicle?.createdAt || "N/A",
+              renterAvatarUrl: profileImageUrl,
             };
           });
 
-          const enrichedVehicles = await Promise.all(enrichmentPromises);
+          const enrichedVehicles = (
+            await Promise.all(enrichmentPromises)
+          ).filter(Boolean);
 
-          // Filter out any enrichment promises that failed completely (returned { id: null, error: ... })
-          const validEnrichedVehicles = enrichedVehicles.filter(
-            (v) => v && v.id !== null && !v.error // Check for null id and explicit error
-          );
-
-          // --- Append or Replace Data ---
-          setVehicles(
-            (prevVehicles) =>
-              currentLastEvaluatedKey
-                ? [...prevVehicles, ...validEnrichedVehicles] // Append for "Load More"
-                : validEnrichedVehicles // Replace for initial fetch
-          );
-
-          // --- START DEBUGGING LOGS ---
-          console.log(
-            "Final Enriched Vehicles for List (after setting state):",
+          setVehicles((prevVehicles) =>
             currentLastEvaluatedKey
-              ? [...vehicles, ...validEnrichedVehicles]
-              : validEnrichedVehicles // Log the *next* state value
+              ? [...prevVehicles, ...enrichedVehicles]
+              : enrichedVehicles
           );
-          console.log("LastEvaluatedKey set to:", nextLastEvaluatedKey);
-          console.log("HasMorePages set to:", !!nextLastEvaluatedKey);
-          // --- END DEBUGGING LOGS ---
-        } else {
-          console.warn(
-            "API response body is not an array or is missing 'body' property:",
-            data
-          );
-          if (!currentLastEvaluatedKey) {
-            // Only set error if initial fetch fails or is not an array
-            setErrorList("Invalid data received from server.");
-            setVehicles([]); // Clear vehicles if initial data is bad
-          }
+        } else if (!currentLastEvaluatedKey) {
+          setErrorList("Invalid data received from server.");
+          setVehicles([]);
         }
       } catch (err) {
-        console.error("Error fetching vehicle list or enriching data:", err);
-        if (!currentLastEvaluatedKey) {
-          // Only set list error for the first load
-          setErrorList("Failed to load vehicle listings: " + err.message);
-          setVehicles([]); // Clear vehicles on initial error
-        } else {
-          // For "Load More" errors, maybe show a temporary message or log
-          console.error("Failed to load more vehicles:", err);
-          // Optionally set a temporary state like `loadingMoreError` if needed
-        }
+        setErrorList("Failed to load listings: " + err.message);
+        if (!currentLastEvaluatedKey) setVehicles([]);
       } finally {
-        setLoadingList(false); // Always turn off loading regardless of success/failure
+        setLoadingList(false);
       }
     },
-    [adminToken, getDownloadUrl] // Dependencies
+    []
   );
 
-  // --- Effect to fetch the FIRST page of vehicles when token is available ---
   useEffect(() => {
     if (adminToken) {
-      console.log("Admin token available, fetching first page...");
-      // Fetch the first page (pass null for lastEvaluatedKey)
       fetchAndEnrichVehiclesList(adminToken, null);
     } else {
-      setLoadingList(false); // Stop loading if no token is found initially
-      setVehicles([]); // Ensure vehicle list is empty
-      // setErrorList is handled in the token effect now
+      setLoadingList(false);
+      setVehicles([]);
     }
-  }, [adminToken, fetchAndEnrichVehiclesList]); // Re-run if adminToken changes
+  }, [adminToken, fetchAndEnrichVehiclesList]);
 
-  // --- Handler for "Load More" button ---
   const handleLoadMore = () => {
-    if (adminToken && lastEvaluatedKey && hasMorePages && !loadingList) {
-      console.log("Loading more vehicles with key:", lastEvaluatedKey);
+    if (
+      adminToken &&
+      lastEvaluatedKey &&
+      hasMorePages &&
+      !loadingList &&
+      !isLoadingAll
+    ) {
       fetchAndEnrichVehiclesList(adminToken, lastEvaluatedKey);
-    } else if (!hasMorePages) {
-      console.log("No more pages to load.");
-    } else if (loadingList) {
-      console.log("Already loading, ignoring 'Load More' click.");
-    } else if (!adminToken) {
-      console.warn("Cannot load more, admin token is missing.");
     }
   };
 
-  // --- Handlers for the main modal (controlled by this component) ---
+  // NEW: Function to handle loading all remaining pages
+  const handleLoadAll = async () => {
+    if (!adminToken || !hasMorePages || loadingList || isLoadingAll) return;
+
+    setIsLoadingAll(true);
+    setErrorList(null);
+    let currentKey = lastEvaluatedKey;
+    const allNewVehicles = [];
+
+    try {
+      while (currentKey) {
+        const apiUrl = `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles?lastEvaluatedKey=${encodeURIComponent(
+          currentKey
+        )}`;
+        const response = await fetch(apiUrl, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        if (!response.ok)
+          throw new Error(`Failed on page with key ${currentKey}`);
+
+        const data = await response.json();
+        const pageVehicles = data?.body;
+
+        if (Array.isArray(pageVehicles)) {
+          const enrichmentPromises = pageVehicles
+            .filter((v) => v)
+            .map(async (vehicle) => {
+              if (!vehicle?.id) return null;
+              let ownerProfileData = null;
+              let profileImageUrl = image;
+              const ownerId = vehicle?.ownerId || vehicle?.owenerId;
+              if (ownerId) {
+                try {
+                  const profileUrl = `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/user/${ownerId}`;
+                  const profileResponse = await fetch(profileUrl, {
+                    headers: { Authorization: `Bearer ${adminToken}` },
+                  });
+                  if (profileResponse.ok) {
+                    ownerProfileData = await profileResponse.json();
+                    const picKey =
+                      ownerProfileData?.["custom:profile_picture_key"];
+                    if (picKey)
+                      profileImageUrl =
+                        (await getDownloadUrl(picKey))?.body || image;
+                  }
+                } catch {
+                  /* ignore individual errors */
+                }
+              }
+              const renterName = `${
+                ownerProfileData?.given_name || vehicle.ownerGivenName || ""
+              } ${ownerProfileData?.family_name || vehicle.ownerSurName || ""}`;
+              return {
+                ...vehicle,
+                renterName: renterName.trim() || "N/A",
+                renterPhone:
+                  ownerProfileData?.phone_number || vehicle.ownerPhone || "N/A",
+                rentalPrice: vehicle?.price || "N/A",
+                submissionDate: vehicle?.createdAt || "N/A",
+                renterAvatarUrl: profileImageUrl,
+              };
+            });
+          const enrichedPage = (await Promise.all(enrichmentPromises)).filter(
+            Boolean
+          );
+          allNewVehicles.push(...enrichedPage);
+        }
+
+        currentKey = data?.lastEvaluatedKey || null;
+      }
+
+      setVehicles((prev) => [...prev, ...allNewVehicles]);
+      setHasMorePages(false);
+      setLastEvaluatedKey(null);
+    } catch (err) {
+      setErrorList(
+        "An error occurred while loading all vehicles. Some data may be missing."
+      );
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
+
   const handleOpenModal = (vehicle) => {
-    // Note: We pass the BASIC vehicle object here.
-    // The modal component should fetch its own detailed data if needed.
     setSelectedVehicleForModal(vehicle);
     setOpenModal(true);
   };
 
   const handleCloseModal = () => {
     setOpenModal(false);
-    // Clearing selectedVehicleForModal immediately ensures the modal component resets its state
     setSelectedVehicleForModal(null);
   };
 
-  // This function is passed to the modal and called when approve/reject succeeds
   const handleModalActionSuccess = () => {
-    // Refresh the list when an action in the modal is successful
-    console.log(
-      "Modal action successful, refreshing vehicle list (fetching first page)..."
-    );
-    handleCloseModal(); // Close the modal after success
-    // Refetch the *first* page to ensure the updated item appears near the top
-    // This clears the current list and fetches fresh data from the beginning.
-    // A more complex approach could update the item in the current list, but refetching is simpler.
+    handleCloseModal();
     fetchAndEnrichVehiclesList(adminToken, null);
   };
 
-  // --- Render Logic ---
   const vehicleCountByColumn = DISPLAY_COLUMNS.reduce((acc, columnKey) => {
     acc[columnKey] = vehicles.filter(
       (v) => getColumnKey(v?.isApproved) === columnKey
@@ -586,44 +425,77 @@ const MyApprovalListing = () => {
         </Breadcrumbs>
       </div>
 
-      {/* Render the Grid layout with columns */}
+      <Box
+        sx={{
+          position: "fixed",
+          top: "200px",
+          right: "44px",
+          zIndex: 1100,
+        }}
+      >
+        {hasMorePages && vehicles.length > 0 && (
+          <ButtonGroup
+            variant="contained"
+            aria-label="outlined primary button group"
+          >
+            <Button
+              onClick={handleLoadMore}
+              disabled={loadingList || isLoadingAll}
+              startIcon={
+                loadingList && !isLoadingAll ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : null
+              }
+            >
+              {loadingList && !isLoadingAll ? "Loading..." : "Load More"}
+            </Button>
+            <Button
+              onClick={handleLoadAll}
+              disabled={loadingList || isLoadingAll}
+              startIcon={
+                isLoadingAll ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : null
+              }
+            >
+              {isLoadingAll ? "Loading All..." : "Load All"}
+            </Button>
+          </ButtonGroup>
+        )}
+      </Box>
+
       <Grid container spacing={3}>
         {DISPLAY_COLUMNS.map((columnKey) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={columnKey}>
             <Box
               className={`drop-shadow-xs p-2 shadow-xs shadow-blue-100 border-t-4 ${
                 cardBorderColors[columnKey] || "border-gray-300"
-              } rounded-md min-h-[500px]`} // min-h to maintain layout if column is empty
+              } rounded-md min-h-[500px]`}
             >
               <Box sx={{ mb: 2, px: 2, pb: 1, borderBottom: "1px solid #eee" }}>
                 <Typography variant="h6">
-                  {columnLabels[columnKey]} ({vehicleCountByColumn[columnKey]}){" "}
-                  {/* Add dynamic count */}
+                  {columnLabels[columnKey]} ({vehicleCountByColumn[columnKey]})
                 </Typography>
               </Box>
-
               <div className="flex flex-col gap-0">
-                {/* Filter and map vehicles for the current column */}
                 {vehicles
                   .filter(
                     (vehicle) => getColumnKey(vehicle?.isApproved) === columnKey
                   )
                   .map((vehicle) => (
                     <ProfileCard
-                      key={vehicle.id} // Use vehicle ID as key
-                      vehicle={vehicle} // Pass the enriched vehicle object
+                      key={vehicle.id}
+                      vehicle={vehicle}
                       onClick={handleOpenModal}
-                      // Pass the enriched data from the list state directly
                       renterName={vehicle.renterName}
                       renterPhone={vehicle.renterPhone}
                       rentalPrice={vehicle.rentalPrice}
                       submissionDate={vehicle.submissionDate}
-                      renterAvatarUrl={vehicle.renterAvatarUrl} // <-- This now holds the fetched URL
+                      renterAvatarUrl={vehicle.renterAvatarUrl}
                     />
                   ))}
-
-                {/* Message if a column is empty and we're not loading or have errors */}
                 {!loadingList &&
+                  !isLoadingAll &&
                   !errorList &&
                   vehicleCountByColumn[columnKey] === 0 && (
                     <Typography
@@ -635,7 +507,6 @@ const MyApprovalListing = () => {
                       No vehicles in this category.
                     </Typography>
                   )}
-                {/* Show loading indicator only in the first column or if no vehicles yet */}
                 {loadingList &&
                   vehicles.length === 0 &&
                   columnKey === DISPLAY_COLUMNS[0] && (
@@ -657,60 +528,27 @@ const MyApprovalListing = () => {
         ))}
       </Grid>
 
-      {/* Loading/Error States for the entire list area */}
-      {/* These will show below the columns or instead of them if initial load fails */}
       {errorList && vehicles.length === 0 && (
         <Typography color="error" align="center" sx={{ py: 4 }}>
           Error loading list: {errorList}
         </Typography>
       )}
-      {loadingList && vehicles.length > 0 && (
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          sx={{ py: 2 }}
-        >
-          <CircularProgress size={20} />
-          <Typography sx={{ ml: 1 }} variant="body2">
-            Loading more...
+
+      {!hasMorePages &&
+        !loadingList &&
+        !isLoadingAll &&
+        vehicles.length > 0 && (
+          <Typography align="center" sx={{ mt: 4, color: "text.secondary" }}>
+            End of list. All vehicles loaded.
           </Typography>
-        </Box>
-      )}
-      {!loadingList && !errorList && vehicles.length === 0 && (
-        <Typography align="center" sx={{ mt: 4, color: "text.secondary" }}>
-          No vehicle listings found.
-        </Typography>
-      )}
+        )}
 
-      {/* "Load More" button */}
-      {hasMorePages && !loadingList && vehicles.length > 0 && (
-        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
-          <Button
-            variant="contained"
-            onClick={handleLoadMore}
-            disabled={loadingList} // Disable while loading
-          >
-            Load More
-          </Button>
-        </Box>
-      )}
-
-      {/* Message when all pages are loaded */}
-      {!hasMorePages && !loadingList && vehicles.length > 0 && (
-        <Typography align="center" sx={{ mt: 4, color: "text.secondary" }}>
-          End of list. All vehicles loaded.
-        </Typography>
-      )}
-
-      {/* Render the VehicleApprovalModal component */}
-      {/* Ensure vehicle and adminToken are passed to the modal */}
       <VehicleApprovalModal
         isOpen={openModal}
-        vehicle={selectedVehicleForModal} // Pass the basic/enriched vehicle object from the list
-        adminToken={adminToken} // Pass the token
+        vehicle={selectedVehicleForModal}
+        adminToken={adminToken}
         onClose={handleCloseModal}
-        onActionSuccess={handleModalActionSuccess} // Pass the success handler
+        onActionSuccess={handleModalActionSuccess}
       />
     </Box>
   );
