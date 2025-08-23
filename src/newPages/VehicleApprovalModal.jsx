@@ -150,6 +150,7 @@ const VehicleApprovalModal = ({
     vehicleOverview: false,
     documents: false,
     photos: false,
+    duplicateVehicle: false,
   });
 
   // --- EVENT HANDLERS & LOGIC ---
@@ -286,6 +287,7 @@ const VehicleApprovalModal = ({
       vehicleOverview: false,
       documents: false,
       photos: false,
+      duplicateVehicle: false,
     });
   };
   const openFullScreen = (index) => {
@@ -357,6 +359,7 @@ const VehicleApprovalModal = ({
             vehicleOverview: "Vehicle Overview Inaccurate/Missing",
             documents: "Documents Missing/Invalid",
             photos: "Photos Unclear/Missing",
+            duplicateVehicle: "Vehicle is a Duplicate (Vehicle already exists)",
           }[key])
       )
       .join(", ");
@@ -1035,7 +1038,7 @@ const VehicleApprovalModal = ({
           <h1 className="font-semibold mb-6">
             Please select options from below
           </h1>
-          <FormGroup className="px-4">
+          <FormGroup className="px-0">
             <FormControlLabel
               control={
                 <Checkbox
@@ -1055,6 +1058,16 @@ const VehicleApprovalModal = ({
                 />
               }
               label="Vehicle Overview Inaccurate/Missing"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  name="duplicateVehicle"
+                  checked={rejectReasons.duplicateVehicle}
+                  onChange={handleRejectReasonChange}
+                />
+              }
+              label="Vehicle is a Duplicate (Vehicle already exists)"
             />
             <FormControlLabel
               control={
