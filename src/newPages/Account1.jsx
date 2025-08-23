@@ -17,6 +17,9 @@ import {
   // Added status and image viewer icons
   FaStar,
   FaSpinner,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
   FaTimes,
 } from "react-icons/fa";
 // Make sure this path is correct for your project structure
@@ -111,14 +114,12 @@ const deleteFile = async (vehicleId, key, token) => {
 
 // --- HELPER FUNCTIONS ---
 const getDocumentName = (key) => {
-  if (!key) return "Document";
+  if (!key || typeof key !== "string") return "Document";
   try {
     const parts = key.split("/");
     const filename = parts[parts.length - 1];
-    return (
-      filename.split("-")[0].charAt(0).toUpperCase() +
-      filename.split("-")[0].slice(1)
-    );
+    const name = filename.split("-")[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
   } catch {
     return "Document";
   }
@@ -159,6 +160,7 @@ function formatDateRange(group) {
 
 const Account = ({ vehicleId, adminToken }) => {
   const navigate = useNavigate();
+  // Component State
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -167,28 +169,36 @@ const Account = ({ vehicleId, adminToken }) => {
     placeholderProfileImage
   );
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [rentalRating, setRentalRating] = useState(0);
+
+  // Editing State
   const [isEditing, setIsEditing] = useState(false);
   const [editableVehicleDetails, setEditableVehicleDetails] = useState(null);
-  const [docsToDelete, setDocsToDelete] = useState(new Set());
-  const [newDocs, setNewDocs] = useState([]);
+
+  // Media and Document State
   const [documentUrls, setDocumentUrls] = useState([]);
   const [loadingUrls, setLoadingUrls] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [actionError, setActionError] = useState(null);
-  const [rentalRating, setRentalRating] = useState(0);
+  const [docsToDelete, setDocsToDelete] = useState(new Set());
+  const [newDocs, setNewDocs] = useState([]);
   const [managedImages, setManagedImages] = useState([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState(
     placeholderVehicleImage
   );
+
+  // Modal and Dialog State
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [dialogOpen, setDialogOpen] = useState({
     softDelete: false,
     restore: false,
     permanentDelete: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
   const admin = JSON.parse(localStorage.getItem("admin"));
   const adminId = admin?.username;
 
+  // Cleanup object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
       managedImages.forEach((image) => {
@@ -237,6 +247,7 @@ const Account = ({ vehicleId, adminToken }) => {
           setIsImageLoading(false);
         }
         await fetchDownloadUrls(vehicle);
+        // Dummy rating, replace with actual API call if available
         setRentalRating(4.5);
       } else {
         setError("Invalid vehicle data structure.");
@@ -258,7 +269,11 @@ const Account = ({ vehicleId, adminToken }) => {
         if (!key) return null;
         try {
           const urlResponse = await getDownloadUrl(key);
-          return { key, url: urlResponse?.body, name: getDocumentName(key) };
+          return {
+            key,
+            url: urlResponse?.body,
+            name: getDocumentName(key),
+          };
         } catch (error) {
           return null;
         }
@@ -302,11 +317,112 @@ const Account = ({ vehicleId, adminToken }) => {
     }
   }, [managedImages, selectedImageUrl]);
 
+  // --- Admin Action Handlers (FROM REFERENCE) ---
+
+  const handleSoftDelete = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/soft_delete_vehicle/${vehicleId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to soft delete.");
+      }
+      setDialogOpen((prev) => ({ ...prev, softDelete: false }));
+      await fetchVehicleDetails(); // Refresh data
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, fetchVehicleDetails]);
+
+  const handleRestore = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/restore_vehicle/${vehicleId}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to restore vehicle.");
+      }
+      setDialogOpen((prev) => ({ ...prev, restore: false }));
+      await fetchVehicleDetails(); // Refresh data
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, fetchVehicleDetails]);
+
+  const handlePermanentDelete = useCallback(async () => {
+    setIsSubmitting(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/admin/permanently_delete_vehicle/${vehicleId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const body = errorData.body ? JSON.parse(errorData.body) : {};
+        const message = body.message || "Failed to permanently delete.";
+        const details = body.daysRemaining
+          ? `Days remaining: ${body.daysRemaining}.`
+          : "";
+        throw new Error(`${message} ${details}`);
+      }
+
+      setDialogOpen((prev) => ({ ...prev, permanentDelete: false }));
+      alert("Vehicle permanently deleted.");
+      navigate("/vehicles"); // Navigate away after successful deletion
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [vehicleId, adminToken, navigate]);
+
+  const handleChatWithOwner = useCallback(
+    (ownerId, ownerGivenName, ownerFamilyName, currentVehicleId) => {
+      if (!adminId) {
+        alert("Your admin ID is missing. Please log in again.");
+        return;
+      }
+      if (!ownerId) {
+        alert("Owner details missing. Cannot initiate chat.");
+        return;
+      }
+      navigate(
+        `/chat?renteeId=${ownerId}&reservationId=${currentVehicleId}&given_name=${ownerGivenName}&family_name=${ownerFamilyName}`
+      );
+    },
+    [navigate, adminId]
+  );
+
+  // --- Editing Handlers ---
   const handleEditClick = () => setIsEditing(true);
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditableVehicleDetails(vehicleDetails);
+    // Reset file changes on cancel
     fetchDownloadUrls(vehicleDetails);
     setDocsToDelete(new Set());
     setNewDocs([]);
@@ -374,22 +490,22 @@ const Account = ({ vehicleId, adminToken }) => {
     setIsSubmitting(true);
     setActionError(null);
     try {
+      // --- Handle file deletions ---
       const imagesToDelete = managedImages.filter(
         (img) => img.status === "deleted" && img.source === "url"
       );
-      const imagesToUpload = managedImages.filter(
-        (img) => img.status === "new"
-      );
-
       const deleteImagePromises = imagesToDelete.map((img) =>
         deleteFile(vehicleId, img.key, adminToken)
       );
       const deleteDocPromises = Array.from(docsToDelete).map((key) =>
         deleteFile(vehicleId, key, adminToken)
       );
-
       await Promise.all([...deleteImagePromises, ...deleteDocPromises]);
 
+      // --- Handle file uploads ---
+      const imagesToUpload = managedImages.filter(
+        (img) => img.status === "new"
+      );
       const uploadImagePromises = imagesToUpload.map(async (img) => {
         const { url, key } = await getUploadUrl(
           vehicleId,
@@ -400,7 +516,6 @@ const Account = ({ vehicleId, adminToken }) => {
         await uploadFile(url, img.file);
         return { key };
       });
-
       const uploadDocPromises = newDocs.map(async (file) => {
         const { url, key } = await getUploadUrl(
           vehicleId,
@@ -411,22 +526,21 @@ const Account = ({ vehicleId, adminToken }) => {
         await uploadFile(url, file);
         return { key };
       });
-
       const newImageKeys = await Promise.all(uploadImagePromises);
       const newDocKeys = await Promise.all(uploadDocPromises);
 
+      // --- Prepare final data payload ---
       const updatedDetails = { ...editableVehicleDetails };
-
       const existingKeys = managedImages
         .filter((img) => img.status === "existing")
         .map((img) => ({ key: img.key }));
       updatedDetails.vehicleImageKeys = [...existingKeys, ...newImageKeys];
-
       const remainingDocKeys = documentUrls
         .filter((doc) => !docsToDelete.has(doc.key))
         .map((doc) => ({ key: doc.key }));
       updatedDetails.adminDocumentKeys = [...remainingDocKeys, ...newDocKeys];
 
+      // --- Update vehicle details via API ---
       const response = await fetch(`${API_BASE_URL}/v1/vehicle/${vehicleId}`, {
         method: "PUT",
         headers: {
@@ -439,7 +553,7 @@ const Account = ({ vehicleId, adminToken }) => {
       if (!response.ok) throw new Error(await response.text());
 
       setIsEditing(false);
-      await fetchVehicleDetails();
+      await fetchVehicleDetails(); // Refresh all data
     } catch (err) {
       setActionError(err.message);
     } finally {
@@ -456,37 +570,49 @@ const Account = ({ vehicleId, adminToken }) => {
     fetchVehicleDetails,
   ]);
 
-  const handleSoftDelete = useCallback(async () => {
-    /* ... */
-  }, []);
-  const handleRestore = useCallback(async () => {
-    /* ... */
-  }, []);
-  const handlePermanentDelete = useCallback(async () => {
-    /* ... */
-  }, []);
-  const handleChatWithOwner = useCallback(() => {
-    /* ... */
-  }, []);
-  const handleOpenDialog = (dialog) =>
+  // --- Dialog and Modal Handlers ---
+  const handleOpenDialog = (dialog) => {
+    setActionError(null);
     setDialogOpen((prev) => ({ ...prev, [dialog]: true }));
-  const handleCloseDialogs = () =>
+  };
+  const handleCloseDialog = () => {
     setDialogOpen({
       softDelete: false,
       restore: false,
       permanentDelete: false,
     });
+    setActionError(null);
+  };
   const handleOpenEventsModal = () => setShowEventsModal(true);
   const handleCloseEventsModal = () => setShowEventsModal(false);
 
+  // Initial data fetch
   useEffect(() => {
     if (!vehicleId || !adminToken) {
       setLoading(false);
-      setError("Vehicle details cannot be loaded.");
+      setError("Vehicle details cannot be loaded. Missing parameters.");
       return;
     }
     fetchVehicleDetails();
   }, [vehicleId, adminToken, fetchVehicleDetails]);
+
+  // Status Icon Helper
+  const getStatusIcon = useCallback((status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+      case "active":
+        return <FaCheckCircle className="text-green-600 inline-block mr-1" />;
+      case "pending":
+        return <FaClock className="text-yellow-600 inline-block mr-1" />;
+      case "inactive":
+      case "rejected":
+        return <FaTimesCircle className="text-red-600 inline-block mr-1" />;
+      default:
+        return null;
+    }
+  }, []);
+
+  // --- RENDER LOGIC ---
 
   if (loading)
     return (
@@ -497,7 +623,7 @@ const Account = ({ vehicleId, adminToken }) => {
         minHeight="200px"
       >
         <CircularProgress />
-        <Typography sx={{ ml: 2 }}>Loading...</Typography>
+        <Typography sx={{ ml: 2 }}>Loading vehicle details...</Typography>
       </Box>
     );
   if (error)
@@ -524,20 +650,14 @@ const Account = ({ vehicleId, adminToken }) => {
       </Box>
     );
 
-  const EditableField = ({ label, name, value }) => (
+  const EditableField = ({ label, name, value, type = "text" }) => (
     <div className="flex flex-col">
       <Typography variant="caption" color="textSecondary">
         {label}
       </Typography>
       {isEditing ? (
         <input
-          type={
-            name.includes("year") ||
-            name.includes("doors") ||
-            name.includes("seats")
-              ? "number"
-              : "text"
-          }
+          type={type}
           name={name}
           value={value || ""}
           onChange={handleInputChange}
@@ -551,9 +671,16 @@ const Account = ({ vehicleId, adminToken }) => {
     </div>
   );
 
+  const ownerGivenName =
+    ownerProfile?.given_name || vehicleDetails?.ownerGivenName || "Unknown";
+  const ownerFamilyName =
+    ownerProfile?.family_name || vehicleDetails?.ownerSurName || "";
+
   return (
     <div className="flex flex-col mt-8">
+      {/* Top section with user/account/admin details */}
       <div className="flex flex-wrap w-full gap-4">
+        {/* User Details Section */}
         <section className="h-fit bg-white p-6 space-y-6 w-fit px-10 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
           <div className="items-center flex gap-8">
             {isImageLoading ? (
@@ -573,52 +700,90 @@ const Account = ({ vehicleId, adminToken }) => {
               </h2>
               <h3 className="flex gap-4 text-sm text-[#38393D]">
                 <IoPersonOutline size={18} />
-                {vehicleDetails.ownerFirstName} {vehicleDetails.ownerLastName}
+                {ownerGivenName} {ownerFamilyName}
               </h3>
               <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
                 <MdOutlineLocalPhone size={18} />
-                <p>{vehicleDetails.ownerPhone || "N/A"}</p>
+                <p>
+                  {ownerProfile?.phone_number ||
+                    vehicleDetails.ownerPhone ||
+                    "N/A"}
+                </p>
               </div>
               <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
                 <MdOutlineMail size={18} />
-                <p>{vehicleDetails.ownerEmail || "N/A"}</p>
+                <p>
+                  {ownerProfile?.email || vehicleDetails.ownerEmail || "N/A"}
+                </p>
               </div>
               <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
                 <IoLocationOutline size={18} />
-                <p>{vehicleDetails.city || "Location Available"}</p>
+                <p>
+                  {ownerProfile?.city ||
+                    vehicleDetails.city ||
+                    "Location Available"}
+                </p>
               </div>
               <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm border rounded-full border-[#00113D] text-[#00113D] bg-white">
                 <IoChatboxOutline size={16} />
-                <button onClick={handleChatWithOwner}>Chat With Owner</button>
+                <button
+                  onClick={() =>
+                    handleChatWithOwner(
+                      vehicleDetails?.ownerId,
+                      ownerGivenName,
+                      ownerFamilyName,
+                      vehicleDetails?.id
+                    )
+                  }
+                  disabled={!adminId || !vehicleDetails?.ownerId}
+                >
+                  Chat With Owner
+                </button>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Account Details Section */}
         <section className="w-fit bg-white p-6 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
           <h2 className="text-lg font-semibold text-[#00113D] mb-4">
             Vehicle Account Details
           </h2>
           <div className="flex flex-col text-sm text-[#38393D]">
+            {vehicleDetails.isDeleted && (
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                This vehicle is currently soft-deleted.
+              </Alert>
+            )}
             <div className="flex items-center mb-2">
               Status:
               <span className="ml-2 font-semibold text-sky-950">
+                {getStatusIcon(vehicleDetails.isApproved)}
                 {vehicleDetails.isApproved}
               </span>
             </div>
             <div className="flex items-center mb-2">
               Admin Status:
               <span className="ml-2 font-semibold text-sky-950">
+                {getStatusIcon(vehicleDetails.isActive)}
                 {vehicleDetails.isActive}
               </span>
             </div>
             <div className="flex items-center mb-2">
               Registration Date:
               <span className="ml-2 font-semibold text-sky-950">
-                {new Date(vehicleDetails.createdAt).toLocaleDateString()}
+                {new Date(vehicleDetails.createdAt).toLocaleDateString()} |{" "}
+                {new Date(vehicleDetails.createdAt).toLocaleTimeString()}
+              </span>
+            </div>
+            <div className="flex items-center mb-2">
+              Rent Amount:
+              <span className="ml-2 font-semibold text-sky-950">
+                {vehicleDetails.price} Birr/Day
               </span>
             </div>
             <div
-              className="flex justify-center items-center gap-2 mt-12 px-4 py-2 text-sm border rounded-full border-[#00113D] text-[#00113D] bg-white cursor-pointer"
+              className="flex justify-center items-center gap-2 mt-12 px-4 py-2 text-sm border rounded-full border-[#00113D] text-[#00113D] bg-white cursor-pointer hover:bg-gray-100"
               onClick={handleOpenEventsModal}
             >
               <CalendarMonthOutlinedIcon fontSize="small" />
@@ -626,6 +791,8 @@ const Account = ({ vehicleId, adminToken }) => {
             </div>
           </div>
         </section>
+
+        {/* Admin Actions Section */}
         <section className="w-fit bg-white p-6 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
           <h2 className="text-lg font-semibold text-[#00113D] mb-4">
             Admin Actions
@@ -690,13 +857,15 @@ const Account = ({ vehicleId, adminToken }) => {
                 )}
               </>
             )}
-            {actionError && (
+            {actionError && !isEditing && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {actionError}
               </Alert>
             )}
           </div>
         </section>
+
+        {/* Stat Cards */}
         <div className="flex flex-col w-1/3 gap-6">
           <div className=" bg-white p-6 flex justify-between items-center w-full shadow-blue-200 rounded-xl drop-shadow-xs shadow-xs">
             <h2 className="text-base font-semibold text-[#00113D] ">
@@ -722,6 +891,7 @@ const Account = ({ vehicleId, adminToken }) => {
         </div>
       </div>
 
+      {/* Vehicle Overview Section */}
       <div className="p-10 bg-white w-full flex flex-col drop-shadow-sm shadow-blue-200 shadow mt-8 rounded-lg">
         <div className=" text-xl font-semibold mb-8">Vehicle Overview</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 p-4 gap-4 ">
@@ -741,29 +911,74 @@ const Account = ({ vehicleId, adminToken }) => {
             value={editableVehicleDetails.model}
           />
           <EditableField
-            label="Year"
+            label="Year of Manufacture"
             name="year"
             value={editableVehicleDetails.year}
+            type="number"
+          />
+          <EditableField
+            label="License Plate Number"
+            name="vehicleNumber"
+            value={editableVehicleDetails.vehicleNumber}
+          />
+          <EditableField
+            label="Mileage"
+            name="mileage"
+            value={editableVehicleDetails.mileage}
+          />
+          <EditableField
+            label="Fuel Type"
+            name="fuelType"
+            value={editableVehicleDetails.fuelType}
+          />
+          <EditableField
+            label="Transmission Type"
+            name="transmission"
+            value={editableVehicleDetails.transmission}
           />
           <EditableField
             label="Doors"
             name="doors"
             value={editableVehicleDetails.doors}
+            type="number"
           />
           <EditableField
             label="Seats"
             name="seats"
             value={editableVehicleDetails.seats}
+            type="number"
+          />
+          <EditableField
+            label="Vehicle ID"
+            name="id"
+            value={editableVehicleDetails.id}
           />
           <EditableField
             label="Color"
             name="color"
             value={editableVehicleDetails.color}
           />
+          <EditableField
+            label="Plate Region"
+            name="plateRegion"
+            value={editableVehicleDetails.plateRegion}
+          />
+          <EditableField
+            label="Plate Code Number"
+            name="licensePlateCodeNumber"
+            value={editableVehicleDetails.licensePlateCodeNumber}
+          />
+          <EditableField
+            label="City"
+            name="city"
+            value={editableVehicleDetails.city}
+          />
         </div>
       </div>
 
+      {/* Documents and Media Sections */}
       <div className="flex lg:flex-row flex-col gap-8 mt-4">
+        {/* Documents Section */}
         <div className="p-10 bg-white w-full lg:w-1/2 flex flex-col drop-shadow-sm shadow-blue-200 shadow rounded-lg">
           <div className=" text-xl font-semibold mb-8">
             Documents and Compliance
@@ -778,7 +993,9 @@ const Account = ({ vehicleId, adminToken }) => {
               >
                 <Button
                   variant="text"
+                  startIcon={<AttachFileIcon />}
                   onClick={() => window.open(doc.url, "_blank")}
+                  sx={{ justifyContent: "flex-start" }}
                 >
                   {doc.name}
                 </Button>
@@ -786,12 +1003,16 @@ const Account = ({ vehicleId, adminToken }) => {
                   (docsToDelete.has(doc.key) ? (
                     <IconButton
                       onClick={() => handleUnmarkDocForDelete(doc.key)}
+                      aria-label="Undo delete document"
                     >
                       <UndoIcon />
                     </IconButton>
                   ) : (
-                    <IconButton onClick={() => handleMarkDocForDelete(doc.key)}>
-                      <MdDelete color="error" />
+                    <IconButton
+                      onClick={() => handleMarkDocForDelete(doc.key)}
+                      aria-label="Delete document"
+                    >
+                      <MdDelete className="text-red-500" />
                     </IconButton>
                   ))}
               </div>
@@ -802,14 +1023,14 @@ const Account = ({ vehicleId, adminToken }) => {
                   key={index}
                   className="flex items-center justify-between p-2"
                 >
-                  <p>{file.name}</p>
+                  <Typography variant="body2">{file.name}</Typography>
                   <IconButton onClick={() => handleRemoveNewDoc(index)}>
                     <FaTimes />
                   </IconButton>
                 </div>
               ))}
             {isEditing && (
-              <Button variant="outlined" component="label">
+              <Button variant="outlined" component="label" sx={{ mt: 2 }}>
                 Add Documents
                 <input
                   type="file"
@@ -821,7 +1042,7 @@ const Account = ({ vehicleId, adminToken }) => {
             )}
           </div>
         </div>
-
+        {/* Photos Section */}
         <div className="p-10 bg-white w-full lg:w-1/2 flex flex-col mt-lg-0 mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
           <div className="text-xl font-semibold mb-8">Photos and Media</div>
           {loadingUrls ? (
@@ -849,7 +1070,7 @@ const Account = ({ vehicleId, adminToken }) => {
                       className={`w-20 h-20 object-cover rounded-lg border-2 flex-shrink-0 ${
                         img.status !== "deleted" ? "cursor-pointer" : ""
                       } ${
-                        selectedImageUrl === img.url
+                        selectedImageUrl === img.url && img.status !== "deleted"
                           ? "border-blue-500"
                           : "border-transparent"
                       } ${
@@ -926,6 +1147,7 @@ const Account = ({ vehicleId, adminToken }) => {
         </div>
       </div>
 
+      {/* --- Dialogs --- */}
       <Dialog
         open={showEventsModal}
         onClose={handleCloseEventsModal}
@@ -947,7 +1169,15 @@ const Account = ({ vehicleId, adminToken }) => {
             <div className="space-y-3">
               {groupConsecutiveDates(vehicleDetails.unavailableDates).map(
                 (group, i) => (
-                  <div key={i}>{formatDateRange(group)}</div>
+                  <div
+                    key={`unavailable-${i}`}
+                    className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-md"
+                  >
+                    <CalendarMonthOutlinedIcon className="text-red-600" />
+                    <span className="text-sm font-medium text-red-800">
+                      {formatDateRange(group)}
+                    </span>
+                  </div>
                 )
               )}
             </div>
@@ -959,42 +1189,95 @@ const Account = ({ vehicleId, adminToken }) => {
           <Button onClick={handleCloseEventsModal}>Close</Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={dialogOpen.softDelete} onClose={handleCloseDialogs}>
+
+      {/* Confirmation Dialogs for Admin Actions */}
+      <Dialog open={dialogOpen.softDelete} onClose={handleCloseDialog}>
         <DialogTitle>Confirm Soft Deletion</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure? This can be restored later.</Typography>
-          {actionError && <Alert severity="error">{actionError}</Alert>}
+          <Typography>
+            Are you sure you want to mark this vehicle as deleted? The owner
+            will no longer see it, but it can be restored within 90 days.
+          </Typography>
+          {actionError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleSoftDelete} color="warning">
-            Confirm
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSoftDelete}
+            color="warning"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <CircularProgress size={24} /> : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={dialogOpen.restore} onClose={handleCloseDialogs}>
-        <DialogTitle>Confirm Restore</DialogTitle>
+
+      <Dialog open={dialogOpen.restore} onClose={handleCloseDialog}>
+        <DialogTitle>Confirm Vehicle Restoration</DialogTitle>
         <DialogContent>
-          <Typography>Restore this vehicle?</Typography>
-          {actionError && <Alert severity="error">{actionError}</Alert>}
+          <Typography>
+            Are you sure you want to restore this vehicle? It will become active
+            and visible to the owner again.
+          </Typography>
+          {actionError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handleRestore} color="success">
-            Confirm
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRestore}
+            color="success"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? <CircularProgress size={24} /> : "Confirm"}
           </Button>
         </DialogActions>
       </Dialog>
-      <Dialog open={dialogOpen.permanentDelete} onClose={handleCloseDialogs}>
+
+      <Dialog open={dialogOpen.permanentDelete} onClose={handleCloseDialog}>
         <DialogTitle>Confirm Permanent Deletion</DialogTitle>
         <DialogContent>
-          <Alert severity="error">This is irreversible.</Alert>
-          {actionError && <Alert severity="info">{actionError}</Alert>}
+          <Alert severity="error">
+            This action is irreversible and will permanently delete all data for
+            this vehicle.
+          </Alert>
+          <Typography sx={{ mt: 2 }}>
+            Please confirm you want to proceed.
+          </Typography>
+          {actionError && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              {actionError}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialogs}>Cancel</Button>
-          <Button onClick={handlePermanentDelete} color="error">
-            Delete Permanently
+          <Button onClick={handleCloseDialog} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePermanentDelete}
+            color="error"
+            variant="contained"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <CircularProgress size={24} />
+            ) : (
+              "Confirm Permanent Delete"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
