@@ -1,6 +1,6 @@
 // VehicleManagment.js (or VehicleManagment.jsx)
 import { HiMiniArrowsUpDown } from "react-icons/hi2";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   TextField,
   Select,
@@ -14,7 +14,7 @@ import {
   Typography,
   Link,
   CircularProgress,
-  ButtonGroup, // Added for the view toggle
+  ButtonGroup,
 } from "@mui/material";
 
 import Breadcrumbs from "@mui/material/Breadcrumbs";
@@ -24,19 +24,20 @@ import CarRentalOutlinedIcon from "@mui/icons-material/CarRentalOutlined";
 import DirectionsCarFilledOutlinedIcon from "@mui/icons-material/DirectionsCarFilledOutlined";
 import CarCrashOutlinedIcon from "@mui/icons-material/CarCrashOutlined";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
-import { Grid } from "@mui/material";
 import { Search } from "@mui/icons-material";
 
+// Correctly import your actual components
 import Account from "./Account1";
 import AddCarModal from "./AddCarModal";
 
 const VehicleManagment = () => {
   const [rentals, setRentals] = useState([]);
-  const [deletedRentals, setDeletedRentals] = useState([]); // State for deleted vehicles
-  const [viewMode, setViewMode] = useState("active"); // 'active' or 'deleted'
+  const [deletedRentals, setDeletedRentals] = useState([]);
+  const [viewMode, setViewMode] = useState("active");
   const [adminToken, setAdminToken] = useState(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDuplicates, setShowDuplicates] = useState(false);
 
   const activeApiUrl =
     "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
@@ -67,7 +68,6 @@ const VehicleManagment = () => {
   const fetchDeletedRentals = useCallback(
     async (token) => {
       if (!token) return [];
-      console.log("Fetching deleted vehicles...");
       const response = await fetch(deletedApiUrl, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -77,7 +77,6 @@ const VehicleManagment = () => {
         );
       }
       const data = await response.json();
-      console.log("Deleted vehicles data:", data);
       return data.body?.vehicles || [];
     },
     [deletedApiUrl]
@@ -106,12 +105,11 @@ const VehicleManagment = () => {
       if (token) {
         try {
           if (viewMode === "active") {
-            console.log("Starting to fetch all active vehicles...");
             const allRentalsData = await fetchAllRentals(token);
             const formattedRentals = allRentalsData.map((vehicle) => ({
               carMake: vehicle.make,
               vehicleID: vehicle.id,
-              plate: vehicle.licensePlateNumber || "N/A",
+              vehicleNumber: vehicle.vehicleNumber || "N/A",
               YearManufactured: vehicle.year,
               carModel: vehicle.model,
               status:
@@ -126,10 +124,10 @@ const VehicleManagment = () => {
                 `${vehicle.ownerGivenName || ""} ${
                   vehicle.ownerSurName || ""
                 }`.trim() || "N/A",
+              submissionDate: vehicle.createdAt || new Date().toISOString(),
             }));
             setRentals(formattedRentals);
           } else {
-            // viewMode is 'deleted'
             const deletedData = await fetchDeletedRentals(token);
             const formattedDeleted = deletedData.map((v) => ({
               vehicleID: v.id,
@@ -180,19 +178,44 @@ const VehicleManagment = () => {
     setCurrentPage(1);
   };
 
-  const activeDataSource = viewMode === "active" ? rentals : deletedRentals;
+  const duplicateRentals = useMemo(() => {
+    const plateCounts = rentals.reduce((acc, vehicle) => {
+      const vNumber = vehicle.vehicleNumber;
+      if (vNumber && vNumber !== "N/A") {
+        acc[vNumber] = (acc[vNumber] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const duplicatePlates = Object.keys(plateCounts).filter(
+      (vNumber) => plateCounts[vNumber] > 1
+    );
+
+    return rentals.filter((vehicle) =>
+      duplicatePlates.includes(vehicle.vehicleNumber)
+    );
+  }, [rentals]);
+
+  const activeDataSource =
+    viewMode === "active"
+      ? showDuplicates
+        ? duplicateRentals
+        : rentals
+      : deletedRentals;
 
   const filteredDataSource = activeDataSource.filter((item) => {
+    if (showDuplicates) return true;
+
     const searchTerm = filters.search || "";
     if (viewMode === "active") {
       const carMake = item.carMake || "";
       const carModel = item.carModel || "";
-      const plate = item.plate || "";
+      const vehicleNumber = item.vehicleNumber || "";
       const ownerName = item.ownerFullName || "";
       const searchMatch =
         carMake.toLowerCase().includes(searchTerm.toLowerCase()) ||
         carModel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        plate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicleNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ownerName.toLowerCase().includes(searchTerm.toLowerCase());
       const typeMatch = filters.carType
         ? item.carType === filters.carType
@@ -202,7 +225,6 @@ const VehicleManagment = () => {
         : true;
       return searchMatch && typeMatch && statusMatch;
     } else {
-      // Filtering for deleted view
       const carMake = item.carMake || "";
       const carModel = item.carModel || "";
       const ownerEmail = item.ownerEmail || "";
@@ -220,6 +242,13 @@ const VehicleManagment = () => {
   });
 
   const sortedDataSource = [...filteredDataSource].sort((a, b) => {
+    if (showDuplicates) {
+      const vNumA = a.vehicleNumber || "";
+      const vNumB = b.vehicleNumber || "";
+      if (vNumA < vNumB) return -1;
+      if (vNumA > vNumB) return 1;
+    }
+
     if (sortConfig.key) {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
@@ -232,7 +261,6 @@ const VehicleManagment = () => {
       ) {
         const numA = Number(aValue);
         const numB = Number(bValue);
-        if (isNaN(numA) && isNaN(numB)) return 0;
         if (isNaN(numA)) return sortConfig.direction === "ascending" ? 1 : -1;
         if (isNaN(numB)) return sortConfig.direction === "ascending" ? -1 : 1;
         return sortConfig.direction === "ascending" ? numA - numB : numB - numA;
@@ -250,9 +278,8 @@ const VehicleManagment = () => {
 
   const handleSort = (key) => {
     let direction = "ascending";
-    if (sortConfig.key === key) {
-      direction =
-        sortConfig.direction === "ascending" ? "descending" : "ascending";
+    if (sortConfig.key === key && sortConfig.direction === "ascending") {
+      direction = "descending";
     }
     setSortConfig({ key, direction });
     setCurrentPage(1);
@@ -300,8 +327,17 @@ const VehicleManagment = () => {
   const handleOpenAddCarModal = () => setOpenAddCarModal(true);
   const handleCloseAddCarModal = () => {
     setOpenAddCarModal(false);
-    // After adding a car, switch to active view to see it, which triggers a refetch
     setViewMode("active");
+  };
+
+  const handleToggleDuplicates = () => {
+    setShowDuplicates((prev) => !prev);
+    if (!showDuplicates) {
+      setSortConfig({ key: "vehicleNumber", direction: "ascending" });
+    } else {
+      setSortConfig({ key: null, direction: "ascending" });
+    }
+    setCurrentPage(1);
   };
 
   const totalVehicles = rentals.length;
@@ -320,6 +356,8 @@ const VehicleManagment = () => {
     !isLoadingList &&
     filteredDataSource.length === 0 &&
     activeDataSource.length > 0;
+
+  let lastPlate = null;
 
   return (
     <div className="flex flex-col">
@@ -369,12 +407,19 @@ const VehicleManagment = () => {
               <div className="flex items-center justify-between gap-4 flex-wrap p-2">
                 <div className="flex items-center gap-4">
                   <h2 className="text-sm font-semibold pl-2 flex-shrink-0">
-                    {viewMode === "active" ? "Car List" : "Deleted Cars List"}
+                    {showDuplicates
+                      ? "Duplicate License Plates"
+                      : viewMode === "active"
+                      ? "Car List"
+                      : "Deleted Cars List"}
                   </h2>
                   <ButtonGroup size="small">
                     <Button
                       variant={viewMode === "active" ? "contained" : "outlined"}
-                      onClick={() => setViewMode("active")}
+                      onClick={() => {
+                        setViewMode("active");
+                        setShowDuplicates(false);
+                      }}
                     >
                       All Vehicles
                     </Button>
@@ -382,7 +427,10 @@ const VehicleManagment = () => {
                       variant={
                         viewMode === "deleted" ? "contained" : "outlined"
                       }
-                      onClick={() => setViewMode("deleted")}
+                      onClick={() => {
+                        setViewMode("deleted");
+                        setShowDuplicates(false);
+                      }}
                       color="secondary"
                     >
                       Deleted
@@ -391,17 +439,14 @@ const VehicleManagment = () => {
                 </div>
                 <div className="flex gap-4 items-center flex-wrap">
                   <TextField
-                    label={
-                      viewMode === "active"
-                        ? "Search by Make/Model/Plate/Owner"
-                        : "Search by Make/Model/Email"
-                    }
+                    label="Search by Make/Model/Plate/Owner"
                     variant="outlined"
                     name="search"
                     value={filters.search}
                     onChange={handleFilterChange}
                     size="small"
                     sx={{ minWidth: 220 }}
+                    disabled={showDuplicates}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
@@ -414,7 +459,7 @@ const VehicleManagment = () => {
                     variant="outlined"
                     size="small"
                     sx={{ minWidth: 120 }}
-                    disabled={viewMode === "deleted"}
+                    disabled={viewMode === "deleted" || showDuplicates}
                   >
                     <InputLabel size="small">Car Type</InputLabel>
                     <Select
@@ -434,7 +479,7 @@ const VehicleManagment = () => {
                     variant="outlined"
                     sx={{ minWidth: 120 }}
                     size="small"
-                    disabled={viewMode === "deleted"}
+                    disabled={viewMode === "deleted" || showDuplicates}
                   >
                     <InputLabel size="small">Status</InputLabel>
                     <Select
@@ -452,6 +497,17 @@ const VehicleManagment = () => {
                       </MenuItem>
                     </Select>
                   </FormControl>
+                  {viewMode === "active" && (
+                    <Button
+                      onClick={handleToggleDuplicates}
+                      variant={showDuplicates ? "contained" : "outlined"}
+                      size="medium"
+                      color="info"
+                      sx={{ height: "40px" }}
+                    >
+                      {showDuplicates ? "Show All" : "Find Duplicates"}
+                    </Button>
+                  )}
                   <button
                     onClick={handleOpenAddCarModal}
                     className="bg-[#00173C] cursor-pointer w-28 justify-center h-fit text-xs text-white flex items-center shadow-lg px-4 py-3 rounded-4xl"
@@ -487,7 +543,9 @@ const VehicleManagment = () => {
                 </Typography>
               ) : showNoDataMessage ? (
                 <Typography variant="body1" align="center" sx={{ py: 4 }}>
-                  No vehicles found.
+                  {showDuplicates
+                    ? "No duplicate license plates found."
+                    : "No vehicles found."}
                 </Typography>
               ) : showNoFilteredDataMessage ? (
                 <Typography variant="body1" align="center" sx={{ py: 4 }}>
@@ -504,93 +562,52 @@ const VehicleManagment = () => {
                             onClick={() => handleSort("ownerFullName")}
                           >
                             Owner Name{" "}
-                            {sortConfig.key === "ownerFullName" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
-                          </th>
-                          <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                            Vehicle ID
-                          </th>
-                          {/* MODIFICATION: Owner Name header moved here */}
-
-                          <th
-                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("carType")}
-                          >
-                            Car Type{" "}
-                            {sortConfig.key === "carType" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                            <HiMiniArrowsUpDown
+                              className={`inline ml-1 ${
+                                sortConfig.key === "ownerFullName"
+                                  ? ""
+                                  : "text-gray-400"
+                              }`}
+                            />
                           </th>
                           <th
                             className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
                             onClick={() => handleSort("carMake")}
                           >
-                            Car Make{" "}
-                            {sortConfig.key === "carMake" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                            Vehicle{" "}
+                            <HiMiniArrowsUpDown
+                              className={`inline ml-1 ${
+                                sortConfig.key === "carMake"
+                                  ? ""
+                                  : "text-gray-400"
+                              }`}
+                            />
                           </th>
                           <th
                             className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("carModel")}
+                            onClick={() => handleSort("vehicleNumber")}
                           >
-                            Car Model{" "}
-                            {sortConfig.key === "carModel" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                            License Plate{" "}
+                            <HiMiniArrowsUpDown
+                              className={`inline ml-1 ${
+                                sortConfig.key === "vehicleNumber"
+                                  ? ""
+                                  : "text-gray-400"
+                              }`}
+                            />
                           </th>
                           <th
                             className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleSort("YearManufactured")}
+                            onClick={() => handleSort("submissionDate")}
                           >
-                            Year{" "}
-                            {sortConfig.key === "YearManufactured" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
-                          </th>
-                          <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
-                            License Plate
+                            Submission Date{" "}
+                            <HiMiniArrowsUpDown
+                              className={`inline ml-1 ${
+                                sortConfig.key === "submissionDate"
+                                  ? ""
+                                  : "text-gray-400"
+                              }`}
+                            />
                           </th>
                           <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                             Status
@@ -603,149 +620,92 @@ const VehicleManagment = () => {
                           <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                             Vehicle ID
                           </th>
-                          <th
-                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-red-100"
-                            onClick={() => handleSort("carMake")}
-                          >
-                            Car Make{" "}
-                            {sortConfig.key === "carMake" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
-                          </th>
-                          <th
-                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-red-100"
-                            onClick={() => handleSort("carModel")}
-                          >
-                            Car Model{" "}
-                            {sortConfig.key === "carModel" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                          <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
+                            Vehicle
                           </th>
                           <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
                             Owner Email
                           </th>
-                          <th
-                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-red-100"
-                            onClick={() => handleSort("deletedAt")}
-                          >
-                            Deleted At{" "}
-                            {sortConfig.key === "deletedAt" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                          <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
+                            Deleted At
                           </th>
-                          <th
-                            className="px-6 text-left text-sm font-semibold py-4 text-gray-600 cursor-pointer hover:bg-red-100"
-                            onClick={() =>
-                              handleSort("daysUntilPermanentDeletion")
-                            }
-                          >
-                            Days Left{" "}
-                            {sortConfig.key === "daysUntilPermanentDeletion" ? (
-                              <HiMiniArrowsUpDown
-                                className={`inline ml-1 transform ${
-                                  sortConfig.direction === "descending"
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              />
-                            ) : (
-                              <HiMiniArrowsUpDown className="inline ml-1 text-gray-400" />
-                            )}
+                          <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
+                            Days Left
                           </th>
                         </tr>
                       </thead>
                     )}
                     <tbody>
-                      {paginatedDataSource.map((item) => (
-                        <tr
-                          key={item.vehicleID}
-                          className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => handleRowClick(item)}
-                        >
-                          {viewMode === "active" ? (
-                            <>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.ownerFullName}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.vehicleID}
-                              </td>
-                              {/* MODIFICATION: Owner Name data cell moved here */}
+                      {paginatedDataSource.map((item) => {
+                        let isFirstInGroup = false;
+                        if (
+                          showDuplicates &&
+                          item.vehicleNumber !== lastPlate
+                        ) {
+                          isFirstInGroup = true;
+                          lastPlate = item.vehicleNumber;
+                        }
 
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.carType}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.carMake}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.carModel}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.YearManufactured}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.plate}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span
-                                  className={`px-3 py-2 rounded-xl text-xs ${
-                                    statusColors[item.status] ||
-                                    "bg-gray-200 text-gray-800"
-                                  }`}
-                                >
-                                  {item.status}
-                                </span>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.vehicleID}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.carMake}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.carModel}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.ownerEmail}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-700">
-                                {item.deletedAt}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-red-600 font-medium">
-                                {item.daysUntilPermanentDeletion}
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ))}
+                        return (
+                          <tr
+                            key={item.vehicleID}
+                            className={`border-t border-gray-200 hover:bg-gray-50 cursor-pointer ${
+                              isFirstInGroup && showDuplicates
+                                ? "border-t-2 border-t-blue-300 bg-blue-50"
+                                : ""
+                            }`}
+                            onClick={() => handleRowClick(item)}
+                          >
+                            {viewMode === "active" ? (
+                              <>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.ownerFullName}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  <div className="font-medium">{`${item.carMake} ${item.carModel}`}</div>
+                                  <div className="text-xs text-gray-500">
+                                    Year: {item.YearManufactured}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                                  {item.vehicleNumber}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {new Date(
+                                    item.submissionDate
+                                  ).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`px-3 py-2 rounded-xl text-xs ${
+                                      statusColors[item.status] ||
+                                      "bg-gray-200 text-gray-800"
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </span>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.vehicleID}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">{`${item.carMake} ${item.carModel} (${item.YearManufactured})`}</td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.ownerEmail}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-700">
+                                  {item.deletedAt}
+                                </td>
+                                <td className="px-6 py-4 text-sm text-red-600 font-medium">
+                                  {item.daysUntilPermanentDeletion}
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {totalPages > 1 && (
