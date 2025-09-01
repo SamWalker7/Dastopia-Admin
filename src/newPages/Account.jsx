@@ -9,6 +9,7 @@ import { MdOutlineLocalPhone, MdOutlineMail } from "react-icons/md";
 import image from "./avatar.png"; // Static fallback image
 import { getDownloadUrl } from "../api"; // Assuming your api.js exports getDownloadUrl
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import UserEditForm from "./UserEditForm"; // Import the new component
 
 import {
   Typography,
@@ -100,7 +101,7 @@ const Account = ({ selectedUser, adminToken }) => {
     direction: "descending",
   });
 
-  // --- NEW STATE for APPROVAL/DENIAL ---
+  // --- STATE for APPROVAL/DENIAL ---
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isDenyDialogOpen, setIsDenyDialogOpen] = useState(false);
   const [expDate, setExpDate] = useState("");
@@ -110,6 +111,9 @@ const Account = ({ selectedUser, adminToken }) => {
     message: "",
   });
   const [refreshTrigger, setRefreshTrigger] = useState(0); // To trigger re-fetch
+
+  // --- NEW STATE for Edit User Dialog ---
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // --- Status Colors ---
   const statusColors = {
@@ -147,7 +151,6 @@ const Account = ({ selectedUser, adminToken }) => {
 
   // --- Functions to fetch data (unchanged) ---
   const fetchRenteeHistory = useCallback(async (AccessToken, userId) => {
-    // ... (existing implementation)
     if (!AccessToken || !userId)
       throw new Error("Access token or User ID is missing");
     const response = await fetch(
@@ -170,7 +173,6 @@ const Account = ({ selectedUser, adminToken }) => {
   }, []);
 
   const fetchUserProfile = useCallback(async (AccessToken, userId) => {
-    // ... (existing implementation)
     if (!AccessToken || !userId)
       throw new Error("Access token or User ID is missing");
     const response = await fetch(`${API_BASE_URL}/v1/user/${userId}`, {
@@ -191,7 +193,6 @@ const Account = ({ selectedUser, adminToken }) => {
   }, []);
 
   const transformBookingToRental = (booking) => {
-    // ... (existing implementation)
     return {
       startDate: formatDate(booking.startTime),
       endDate: formatDate(booking.endTime),
@@ -309,7 +310,7 @@ const Account = ({ selectedUser, adminToken }) => {
     getDownloadUrl,
   ]);
 
-  // --- NEW: Handlers for Approval/Denial ---
+  // --- Handlers for Approval/Denial ---
 
   const handleOpenVerifyDialog = () => setIsVerifyDialogOpen(true);
   const handleCloseVerifyDialog = () => {
@@ -320,10 +321,23 @@ const Account = ({ selectedUser, adminToken }) => {
   const handleOpenDenyDialog = () => setIsDenyDialogOpen(true);
   const handleCloseDenyDialog = () => setIsDenyDialogOpen(false);
 
+  // --- NEW: Handlers for Edit User Dialog ---
+  const handleOpenEditDialog = () => setIsEditDialogOpen(true);
+  const handleCloseEditDialog = () => setIsEditDialogOpen(false);
+
+  const handleUserUpdated = () => {
+    handleCloseEditDialog();
+    // Set a success message and trigger a data refresh
+    setActionFeedback({
+      type: "success",
+      message: "User updated successfully!",
+    });
+    setRefreshTrigger((t) => t + 1);
+  };
+
   const handleConfirmApprove = async () => {
     const userId = fullUserProfile?.id;
     const adminToken = JSON.parse(localStorage.getItem("admin"))?.AccessToken;
-    console.log("User ID for approval:", userId, adminToken, expDate);
     if (!adminToken || !userId || !expDate) {
       setActionFeedback({
         type: "error",
@@ -430,7 +444,6 @@ const Account = ({ selectedUser, adminToken }) => {
     if (!sortConfig.key) return 0;
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
-    // ... (existing implementation)
     if (sortConfig.key === "startDate" || sortConfig.key === "endDate") {
       const parseDate = (dateStr) => {
         if (
@@ -494,7 +507,7 @@ const Account = ({ selectedUser, adminToken }) => {
 
   return (
     <div className="flex flex-col">
-      {/* --- NEW: Feedback Alert --- */}
+      {/* --- Feedback Alert --- */}
       {actionFeedback.message && (
         <Alert
           severity={actionFeedback.type}
@@ -615,34 +628,44 @@ const Account = ({ selectedUser, adminToken }) => {
             )}
           </div>
 
-          {/* --- NEW: APPROVAL/DENIAL BUTTONS --- */}
-          {
-            // userStatus === "UNCONFIRMED" && fullUserProfile &&
-            <div className="flex gap-2 mt-6">
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleOpenVerifyDialog}
-                disabled={isSubmitting}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleOpenDenyDialog}
-                disabled={isSubmitting}
-              >
-                Deny
-              </Button>
-            </div>
-          }
+          {/* --- ACTION BUTTONS --- */}
+          <div className="flex flex-wrap gap-2 mt-6">
+            {/* NEW: Edit User Button */}
+            <Button
+              variant="outlined"
+              onClick={handleOpenEditDialog}
+              disabled={!fullUserProfile || isSubmitting}
+            >
+              Edit User
+            </Button>
+
+            {/* Existing Approval/Denial Buttons */}
+            {userStatus === "UNCONFIRMED" && fullUserProfile && (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={handleOpenVerifyDialog}
+                  disabled={isSubmitting}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleOpenDenyDialog}
+                  disabled={isSubmitting}
+                >
+                  Deny
+                </Button>
+              </>
+            )}
+          </div>
         </section>
       </div>
 
       {/* --- Rental History Table --- */}
       <div className=" bg-white mt-8 w-full drop-shadow-sm shadow-sm rounded-lg">
-        {/* ... (existing rental history table logic, unchanged) ... */}
         <div className="p-4 md:p-6 rounded-lg ">
           <h2 className="text-lg font-semibold pl-2 my-4 md:my-6">
             Rental History (Cars Rented)
@@ -737,7 +760,7 @@ const Account = ({ selectedUser, adminToken }) => {
         </div>
       </div>
 
-      {/* --- NEW: APPROVAL DIALOG --- */}
+      {/* --- APPROVAL DIALOG --- */}
       <Dialog
         open={isVerifyDialogOpen}
         onClose={handleCloseVerifyDialog}
@@ -779,7 +802,7 @@ const Account = ({ selectedUser, adminToken }) => {
         </DialogActions>
       </Dialog>
 
-      {/* --- NEW: DENIAL CONFIRMATION DIALOG --- */}
+      {/* --- DENIAL CONFIRMATION DIALOG --- */}
       <Dialog
         open={isDenyDialogOpen}
         onClose={handleCloseDenyDialog}
@@ -807,6 +830,16 @@ const Account = ({ selectedUser, adminToken }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* --- NEW: EDIT USER DIALOG --- */}
+      {fullUserProfile && (
+        <UserEditForm
+          user={fullUserProfile}
+          open={isEditDialogOpen}
+          onClose={handleCloseEditDialog}
+          onUserUpdated={handleUserUpdated}
+        />
+      )}
     </div>
   );
 };

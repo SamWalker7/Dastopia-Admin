@@ -51,7 +51,7 @@ const placeholderVehicleImage =
 const API_BASE_URL =
   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod";
 
-// --- API FUNCTIONS FOR FILE OPERATIONS ---
+// --- API FUNCTIONS FOR FILE OPERATIONS (Unchanged) ---
 const getUploadUrl = async (vehicleId, filename, contentType, token) => {
   const url =
     "https://xo55y7ogyj.execute-api.us-east-1.amazonaws.com/prod/add_vehicle";
@@ -111,7 +111,6 @@ const deleteFile = async (vehicleId, key, token) => {
     throw error;
   }
 };
-
 // --- HELPER FUNCTIONS ---
 const getDocumentName = (key) => {
   if (!key || typeof key !== "string") return "Document";
@@ -158,9 +157,31 @@ function formatDateRange(group) {
   return `${format(start, "MMMM d")}–${format(end, "d, yyyy")}`;
 }
 
+// NEW: Helper functions for service type display
+const formatServiceType = (serviceType) => {
+  if (!serviceType) return "N/A";
+  switch (serviceType) {
+    case "self-drive":
+      return "Self-Drive Only";
+    case "with-driver":
+      return "With Driver Only";
+    case "both":
+      return "Both Options Available";
+    default:
+      return serviceType;
+  }
+};
+
+const formatWorkingDays = (days) => {
+  if (!days || !Array.isArray(days) || days.length === 0) return "N/A";
+  return days
+    .map((day) => day.charAt(0).toUpperCase() + day.slice(1))
+    .join(", ");
+};
+
 const Account = ({ vehicleId, adminToken }) => {
   const navigate = useNavigate();
-  // Component State
+  // Component State (unchanged)
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -194,7 +215,6 @@ const Account = ({ vehicleId, adminToken }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState(null);
-
   const admin = JSON.parse(localStorage.getItem("admin"));
   const adminId = admin?.username;
 
@@ -300,7 +320,6 @@ const Account = ({ vehicleId, adminToken }) => {
     setDocumentUrls(fetchedDocUrls);
     setLoadingUrls(false);
   }, []);
-
   // Sync selected image if the current one is deleted or the list changes
   useEffect(() => {
     const availableImages = managedImages.filter(
@@ -316,9 +335,6 @@ const Account = ({ vehicleId, adminToken }) => {
       setSelectedImageUrl(placeholderVehicleImage);
     }
   }, [managedImages, selectedImageUrl]);
-
-  // --- Admin Action Handlers (FROM REFERENCE) ---
-
   const handleSoftDelete = useCallback(async () => {
     setIsSubmitting(true);
     setActionError(null);
@@ -415,8 +431,8 @@ const Account = ({ vehicleId, adminToken }) => {
     },
     [navigate, adminId]
   );
+  // --- All existing handlers up to this point remain the same ---
 
-  // --- Editing Handlers ---
   const handleEditClick = () => setIsEditing(true);
 
   const handleCancelEdit = () => {
@@ -432,6 +448,18 @@ const Account = ({ vehicleId, adminToken }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditableVehicleDetails((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // NEW: Handler for working days checkboxes
+  const handleWorkingDaysChange = (e) => {
+    const { value, checked } = e.target;
+    setEditableVehicleDetails((prev) => {
+      const currentDays = prev.driverWorkingDays || [];
+      const newDays = checked
+        ? [...currentDays, value]
+        : currentDays.filter((day) => day !== value);
+      return { ...prev, driverWorkingDays: [...new Set(newDays)] }; // Ensure uniqueness
+    });
   };
 
   const handleNewImageChange = (e) => {
@@ -486,11 +514,12 @@ const Account = ({ vehicleId, adminToken }) => {
   const handleRemoveNewDoc = (index) =>
     setNewDocs((prev) => prev.filter((_, i) => i !== index));
 
+  // --- MODIFIED: `handleSaveChanges` to include new fields ---
   const handleSaveChanges = useCallback(async () => {
     setIsSubmitting(true);
     setActionError(null);
     try {
-      // --- Handle file deletions ---
+      // --- File operations (unchanged) ---
       const imagesToDelete = managedImages.filter(
         (img) => img.status === "deleted" && img.source === "url"
       );
@@ -502,7 +531,6 @@ const Account = ({ vehicleId, adminToken }) => {
       );
       await Promise.all([...deleteImagePromises, ...deleteDocPromises]);
 
-      // --- Handle file uploads ---
       const imagesToUpload = managedImages.filter(
         (img) => img.status === "new"
       );
@@ -529,7 +557,7 @@ const Account = ({ vehicleId, adminToken }) => {
       const newImageKeys = await Promise.all(uploadImagePromises);
       const newDocKeys = await Promise.all(uploadDocPromises);
 
-      // --- Prepare final data payload ---
+      // --- Prepare final data payload with NEW fields ---
       const updatedDetails = { ...editableVehicleDetails };
       const existingKeys = managedImages
         .filter((img) => img.status === "existing")
@@ -539,6 +567,14 @@ const Account = ({ vehicleId, adminToken }) => {
         .filter((doc) => !docsToDelete.has(doc.key))
         .map((doc) => ({ key: doc.key }));
       updatedDetails.adminDocumentKeys = [...remainingDocKeys, ...newDocKeys];
+
+      // NEW: Clear driver fields if service type is self-drive
+      if (updatedDetails.serviceType === "self-drive") {
+        updatedDetails.driverPrice = null;
+        updatedDetails.driverMaxHours = null;
+        updatedDetails.driverHours = "";
+        updatedDetails.driverWorkingDays = [];
+      }
 
       // --- Update vehicle details via API ---
       const response = await fetch(`${API_BASE_URL}/v1/vehicle/${vehicleId}`, {
@@ -570,7 +606,7 @@ const Account = ({ vehicleId, adminToken }) => {
     fetchVehicleDetails,
   ]);
 
-  // --- Dialog and Modal Handlers ---
+  // --- Dialog and Modal Handlers (unchanged) ---
   const handleOpenDialog = (dialog) => {
     setActionError(null);
     setDialogOpen((prev) => ({ ...prev, [dialog]: true }));
@@ -585,7 +621,6 @@ const Account = ({ vehicleId, adminToken }) => {
   };
   const handleOpenEventsModal = () => setShowEventsModal(true);
   const handleCloseEventsModal = () => setShowEventsModal(false);
-
   // Initial data fetch
   useEffect(() => {
     if (!vehicleId || !adminToken) {
@@ -611,7 +646,6 @@ const Account = ({ vehicleId, adminToken }) => {
         return null;
     }
   }, []);
-
   // --- RENDER LOGIC ---
 
   if (loading)
@@ -776,8 +810,9 @@ const Account = ({ vehicleId, adminToken }) => {
                 {new Date(vehicleDetails.createdAt).toLocaleTimeString()}
               </span>
             </div>
+            {/* MODIFIED: Label changed for clarity */}
             <div className="flex items-center mb-2">
-              Rent Amount:
+              Self-Drive Price:
               <span className="ml-2 font-semibold text-sky-950">
                 {vehicleDetails.price} Birr/Day
               </span>
@@ -791,7 +826,6 @@ const Account = ({ vehicleId, adminToken }) => {
             </div>
           </div>
         </section>
-
         {/* Admin Actions Section */}
         <section className="w-fit bg-white p-6 shadow-blue-100 rounded-xl drop-shadow-xs shadow-xs">
           <h2 className="text-lg font-semibold text-[#00113D] mb-4">
@@ -864,7 +898,6 @@ const Account = ({ vehicleId, adminToken }) => {
             )}
           </div>
         </section>
-
         {/* Stat Cards */}
         <div className="flex flex-col w-1/3 gap-6">
           <div className=" bg-white p-6 flex justify-between items-center w-full shadow-blue-200 rounded-xl drop-shadow-xs shadow-xs">
@@ -976,7 +1009,177 @@ const Account = ({ vehicleId, adminToken }) => {
         </div>
       </div>
 
-      {/* Documents and Media Sections */}
+      {/* --- NEW & MODIFIED: Service & Pricing Section --- */}
+      <div className="p-10 bg-white w-full flex flex-col drop-shadow-sm shadow-blue-200 shadow mt-8 rounded-lg">
+        <div className="text-xl font-semibold mb-8">
+          Service & Pricing Details
+        </div>
+        {/* --- EDITING VIEW --- */}
+        {isEditing ? (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+              <div className="flex flex-col">
+                <Typography variant="caption" color="textSecondary">
+                  Service Type
+                </Typography>
+                <select
+                  name="serviceType"
+                  value={editableVehicleDetails.serviceType || "self-drive"}
+                  onChange={handleInputChange}
+                  className="mt-1 bg-gray-50 border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="self-drive">Self-Drive Only</option>
+                  <option value="with-driver">With Driver Only</option>
+                  <option value="both">Both Options Available</option>
+                </select>
+              </div>
+              <EditableField
+                label="Self-Drive Daily Price (Birr)"
+                name="price"
+                value={editableVehicleDetails.price}
+                type="number"
+              />
+            </div>
+            {editableVehicleDetails.serviceType !== "self-drive" && (
+              <>
+                <div className="border-t my-6"></div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                  Driver Service Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+                  <EditableField
+                    label="Driver Daily Price (Birr)"
+                    name="driverPrice"
+                    value={editableVehicleDetails.driverPrice}
+                    type="number"
+                  />
+                  <EditableField
+                    label="Driver Working Hours"
+                    name="driverHours"
+                    value={editableVehicleDetails.driverHours}
+                  />
+                  <EditableField
+                    label="Driver Max Hours/Day"
+                    name="driverMaxHours"
+                    value={editableVehicleDetails.driverMaxHours}
+                    type="number"
+                  />
+                </div>
+                <div className="p-4">
+                  <Typography variant="caption" color="textSecondary">
+                    Driver Working Days
+                  </Typography>
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    {[
+                      "monday",
+                      "tuesday",
+                      "wednesday",
+                      "thursday",
+                      "friday",
+                      "saturday",
+                      "sunday",
+                    ].map((day) => (
+                      <label key={day} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          value={day}
+                          checked={
+                            editableVehicleDetails.driverWorkingDays?.includes(
+                              day
+                            ) || false
+                          }
+                          onChange={handleWorkingDaysChange}
+                          className="rounded"
+                        />
+                        <span>
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          /* --- VIEWING MODE --- */
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+              <div className="flex flex-col">
+                <Typography variant="caption" color="textSecondary">
+                  Service Type
+                </Typography>
+                <span className="mt-1 bg-blue-100 rounded-md p-2 font-medium text-blue-800">
+                  {formatServiceType(vehicleDetails.serviceType)}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <Typography variant="caption" color="textSecondary">
+                  Self-Drive Daily Price
+                </Typography>
+                <span className="mt-1 bg-blue-100 rounded-md p-2">
+                  {vehicleDetails.price
+                    ? `${vehicleDetails.price} Birr`
+                    : "N/A"}
+                </span>
+              </div>
+            </div>
+            {vehicleDetails.serviceType !== "self-drive" && (
+              <>
+                <div className="border-t my-6"></div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                  Driver Service Details
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+                  <div className="flex flex-col">
+                    <Typography variant="caption" color="textSecondary">
+                      Driver Daily Price
+                    </Typography>
+                    <span className="mt-1 bg-green-100 text-green-800 rounded-md p-2 font-semibold">
+                      {vehicleDetails.driverPrice
+                        ? `+ ${vehicleDetails.driverPrice} Birr`
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col md:col-span-2">
+                    <Typography variant="caption" color="textSecondary">
+                      Driver Working Days
+                    </Typography>
+                    <span className="mt-1 bg-gray-100 rounded-md p-2">
+                      {formatWorkingDays(
+                        vehicleDetails.driverWorkingDays ||
+                          vehicleDetails.driverInfo?.workingDays
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <Typography variant="caption" color="textSecondary">
+                      Driver Working Hours
+                    </Typography>
+                    <span className="mt-1 bg-gray-100 rounded-md p-2">
+                      {vehicleDetails.driverHours ||
+                        vehicleDetails.driverInfo?.workingHours ||
+                        "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex flex-col">
+                    <Typography variant="caption" color="textSecondary">
+                      Driver Max Hours/Day
+                    </Typography>
+                    <span className="mt-1 bg-gray-100 rounded-md p-2">
+                      {vehicleDetails.driverMaxHours ||
+                        vehicleDetails.driverInfo?.maxHoursPerDay ||
+                        "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* --- Existing Documents and Media Sections (unchanged) --- */}
       <div className="flex lg:flex-row flex-col gap-8 mt-4">
         {/* Documents Section */}
         <div className="p-10 bg-white w-full lg:w-1/2 flex flex-col drop-shadow-sm shadow-blue-200 shadow rounded-lg">
@@ -1147,7 +1350,7 @@ const Account = ({ vehicleId, adminToken }) => {
         </div>
       </div>
 
-      {/* --- Dialogs --- */}
+      {/* --- ALL DIALOGS REMAIN UNCHANGED --- */}
       <Dialog
         open={showEventsModal}
         onClose={handleCloseEventsModal}
@@ -1189,7 +1392,6 @@ const Account = ({ vehicleId, adminToken }) => {
           <Button onClick={handleCloseEventsModal}>Close</Button>
         </DialogActions>
       </Dialog>
-
       {/* Confirmation Dialogs for Admin Actions */}
       <Dialog open={dialogOpen.softDelete} onClose={handleCloseDialog}>
         <DialogTitle>Confirm Soft Deletion</DialogTitle>
