@@ -8,29 +8,29 @@ import {
   MenuItem,
   Select,
   TextField,
+  Typography,
 } from "@mui/material";
 
-// Options for the new Select components
+// Options for the Select components
 const currentYear = new Date().getFullYear();
 const yearOptions = Array.from({ length: 70 }, (_, i) => {
-  // Years for the last 70 years
   const year = currentYear - i;
   return { value: year.toString(), label: year.toString() };
 });
 
 const plateRegionOptions = [
-  { value: "AA", label: "Addis Ababa" },
-  { value: "OR", label: "Oromia" },
-  { value: "AM", label: "Amhara" },
-  { value: "TG", label: "Tigray" },
-  { value: "SN", label: "SNNPR" },
-  { value: "SD", label: "Sidama" },
-  { value: "SM", label: "Somali" },
-  { value: "BG", label: "Benishangul-Gumuz" },
-  { value: "AF", label: "Afar" },
-  { value: "GM", label: "Gambela" },
-  { value: "HR", label: "Harari" },
-  { value: "DR", label: "Dire Dawa" },
+  { value: "Addis Ababa", label: "Addis Ababa" },
+  { value: "Oromia", label: "Oromia" },
+  { value: "Amhara", label: "Amhara" },
+  { value: "Tigray", label: "Tigray" },
+  { value: "SNNPR", label: "SNNPR" },
+  { value: "Sidama", label: "Sidama" },
+  { value: "Somali", label: "Somali" },
+  { value: "Benishangul-Gumuz", label: "Benishangul-Gumuz" },
+  { value: "Afar", label: "Afar" },
+  { value: "Gambela", label: "Gambela" },
+  { value: "Harari", label: "Harari" },
+  { value: "Dire Dawa", label: "Dire Dawa" },
   { value: "Other", label: "Other/Not Specified" },
 ];
 
@@ -53,10 +53,9 @@ const mileageRangeOptions = [
   { value: "250000+", label: "Over 250,000 km" },
 ];
 
-const Step1 = ({ nextStep }) => {
+const Step1 = ({ nextStep, userId, setUserId }) => {
   const [makeDisplayArray, setMakeDisplayArray] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
-
   const { vehicleData, updateVehicleData } = useVehicleFormStore();
 
   useEffect(() => {
@@ -66,7 +65,7 @@ const Step1 = ({ nextStep }) => {
 
   useEffect(() => {
     const selectedMake = vehicleData.make;
-    if (selectedMake) {
+    if (selectedMake && selectedMake !== "Other") {
       const selectedMakeModels = modelsData.find(
         (model) => Object.keys(model)[0] === selectedMake
       );
@@ -83,60 +82,86 @@ const Step1 = ({ nextStep }) => {
     updateVehicleData({ [name]: value });
   };
 
-  // Updated validation logic for new Select fields
-  const isFormValid =
-    vehicleData.fuelType !== "" &&
-    vehicleData.seats !== "" && // Changed from number check to string check
-    vehicleData.vehicleNumber !== "" &&
-    vehicleData.mileage !== "" && // Changed from number check to string check
-    vehicleData.year !== "" && // Changed from number check to string check
-    vehicleData.plateRegion !== "" && // Was okay, but now it's definitely a select
-    vehicleData.category !== "" &&
-    vehicleData.make !== "" &&
-    vehicleData.model !== "" &&
-    vehicleData.transmission !== "";
-
-  const handleContinueClick = () => {
-    if (isFormValid) {
-      nextStep();
-    } else {
-      console.log("Form is invalid. Please fill all required fields.");
-      // You might want to show a user-friendly message or highlight errors
-    }
+  const handleMakeChange = (event) => {
+    const newMake = event.target.value;
+    // When make changes, reset the model and otherMake fields
+    updateVehicleData({ make: newMake, model: "", otherMake: "" });
   };
 
+  // Form validation logic updated for "Other" make option
+  const isFormValid =
+    userId.trim() !== "" &&
+    vehicleData.city.trim() !== "" &&
+    vehicleData.fuelType !== "" &&
+    vehicleData.seats !== "" &&
+    vehicleData.vehicleNumber.trim() !== "" &&
+    vehicleData.mileage !== "" &&
+    vehicleData.year !== "" &&
+    vehicleData.plateRegion !== "" &&
+    vehicleData.category !== "" &&
+    vehicleData.make !== "" &&
+    (vehicleData.make === "Other"
+      ? vehicleData.otherMake.trim() !== "" && vehicleData.model.trim() !== ""
+      : vehicleData.model !== "") &&
+    vehicleData.transmission !== "";
+
   return (
-    <div className="flex gap-10 h-fit">
-      <div className="bg-white rounded-2xl shadow-sm p-10 w-full md:w-2/3">
+    <div className="flex flex-col lg:flex-row gap-10 h-fit">
+      <div className="bg-white rounded-2xl shadow-sm p-6 md:p-10 w-full lg:w-2/3">
         {/* Progress Bar */}
-        <div className="flex items-center justify-center">
-          <div className="w-1/5 border-b-4 border-[#00113D] mr-2"></div>
-          <div className="w-4/5 border-b-4 border-blue-200"></div>
+        <div className="flex items-center">
+          <div className="w-1/5 border-b-4 border-[#00113D]"></div>
+          <div className="w-4/5 border-b-4 border-gray-200"></div>
         </div>
+        <Typography variant="body1" className="text-gray-800 my-4 font-medium">
+          Step 1 of 5
+        </Typography>
 
         {/* Heading */}
-        <div className="flex justify-between w-full">
-          <div className="flex flex-col w-1/2 items-start">
-            <p className="text-xl text-gray-800 my-4 font-medium text-center mb-4">
-              Steps 1 of 5
-            </p>
-          </div>
-        </div>
-        <h1 className="text-3xl font-semibold my-8">Car Details</h1>
+        <Typography
+          variant="h4"
+          component="h1"
+          className="font-semibold my-8 !text-2xl md:!text-3xl"
+        >
+          List Vehicle For User
+        </Typography>
 
         {/* Form Fields */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* User ID Field */}
+          <TextField
+            label="User ID"
+            variant="outlined"
+            name="userId"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            size="small"
+            fullWidth
+            required
+            helperText="The ID of the user you are listing for."
+          />
+
+          {/* City Field */}
+          <TextField
+            label="City"
+            variant="outlined"
+            name="city"
+            value={vehicleData.city || ""}
+            onChange={handleChange}
+            size="small"
+            fullWidth
+            required
+            helperText="City where the vehicle is located."
+          />
+
           <FormControl fullWidth required size="small">
             <InputLabel>Fuel Type</InputLabel>
             <Select
-              label="Fuel Type" // Note: MUI recommends label prop match InputLabel
+              label="Fuel Type"
               name="fuelType"
               value={vehicleData.fuelType || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               <MenuItem value="Petrol">Petrol (Benzene)</MenuItem>
               <MenuItem value="Diesel">Diesel (Nafta)</MenuItem>
               <MenuItem value="Electric">Electric</MenuItem>
@@ -144,7 +169,6 @@ const Step1 = ({ nextStep }) => {
             </Select>
           </FormControl>
 
-          {/* Number of Seats - Changed to Select */}
           <FormControl fullWidth required size="small">
             <InputLabel>Number of Seats</InputLabel>
             <Select
@@ -153,9 +177,6 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.seats || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               {seatOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -175,7 +196,6 @@ const Step1 = ({ nextStep }) => {
             required
           />
 
-          {/* Mileage - Changed to Select */}
           <FormControl fullWidth required size="small">
             <InputLabel>Mileage</InputLabel>
             <Select
@@ -184,9 +204,6 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.mileage || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               {mileageRangeOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -195,7 +212,6 @@ const Step1 = ({ nextStep }) => {
             </Select>
           </FormControl>
 
-          {/* Manufactured Year - Changed to Select */}
           <FormControl fullWidth required size="small">
             <InputLabel>Manufactured Year</InputLabel>
             <Select
@@ -204,9 +220,6 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.year || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               {yearOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -215,7 +228,6 @@ const Step1 = ({ nextStep }) => {
             </Select>
           </FormControl>
 
-          {/* Plate Region - Changed to Select */}
           <FormControl fullWidth required size="small">
             <InputLabel>Plate Region</InputLabel>
             <Select
@@ -224,9 +236,6 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.plateRegion || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               {plateRegionOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
                   {option.label}
@@ -243,14 +252,10 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.category || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               <MenuItem value="Hatchback">Hatchback</MenuItem>
               <MenuItem value="Sedan">Sedan</MenuItem>
-              <MenuItem value="MUV">MUV/SUV</MenuItem>{" "}
-              {/* Combined for simplicity or keep separate */}
               <MenuItem value="SUV">SUV</MenuItem>
+              <MenuItem value="MUV">MUV</MenuItem>
               <MenuItem value="Coupe">Coupe</MenuItem>
               <MenuItem value="Convertible">Convertible</MenuItem>
               <MenuItem value="Pickup Truck">Pickup Truck</MenuItem>
@@ -259,29 +264,53 @@ const Step1 = ({ nextStep }) => {
             </Select>
           </FormControl>
 
-          <div className="flex gap-6">
-            <FormControl variant="outlined" fullWidth size="small" required>
-              <InputLabel id="car-make-label">Car Make</InputLabel>
-              <Select
-                labelId="car-make-label"
-                label="Car Make"
-                name="make"
-                value={vehicleData.make || ""}
-                onChange={(event) => {
-                  updateVehicleData({ make: event.target.value, model: "" });
-                }}
-              >
-                <MenuItem value="">
-                  <em>None</em>
+          {/* Car Make Dropdown - Spans full width */}
+          <FormControl variant="outlined" fullWidth size="small" required>
+            <InputLabel id="car-make-label">Car Make</InputLabel>
+            <Select
+              labelId="car-make-label"
+              label="Car Make"
+              name="make"
+              value={vehicleData.make || ""}
+              onChange={handleMakeChange}
+            >
+              {makeDisplayArray.map((make) => (
+                <MenuItem key={make} value={make}>
+                  {make}
                 </MenuItem>
-                {makeDisplayArray.map((make) => (
-                  <MenuItem key={make} value={make}>
-                    {make}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+              ))}
+              <MenuItem value="Other">Other</MenuItem>
+            </Select>
+          </FormControl>
 
+          {/* --- NEW: Conditional Fields for Make/Model --- */}
+          {vehicleData.make === "Other" ? (
+            <>
+              <TextField
+                label="Custom Car Make"
+                variant="outlined"
+                name="otherMake"
+                value={vehicleData.otherMake || ""}
+                onChange={handleChange}
+                size="small"
+                fullWidth
+                required
+                helperText="Please specify the vehicle make."
+              />
+              <TextField
+                label="Custom Car Model"
+                variant="outlined"
+                name="model"
+                value={vehicleData.model || ""}
+                onChange={handleChange}
+                size="small"
+                fullWidth
+                required
+                helperText="Please specify the vehicle model."
+              />
+            </>
+          ) : (
+            // Original Car Model Dropdown - now occupies a full grid cell
             <FormControl
               variant="outlined"
               fullWidth
@@ -297,18 +326,14 @@ const Step1 = ({ nextStep }) => {
                 value={vehicleData.model || ""}
                 onChange={handleChange}
               >
-                <MenuItem value="">
-                  <em>None</em>
-                </MenuItem>
-                {vehicleData.make &&
-                  modelOptions.map((model) => (
-                    <MenuItem key={model} value={model}>
-                      {model}
-                    </MenuItem>
-                  ))}
+                {modelOptions.map((model) => (
+                  <MenuItem key={model} value={model}>
+                    {model}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
-          </div>
+          )}
 
           <FormControl fullWidth required size="small">
             <InputLabel>Transmission Type</InputLabel>
@@ -318,17 +343,14 @@ const Step1 = ({ nextStep }) => {
               value={vehicleData.transmission || ""}
               onChange={handleChange}
             >
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
               <MenuItem value="Manual">Manual</MenuItem>
               <MenuItem value="Automatic">Automatic</MenuItem>
             </Select>
           </FormControl>
         </div>
 
-        {/* Submit Button */}
-        <div className="w-full justify-end items-end flex">
+        {/* Action Button */}
+        <div className="w-full flex justify-end mt-8">
           <button
             onClick={nextStep}
             className={`md:w-fit cursor-pointer w-full items-center justify-center flex text-white text-xs rounded-full px-8 py-3 mt-8  transition bg-[#00113D] hover:bg-blue-900"
@@ -344,8 +366,14 @@ const Step1 = ({ nextStep }) => {
         </div>
       </div>
 
-      <div className="p-4 w-1/4 bg-blue-200 py-6 md:flex hidden font-light h-fit">
-        Provide details about your car to get started.
+      <div className="p-6 w-full lg:w-1/4 bg-blue-100 rounded-lg md:flex hidden flex-col h-fit">
+        <Typography variant="h6" className="font-semibold mb-2">
+          Admin Instructions
+        </Typography>
+        <Typography variant="body2" className="text-gray-700">
+          Enter the User's ID and provide the vehicle's core details to begin
+          the listing process. All fields on this page are required.
+        </Typography>
       </div>
     </div>
   );

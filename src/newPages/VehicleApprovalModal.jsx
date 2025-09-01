@@ -64,6 +64,7 @@ const placeholderVehicleImage =
   "https://via.placeholder.com/600x400.png?text=No+Image+Available";
 
 // --- HELPER FUNCTIONS ---
+// (Existing helpers remain the same)
 const getColumnKey = (apiStatus) =>
   API_STATUS_TO_COLUMN[apiStatus] || "unassigned";
 
@@ -112,6 +113,29 @@ function formatDateRange(group) {
   return `${format(start, "MMMM d")}–${format(end, "d, yyyy")}`;
 }
 
+// NEW: Helper to format service type for display
+const formatServiceType = (serviceType) => {
+  if (!serviceType) return "N/A";
+  switch (serviceType) {
+    case "self-drive":
+      return "Self-Drive Only";
+    case "with-driver":
+      return "With Driver Only";
+    case "both":
+      return "Both Options Available";
+    default:
+      return serviceType;
+  }
+};
+
+// NEW: Helper to format working days array
+const formatWorkingDays = (days) => {
+  if (!days || !Array.isArray(days) || days.length === 0) return "N/A";
+  return days
+    .map((day) => day.charAt(0).toUpperCase() + day.slice(1))
+    .join(", ");
+};
+
 const VehicleApprovalModal = ({
   isOpen,
   vehicle,
@@ -123,7 +147,7 @@ const VehicleApprovalModal = ({
   const admin = JSON.parse(localStorage.getItem("admin"));
   const adminId = admin?.username;
 
-  // --- STATE ---
+  // --- STATE (unchanged) ---
   const [vehicleDetails, setVehicleDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [errorDetails, setErrorDetails] = useState(null);
@@ -153,7 +177,7 @@ const VehicleApprovalModal = ({
     duplicateVehicle: false,
   });
 
-  // --- EVENT HANDLERS & LOGIC ---
+  // --- All event handlers and useEffect hooks remain unchanged ---
   const handleChatWithRenter = useCallback(() => {
     const ownerId = vehicleDetails?.ownerId;
     const ownerGivenName =
@@ -276,7 +300,6 @@ const VehicleApprovalModal = ({
     };
     fetchModalDetails();
   }, [isOpen, vehicle, adminToken, fetchMediaUrls, fetchRentalRating]);
-
   const handleOpenEventsDialog = () => setOpenEventsDialog(true);
   const handleCloseEventsDialog = () => setOpenEventsDialog(false);
   const handleOpenRejectModal = () => setOpenRejectModal(true);
@@ -629,8 +652,9 @@ const VehicleApprovalModal = ({
                         {displayRegistrationDate}
                       </span>
                     </div>
+                    {/* MODIFIED: Replaced Rent Amount with Self-Drive Price for clarity */}
                     <div className="flex items-center mb-2">
-                      Rent Amount:
+                      Self-Drive Price:
                       <span className="ml-2 font-semibold text-sky-950">
                         {displayRentAmount}
                       </span>
@@ -644,7 +668,6 @@ const VehicleApprovalModal = ({
                     </div>
                   </div>
                 </section>
-
                 {/* Stat Cards Section */}
                 <div className="flex flex-col w-full md:w-1/3 gap-6">
                   <div className=" bg-white p-6 flex justify-between items-center w-full gap-24 shadow-blue-200 rounded-xl drop-shadow-xs shadow-xs">
@@ -679,6 +702,7 @@ const VehicleApprovalModal = ({
               <div className=" text-xl font-semibold mb-8">
                 Vehicle Overview
               </div>
+              {/* Existing Vehicle Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 p-4 gap-4 ">
                 <div className="flex flex-col">
                   <Typography variant="caption" color="textSecondary">
@@ -829,6 +853,93 @@ const VehicleApprovalModal = ({
               </Box>
             </div>
 
+            {/* --- NEW: Service & Pricing Details Section --- */}
+            <div className="p-10 bg-white w-full flex flex-col drop-shadow-sm shadow-blue-200 shadow mt-8 rounded-lg">
+              <div className="text-xl font-semibold mb-8">
+                Service & Pricing Details
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+                {/* Service Type */}
+                <div className="flex flex-col">
+                  <Typography variant="caption" color="textSecondary">
+                    Service Type
+                  </Typography>
+                  <span className="mt-1 bg-blue-100 rounded-md p-2 font-medium text-blue-800">
+                    {formatServiceType(vehicleDetails?.serviceType)}
+                  </span>
+                </div>
+
+                {/* Self-Drive Price */}
+                <div className="flex flex-col">
+                  <Typography variant="caption" color="textSecondary">
+                    Self-Drive Daily Price
+                  </Typography>
+                  <span className="mt-1 bg-blue-100 rounded-md p-2">
+                    {vehicleDetails?.price
+                      ? `${vehicleDetails.price} Birr`
+                      : "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Conditionally render driver details */}
+              {vehicleDetails?.serviceType !== "self-drive" && (
+                <>
+                  <div className="border-t my-6"></div>
+                  <h3 className="text-lg font-semibold mb-4 text-gray-800">
+                    Driver Service Details
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 p-4 gap-4">
+                    {/* Driver Price */}
+                    <div className="flex flex-col">
+                      <Typography variant="caption" color="textSecondary">
+                        Driver Daily Price
+                      </Typography>
+                      <span className="mt-1 bg-green-100 text-green-800 rounded-md p-2 font-semibold">
+                        {vehicleDetails?.driverPrice
+                          ? `+ ${vehicleDetails.driverPrice} Birr`
+                          : "N/A"}
+                      </span>
+                    </div>
+                    {/* Driver Working Days */}
+                    <div className="flex flex-col md:col-span-2">
+                      <Typography variant="caption" color="textSecondary">
+                        Driver Working Days
+                      </Typography>
+                      <span className="mt-1 bg-gray-100 rounded-md p-2">
+                        {formatWorkingDays(
+                          vehicleDetails?.driverWorkingDays ||
+                            vehicleDetails?.driverInfo?.workingDays
+                        )}
+                      </span>
+                    </div>
+                    {/* Driver Working Hours */}
+                    <div className="flex flex-col">
+                      <Typography variant="caption" color="textSecondary">
+                        Driver Working Hours
+                      </Typography>
+                      <span className="mt-1 bg-gray-100 rounded-md p-2">
+                        {vehicleDetails?.driverHours ||
+                          vehicleDetails?.driverInfo?.workingHours ||
+                          "N/A"}
+                      </span>
+                    </div>
+                    {/* Driver Max Hours */}
+                    <div className="flex flex-col">
+                      <Typography variant="caption" color="textSecondary">
+                        Driver Max Hours/Day
+                      </Typography>
+                      <span className="mt-1 bg-gray-100 rounded-md p-2">
+                        {vehicleDetails?.driverMaxHours ||
+                          vehicleDetails?.driverInfo?.maxHoursPerDay ||
+                          "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="flex lg:flex-row flex-col gap-8 mt-4">
               {/* Documents and Compliance */}
               <div className="p-10 bg-white w-full lg:w-1/2 flex flex-col mt-4 drop-shadow-sm shadow-blue-200 shadow rounded-lg">
@@ -914,6 +1025,7 @@ const VehicleApprovalModal = ({
         )}
       </Modal>
 
+      {/* --- ALL OTHER MODALS/DIALOGS REMAIN UNCHANGED --- */}
       {/* Unavailable Dates Dialog */}
       <Dialog
         open={openEventsDialog}
@@ -964,7 +1076,6 @@ const VehicleApprovalModal = ({
           <Button onClick={handleCloseEventsDialog}>Close</Button>
         </DialogActions>
       </Dialog>
-
       {/* Full-Screen Image Viewer */}
       {isFullScreenView && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black bg-opacity-90 p-4">

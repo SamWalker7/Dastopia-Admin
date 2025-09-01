@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { FaSearch, FaTimes } from "react-icons/fa";
 import { FiEdit2, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import useVehicleFormStore from "../../store/useVehicleFormStore"; // Assuming correct path
+import useVehicleFormStore from "../../store/useVehicleFormStore";
+import {
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+} from "@mui/material";
 
 // Helper to set time to 00:00:00.000 for consistent date comparisons
 const normalizeDate = (date) => {
@@ -32,8 +43,6 @@ const CalendarModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full mx-auto">
-        {" "}
-        {/* Adjusted max-width and padding */}
         <div className="flex items-center justify-between mb-6">
           <select
             value={`${
@@ -93,7 +102,7 @@ const CalendarModal = ({
           {daysOfWeek.map((day) => (
             <div
               key={day}
-              className="w-8 h-8 flex items-center justify-center text-gray-600 text-xs sm:text-sm font-semibold" // smaller text on small screens
+              className="w-8 h-8 flex items-center justify-center text-gray-600 text-xs sm:text-sm font-semibold"
             >
               {day}
             </div>
@@ -126,17 +135,13 @@ const CalendarModal = ({
 const Step3 = ({ nextStep, prevStep }) => {
   const { vehicleData, updateVehicleData } = useVehicleFormStore();
   const [searchTerm, setSearchTerm] = useState("");
-  const [tempRangeStart, setTempRangeStart] = useState(null); // Only need start for temp range
+  const [tempRangeStart, setTempRangeStart] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // selectedUnavailableEntries stores objects: { date: Date } or { start: Date, end: Date } for UI
   const [selectedUnavailableEntries, setSelectedUnavailableEntries] = useState(
     () => {
       try {
-        // Initialize from store: vehicleData.unavailableDates are ISO strings
-        // For UI, treat each as a single unavailable date entry initially.
-        // More complex range reconstruction from flat list is possible but adds significant complexity.
         return vehicleData.unavailableDates &&
           Array.isArray(vehicleData.unavailableDates)
           ? vehicleData.unavailableDates
@@ -144,7 +149,7 @@ const Step3 = ({ nextStep, prevStep }) => {
                 const date = normalizeDate(new Date(isoString));
                 return date ? { date } : null;
               })
-              .filter(Boolean) // Remove nulls from invalid dates
+              .filter(Boolean)
           : [];
       } catch (e) {
         console.error("Error parsing unavailableDates for UI:", e);
@@ -153,18 +158,14 @@ const Step3 = ({ nextStep, prevStep }) => {
     }
   );
 
-  // Effect to update the Zustand store (vehicleData.unavailableDates)
-  // This effect will flatten selectedUnavailableEntries into an array of ISO date strings
   useEffect(() => {
     const allUnavailableIsoDates = [];
     selectedUnavailableEntries.forEach((entry) => {
       if (entry.date) {
-        // Single date entry
         if (entry.date instanceof Date && !isNaN(entry.date)) {
           allUnavailableIsoDates.push(normalizeDate(entry.date).toISOString());
         }
       } else if (entry.start && entry.end) {
-        // Date range entry
         if (
           entry.start instanceof Date &&
           !isNaN(entry.start) &&
@@ -181,12 +182,11 @@ const Step3 = ({ nextStep, prevStep }) => {
         }
       }
     });
-    // Ensure unique dates in the store
-    const uniqueIsoDates = [...new Set(allUnavailableIsoDates)].sort(); // Sort for consistency
+    const uniqueIsoDates = [...new Set(allUnavailableIsoDates)].sort();
     updateVehicleData({ unavailableDates: uniqueIsoDates });
   }, [selectedUnavailableEntries, updateVehicleData]);
 
-  const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"]; // Shorter names for small cells
+  const daysOfWeek = ["S", "M", "T", "W", "T", "F", "S"];
   const months = [
     "January",
     "February",
@@ -202,7 +202,6 @@ const Step3 = ({ nextStep, prevStep }) => {
     "December",
   ];
 
-  // Constants (unchanged)
   const carFeatures = [
     "GPS",
     "AWD",
@@ -219,9 +218,18 @@ const Step3 = ({ nextStep, prevStep }) => {
     "2 hours",
     "6 hours",
     "12 hours",
-    "1 day",
-    "2 days",
-    "3 days",
+    "24 hours",
+    "48 hours",
+    "72 hours",
+  ];
+  const workingDaysOptions = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
   ];
 
   const getDaysInMonth = (date) => {
@@ -245,7 +253,6 @@ const Step3 = ({ nextStep, prevStep }) => {
     (date) => {
       const normalizedTargetDate = normalizeDate(date);
       if (!normalizedTargetDate) return false;
-
       return selectedUnavailableEntries.some((entry) => {
         if (entry.date) {
           return (
@@ -270,98 +277,67 @@ const Step3 = ({ nextStep, prevStep }) => {
   );
 
   const handleDateSelect = (day) => {
-    let selectedDate = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
+    let selectedDate = normalizeDate(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day)
     );
-    selectedDate = normalizeDate(selectedDate);
     if (!selectedDate) return;
 
-    // Prevent selection of past dates
     const today = normalizeDate(new Date());
     if (selectedDate < today) return;
 
-    const alreadyUnavailable = isDateUnavailable(selectedDate);
-
-    if (alreadyUnavailable) {
-      // User clicked an already unavailable date - make it available (deselect)
-      setSelectedUnavailableEntries(
-        (prevEntries) =>
-          prevEntries
-            .reduce((acc, entry) => {
-              if (entry.date) {
-                // Single date entry
-                if (
-                  normalizeDate(entry.date)?.getTime() !==
-                  selectedDate.getTime()
-                ) {
-                  acc.push(entry);
-                }
-              } else if (entry.start && entry.end) {
-                // Range entry
-                const entryStart = normalizeDate(entry.start);
-                const entryEnd = normalizeDate(entry.end);
-
-                if (selectedDate >= entryStart && selectedDate <= entryEnd) {
-                  // Split the range
-                  if (selectedDate > entryStart) {
-                    // Part before the clicked date
-                    acc.push({
-                      start: entryStart,
-                      end: new Date(
-                        selectedDate.getTime() - 86400000
-                      ) /* day before */,
-                    });
-                  }
-                  if (selectedDate < entryEnd) {
-                    // Part after the clicked date
-                    acc.push({
-                      start: new Date(
-                        selectedDate.getTime() + 86400000
-                      ) /* day after */,
-                      end: entryEnd,
-                    });
-                  }
-                } else {
-                  acc.push(entry); // Range does not include the selected date
-                }
+    if (isDateUnavailable(selectedDate)) {
+      setSelectedUnavailableEntries((prevEntries) =>
+        prevEntries
+          .reduce((acc, entry) => {
+            if (entry.date) {
+              if (
+                normalizeDate(entry.date)?.getTime() !== selectedDate.getTime()
+              ) {
+                acc.push(entry);
               }
-              return acc;
-            }, [])
-            .filter(
-              (e) =>
-                e.date ||
-                (e.start &&
-                  e.end &&
-                  normalizeDate(e.start) <= normalizeDate(e.end))
-            ) // Clean up empty ranges
+            } else if (entry.start && entry.end) {
+              const entryStart = normalizeDate(entry.start);
+              const entryEnd = normalizeDate(entry.end);
+              if (selectedDate >= entryStart && selectedDate <= entryEnd) {
+                if (selectedDate > entryStart)
+                  acc.push({
+                    start: entryStart,
+                    end: new Date(selectedDate.getTime() - 86400000),
+                  });
+                if (selectedDate < entryEnd)
+                  acc.push({
+                    start: new Date(selectedDate.getTime() + 86400000),
+                    end: entryEnd,
+                  });
+              } else {
+                acc.push(entry);
+              }
+            }
+            return acc;
+          }, [])
+          .filter(
+            (e) =>
+              e.date ||
+              (e.start &&
+                e.end &&
+                normalizeDate(e.start) <= normalizeDate(e.end))
+          )
       );
-      setTempRangeStart(null); // Reset any pending range selection
+      setTempRangeStart(null);
     } else {
-      // User clicked an available date - make it unavailable
       if (!tempRangeStart) {
-        setTempRangeStart(selectedDate); // Start of a new unavailable range/single date
+        setTempRangeStart(selectedDate);
       } else {
-        // Complete the range
-        let startDate = tempRangeStart;
-        let endDate = selectedDate;
-        if (startDate > endDate) [startDate, endDate] = [endDate, startDate];
-
-        if (startDate.getTime() === endDate.getTime()) {
-          // Single day selection
-          setSelectedUnavailableEntries((prev) => [
-            ...prev,
-            { date: startDate },
-          ]);
-        } else {
-          // Range selection
-          setSelectedUnavailableEntries((prev) => [
-            ...prev,
-            { start: startDate, end: endDate },
-          ]);
-        }
-        setTempRangeStart(null); // Reset temp range
+        let [startDate, endDate] =
+          tempRangeStart > selectedDate
+            ? [selectedDate, tempRangeStart]
+            : [tempRangeStart, selectedDate];
+        const newEntry =
+          startDate.getTime() === endDate.getTime()
+            ? { date: startDate }
+            : { start: startDate, end: endDate };
+        setSelectedUnavailableEntries((prev) => [...prev, newEntry]);
+        setTempRangeStart(null);
       }
     }
   };
@@ -370,20 +346,17 @@ const Step3 = ({ nextStep, prevStep }) => {
     setSelectedUnavailableEntries((prev) =>
       prev.filter((_, index) => index !== indexToRemove)
     );
-    setTempRangeStart(null); // Reset temp range if an entry is removed
+    setTempRangeStart(null);
   };
 
   const formatUnavailableDateEntry = (entry) => {
-    if (entry.date) {
-      return formatDate(entry.date);
-    }
+    if (entry.date) return formatDate(entry.date);
     if (entry.start && entry.end) {
       if (
         normalizeDate(entry.start)?.getTime() ===
         normalizeDate(entry.end)?.getTime()
-      ) {
+      )
         return formatDate(entry.start);
-      }
       return `${formatDate(entry.start)} - ${formatDate(entry.end)}`;
     }
     return "Invalid Entry";
@@ -394,9 +367,8 @@ const Step3 = ({ nextStep, prevStep }) => {
     const days = [];
     const today = normalizeDate(new Date());
 
-    for (let i = 0; i < startingDay; i++) {
+    for (let i = 0; i < startingDay; i++)
       days.push(<div key={`empty-${i}`} className="w-8 h-8" />);
-    }
 
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = normalizeDate(
@@ -404,47 +376,36 @@ const Step3 = ({ nextStep, prevStep }) => {
       );
       if (!currentDate) continue;
 
-      const isPastDate = currentDate < today;
-      const isCurrentlyUnavailable = isDateUnavailable(currentDate);
-      const isTempSelectionStart =
+      const isPast = currentDate < today;
+      const isUnavailable = isDateUnavailable(currentDate);
+      const isTempStart =
         tempRangeStart && currentDate.getTime() === tempRangeStart.getTime();
+      const isToday = currentDate.getTime() === today.getTime();
 
       days.push(
         <button
           key={day}
           onClick={() => handleDateSelect(day)}
-          className={`
-            w-8 h-8 flex items-center justify-center focus:outline focus:outline-1 
-            focus:outline-blue-400 rounded-full text-xs sm:text-sm transition-all duration-200
-            ${isCurrentlyUnavailable ? "bg-red-500 text-white" : ""} 
-            ${
-              isTempSelectionStart
-                ? "bg-red-300 text-black ring-2 ring-red-500"
-                : ""
-            }
-            ${
-              !isCurrentlyUnavailable && !isTempSelectionStart && !isPastDate
-                ? "hover:bg-gray-100"
-                : ""
-            }
-            ${
-              currentDate.toDateString() === today.toDateString() &&
-              !isCurrentlyUnavailable &&
-              !isTempSelectionStart
-                ? "border-2 border-navy-900"
-                : ""
-            }
-            ${isPastDate ? "text-gray-400 cursor-not-allowed" : "text-gray-700"}
-          `}
-          disabled={isPastDate}
-          aria-pressed={isCurrentlyUnavailable}
-          aria-label={`${formatDate(currentDate)} ${
-            isCurrentlyUnavailable
-              ? "(Unavailable)"
-              : isPastDate
-              ? "(Past date)"
-              : "(Available)"
-          }`}
+          className={`w-8 h-8 flex items-center justify-center rounded-full text-xs sm:text-sm transition-all duration-200
+                    ${
+                      isPast
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700"
+                    }
+                    ${isUnavailable ? "bg-red-500 text-white" : ""}
+                    ${isTempStart ? "bg-red-300 ring-2 ring-red-500" : ""}
+                    ${
+                      !isUnavailable && !isTempStart && !isPast
+                        ? "hover:bg-gray-100"
+                        : ""
+                    }
+                    ${
+                      isToday && !isUnavailable && !isTempStart
+                        ? "border-2 border-blue-600"
+                        : ""
+                    }
+                `}
+          disabled={isPast}
         >
           {day}
         </button>
@@ -468,8 +429,16 @@ const Step3 = ({ nextStep, prevStep }) => {
     });
   };
 
-  const filteredFeatures = carFeatures.filter((feature) =>
-    feature.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleWorkingDaysChange = (day) => {
+    const currentDays = vehicleData.driverWorkingDays || [];
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter((d) => d !== day)
+      : [...currentDays, day];
+    updateVehicleData({ driverWorkingDays: newDays });
+  };
+
+  const filteredFeatures = carFeatures.filter((f) =>
+    f.toLowerCase().includes(searchTerm.toLowerCase())
   );
   const suggestions = [
     "AWD",
@@ -479,303 +448,387 @@ const Step3 = ({ nextStep, prevStep }) => {
   ];
 
   // --- Validation Logic ---
-  const isAdvanceNoticePeriodFilled =
-    vehicleData.advanceNoticePeriod &&
-    vehicleData.advanceNoticePeriod.trim() !== "";
-  // No longer require specific availability dates. Empty unavailableDates means fully available.
-  // const isAvailabilityDatesFilled = selectedUnavailableEntries.length > 0; // Or vehicleData.unavailableDates.length > 0
-  const isInstantBookingFilled =
-    typeof vehicleData.instantBooking === "boolean";
   const isPriceFilled =
-    vehicleData.price !== undefined &&
-    vehicleData.price !== null &&
-    vehicleData.price.toString().trim() !== "" &&
+    vehicleData.price?.toString().trim() !== "" &&
     !isNaN(parseFloat(vehicleData.price)) &&
     parseFloat(vehicleData.price) >= 0;
 
-  const allRequiredFieldsFilled =
-    //isAdvanceNoticePeriodFilled &&
-    // isAvailabilityDatesFilled && // This might be optional now
-    // isInstantBookingFilled &&
-    isPriceFilled;
-  // --- End Validation Logic ---
+  let driverFieldsValid = true;
+  if (
+    vehicleData.serviceType === "with-driver" ||
+    vehicleData.serviceType === "both"
+  ) {
+    const isDriverPriceValid =
+      vehicleData.driverPrice?.toString().trim() !== "" &&
+      !isNaN(parseFloat(vehicleData.driverPrice)) &&
+      parseFloat(vehicleData.driverPrice) >= 0;
+    const isDriverMaxHoursValid =
+      vehicleData.driverMaxHours?.toString().trim() !== "" &&
+      !isNaN(parseInt(vehicleData.driverMaxHours)) &&
+      parseInt(vehicleData.driverMaxHours) > 0;
+    const isDriverHoursValid = vehicleData.driverHours?.trim() !== "";
+    const areDriverWorkingDaysValid = vehicleData.driverWorkingDays?.length > 0;
+    driverFieldsValid =
+      isDriverPriceValid &&
+      isDriverMaxHoursValid &&
+      isDriverHoursValid &&
+      areDriverWorkingDaysValid;
+  }
+
+  const allRequiredFieldsFilled = isPriceFilled && driverFieldsValid;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 bg-[#F8F8FF] p-4 sm:p-0">
-      <div className="lg:mx-auto p-4 sm:p-8 md:w-full lg:w-2/3 bg-white rounded-2xl shadow-sm text-base">
-        {/* Progress Bar */}
-        <div className="flex items-center justify-center">
-          <div className="w-3/5 border-b-4 border-[#00113D] mr-2"></div>
-          <div className="w-2/5 border-b-4 border-blue-200"></div>
+      <div className="lg:mx-auto p-4 sm:p-8 w-full lg:w-2/3 bg-white rounded-2xl shadow-sm">
+        {/* Progress Bar & Step Counter */}
+        <div className="flex items-center">
+          <div className="w-3/5 border-b-4 border-[#00113D]"></div>
+          <div className="w-2/5 border-b-4 border-gray-200"></div>
         </div>
-        <div className="flex justify-between w-full">
-          <div className="flex flex-col w-1/2 items-start">
-            <p className="text-lg sm:text-xl text-gray-800 my-4 font-medium text-center mb-4">
-              Step 3 of 5
-            </p>
-          </div>
+        <Typography variant="body1" className="text-gray-800 my-4 font-medium">
+          Step 3 of 5
+        </Typography>
+        <div className="mb-8">
+          <Typography
+            variant="h6"
+            component="h3"
+            className="font-semibold mb-2"
+          >
+            Set Unavailable Dates
+          </Typography>
+          <Typography variant="body2" className="text-gray-600 mb-3">
+            Block dates when the car is NOT available. If empty, the car is
+            always available.
+          </Typography>
+          <button
+            className="w-full p-3 border rounded-lg text-left flex justify-between items-center hover:bg-gray-50"
+            onClick={() => setShowCalendar(true)}
+          >
+            <span>
+              {selectedUnavailableEntries.length > 0
+                ? `${selectedUnavailableEntries.length} period(s) blocked`
+                : "Select dates to block"}
+            </span>
+            <FiEdit2 />
+          </button>
+          {selectedUnavailableEntries.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {selectedUnavailableEntries.map((entry, index) => (
+                <div
+                  key={index}
+                  className="bg-red-100 text-red-800 px-3 py-1.5 rounded-full text-sm flex items-center gap-2"
+                >
+                  {formatUnavailableDateEntry(entry)}
+                  <FaTimes
+                    className="cursor-pointer"
+                    size={12}
+                    onClick={() => removeUnavailableEntry(index)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Car Features Section (largely unchanged) */}
+        <CalendarModal
+          showCalendar={showCalendar}
+          setShowCalendar={setShowCalendar}
+          currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
+          renderCalendarDays={renderCalendarDays}
+          daysOfWeek={daysOfWeek}
+          months={months}
+        />
+
+        {/* Car Features Section */}
         <section className="mb-12">
-          <h1 className="text-2xl sm:text-3xl font-semibold mt-8">
+          <Typography
+            variant="h4"
+            component="h1"
+            className="font-semibold mt-8 !text-2xl md:!text-3xl"
+          >
             Car Features
-          </h1>
-          <p className="text-gray-600 text-sm sm:text-base mt-2 mb-6">
+          </Typography>
+          <Typography variant="body2" className="text-gray-600 mt-2 mb-6">
             Select your car's features.
-          </p>
-          <div className="relative items-center justify-center flex mb-6">
+          </Typography>
+          <div className="relative mb-6">
             <input
               type="text"
-              className="w-full p-2 border rounded-lg pr-8 text-sm sm:text-base"
+              className="w-full p-3 border rounded-lg pr-10"
               placeholder="Search features"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
+            <FaSearch className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
             {searchTerm && (
               <div className="absolute z-10 w-full bg-white border rounded-lg mt-1 shadow-lg top-full max-h-60 overflow-y-auto">
                 {filteredFeatures.length > 0 ? (
-                  filteredFeatures.map((feature) => (
+                  filteredFeatures.map((f) => (
                     <div
-                      key={feature}
-                      className="p-3 sm:p-4 hover:bg-gray-100 cursor-pointer text-xs sm:text-sm"
-                      onClick={() => addFeature(feature)}
+                      key={f}
+                      className="p-3 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => addFeature(f)}
                     >
-                      {feature}
+                      {f}
                     </div>
                   ))
                 ) : (
-                  <div className="p-3 sm:p-4 text-xs sm:text-sm text-gray-500">
-                    No features found
-                  </div>
+                  <div className="p-3 text-gray-500">No features found</div>
                 )}
               </div>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-6">
-            {vehicleData.carFeatures?.map((feature) => (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {vehicleData.carFeatures?.map((f) => (
               <span
-                key={feature}
-                className="bg-blue-100 text-blue-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full flex items-center gap-2 text-xs sm:text-sm"
+                key={f}
+                className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full flex items-center gap-2 text-sm"
               >
-                {feature}
+                {f}{" "}
                 <FaTimes
                   className="cursor-pointer"
-                  size={10}
-                  onClick={() => removeFeature(feature)}
-                  aria-label={`Remove ${feature}`}
+                  size={12}
+                  onClick={() => removeFeature(f)}
                 />
               </span>
             ))}
           </div>
-          <div className="mt-6">
-            <p className="text-gray-600 mb-3 text-base sm:text-lg">
+          <div>
+            <Typography variant="subtitle1" className="text-gray-700 mb-3">
               Suggestions
-            </p>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              {suggestions.map((suggestion) => (
+            </Typography>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
                 <button
-                  key={suggestion}
-                  className="border rounded-full px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm flex items-center gap-2 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => addFeature(suggestion)}
-                  disabled={vehicleData.carFeatures?.includes(suggestion)}
+                  key={s}
+                  className="border rounded-full px-4 py-1.5 text-sm flex items-center gap-2 hover:bg-gray-50 disabled:opacity-50"
+                  onClick={() => addFeature(s)}
+                  disabled={vehicleData.carFeatures?.includes(s)}
                 >
-                  <span>+</span> {suggestion}
+                  + {s}
                 </button>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Car Unavailability Section */}
-        <section className="my-8">
-          <h2 className="text-2xl sm:text-3xl font-semibold my-8">
-            Car Unavailability
-          </h2>
+        {/* --- NEW: Driver Service Section --- */}
+        <section className="my-12">
+          <Typography
+            variant="h4"
+            component="h2"
+            className="font-semibold mb-2 !text-2xl md:!text-3xl"
+          >
+            Driver Service
+          </Typography>
+          <Typography variant="body2" className="text-gray-600 mb-6">
+            Specify if the vehicle comes with a driver.
+          </Typography>
 
-          {/* Advance Notice Period */}
-          {/* <div className="mb-8">
-            <h3 className="text-base sm:text-lg font-semibold mb-3">
-              Advance Notice Period
-            </h3>
-            <p className="text-gray-600 text-sm sm:text-base mb-3">
-              How long in advance do you need to be notified before a trip
-              starts.
-            </p>
-            <select
-              className="w-full sm:w-4/6 p-2 border rounded-lg text-xs sm:text-sm"
-              value={vehicleData.advanceNoticePeriod || ""}
+          <FormControl fullWidth size="small" className="mb-6">
+            <InputLabel>Service Type</InputLabel>
+            <Select
+              label="Service Type"
+              name="serviceType"
+              value={vehicleData.serviceType || "self-drive"}
               onChange={(e) =>
-                updateVehicleData({ advanceNoticePeriod: e.target.value })
+                updateVehicleData({ serviceType: e.target.value })
               }
             >
-              <option value="">Set period duration</option>
-              {noticePeriods.map((period) => (
-                <option key={period} value={period}>
-                  {period}
-                </option>
-              ))}
-            </select>
-            {!isAdvanceNoticePeriodFilled && (
-              <p className="text-red-500 text-xs mt-1">
-                This field is required.
-              </p>
-            )}
-          </div> */}
+              <MenuItem value="self-drive">Self-Drive</MenuItem>
+              <MenuItem value="with-driver">With Driver</MenuItem>
+              <MenuItem value="both">
+                Both (Self-Drive and With Driver)
+              </MenuItem>
+            </Select>
+          </FormControl>
 
-          {/* Set Car Unavailability Dates */}
-          <div className="mb-8">
-            <h3 className="text-base sm:text-lg font-semibold mb-3">
-              Set Unavailable/Blocked Dates
-            </h3>
-            <p className="text-gray-600 text-sm sm:text-base mb-3">
-              Select dates or date ranges when your car will NOT be available.
-              If no dates are selected, the car is assumed to be always
-              available.
-            </p>
-            <button
-              className="w-full p-2 border rounded-lg text-left text-xs sm:text-sm flex justify-between items-center hover:bg-gray-50"
-              onClick={() => setShowCalendar(true)}
-            >
-              <span>
-                {selectedUnavailableEntries.length > 0
-                  ? `${selectedUnavailableEntries.length} unavailable period(s) set`
-                  : "Select unavailable dates"}
-              </span>
-              <FiEdit2 className="text-sm" />
-            </button>
-            {selectedUnavailableEntries.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {selectedUnavailableEntries.map((entry, index) => (
-                  <div
-                    key={index}
-                    className="bg-red-100 text-red-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm flex items-center gap-2"
-                  >
-                    {formatUnavailableDateEntry(entry)}
-                    <FaTimes
-                      className="cursor-pointer"
-                      size={10}
-                      onClick={() => removeUnavailableEntry(index)}
-                      aria-label={`Remove unavailability: ${formatUnavailableDateEntry(
-                        entry
-                      )}`}
+          {(vehicleData.serviceType === "with-driver" ||
+            vehicleData.serviceType === "both") && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-lg bg-gray-50">
+              <TextField
+                label="Driver's Daily Price (ETB)"
+                type="number"
+                size="small"
+                required
+                value={vehicleData.driverPrice || ""}
+                onChange={(e) =>
+                  updateVehicleData({ driverPrice: e.target.value })
+                }
+                error={!vehicleData.driverPrice}
+                helperText={
+                  !vehicleData.driverPrice ? "Price is required." : ""
+                }
+              />
+              <TextField
+                label="Driver's Max Daily Hours"
+                type="number"
+                size="small"
+                required
+                value={vehicleData.driverMaxHours || ""}
+                onChange={(e) =>
+                  updateVehicleData({ driverMaxHours: e.target.value })
+                }
+                error={!vehicleData.driverMaxHours}
+                helperText={
+                  !vehicleData.driverMaxHours ? "Max hours are required." : ""
+                }
+              />
+              <TextField
+                label="Driver's Working Hours (e.g., 8 AM - 5 PM)"
+                type="text"
+                size="small"
+                required
+                className="md:col-span-2"
+                value={vehicleData.driverHours || ""}
+                onChange={(e) =>
+                  updateVehicleData({ driverHours: e.target.value })
+                }
+                error={!vehicleData.driverHours}
+                helperText={
+                  !vehicleData.driverHours ? "Working hours are required." : ""
+                }
+              />
+              <div className="md:col-span-2">
+                <Typography
+                  variant="subtitle2"
+                  className="font-medium text-gray-800 mb-2"
+                >
+                  Driver's Working Days *
+                </Typography>
+                <FormGroup row>
+                  {workingDaysOptions.map((day) => (
+                    <FormControlLabel
+                      key={day}
+                      control={
+                        <Checkbox
+                          checked={
+                            vehicleData.driverWorkingDays?.includes(day) ||
+                            false
+                          }
+                          onChange={() => handleWorkingDaysChange(day)}
+                          name={day}
+                        />
+                      }
+                      label={<span className="capitalize text-sm">{day}</span>}
                     />
-                  </div>
-                ))}
+                  ))}
+                </FormGroup>
+                {vehicleData.driverWorkingDays?.length === 0 && (
+                  <Typography variant="caption" color="error">
+                    At least one working day is required.
+                  </Typography>
+                )}
               </div>
-            )}
-            {/*
-            If making unavailable dates mandatory:
-            {!isAvailabilityDatesFilled && (
-              <p className="text-red-500 text-xs mt-1">
-                Please select at least one unavailable date or range if applicable.
-              </p>
-            )}
-            */}
+            </div>
+          )}
+        </section>
+
+        {/* Car Unavailability Section */}
+        <section className="my-8">
+          <Typography
+            variant="h4"
+            component="h2"
+            className="font-semibold my-8 !text-2xl md:!text-3xl"
+          >
+            Car Availability & Pricing
+          </Typography>
+
+          <div className="mb-8">
+            <Typography
+              variant="h6"
+              component="h3"
+              className="font-semibold mb-2"
+            >
+              Advance Notice Period
+            </Typography>
+            <Typography variant="body2" className="text-gray-600 mb-3">
+              How long in advance a renter needs to book.
+            </Typography>
+            <FormControl fullWidth size="small">
+              <InputLabel>Notice Period</InputLabel>
+              <Select
+                label="Notice Period"
+                value={vehicleData.advanceNoticePeriod || "24 hours"}
+                onChange={(e) =>
+                  updateVehicleData({ advanceNoticePeriod: e.target.value })
+                }
+              >
+                {noticePeriods.map((period) => (
+                  <MenuItem key={period} value={period}>
+                    {period}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </div>
 
-          <CalendarModal
-            showCalendar={showCalendar}
-            setShowCalendar={setShowCalendar}
-            currentMonth={currentMonth}
-            setCurrentMonth={setCurrentMonth}
-            renderCalendarDays={renderCalendarDays}
-            daysOfWeek={daysOfWeek}
-            months={months}
-          />
-
-          {/* Instant Booking (largely unchanged) */}
           <div className="flex items-center gap-3 mb-8">
             <div
-              className={`w-12 h-6 rounded-full p-1 cursor-pointer flex items-center transition-colors duration-300 ${
-                vehicleData.instantBooking ? "bg-sky-950" : "bg-gray-300"
+              className={`w-12 h-6 rounded-full p-1 cursor-pointer flex items-center transition-colors ${
+                vehicleData.instantBooking ? "bg-blue-600" : "bg-gray-300"
               }`}
               onClick={() =>
                 updateVehicleData({
                   instantBooking: !vehicleData.instantBooking,
                 })
               }
-              role="switch"
-              aria-checked={!!vehicleData.instantBooking}
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ")
-                  updateVehicleData({
-                    instantBooking: !vehicleData.instantBooking,
-                  });
-              }}
             >
               <div
-                className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${
+                className={`w-4 h-4 rounded-full bg-white transition-transform ${
                   vehicleData.instantBooking ? "transform translate-x-6" : ""
                 }`}
               />
             </div>
             <span
-              className="text-sm sm:text-base cursor-pointer"
+              className="cursor-pointer"
               onClick={() =>
                 updateVehicleData({
                   instantBooking: !vehicleData.instantBooking,
                 })
               }
             >
-              Instant booking
+              Enable Instant Booking
             </span>
           </div>
-          {/* This field might not need an error message if a default is assumed, 
-               but if undefined is the initial and not allowed:
-            {!isInstantBookingFilled && (
-                 <p className="text-red-500 text-xs mt-1 -translate-y-6">Please specify instant booking preference.</p>
-            )} */}
 
-          {/* Pricing (largely unchanged) */}
           <div className="mb-8">
-            <h3 className="text-base sm:text-lg font-semibold mb-3">Pricing</h3>
-            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg mb-4">
-              <p className="text-xs sm:text-sm text-blue-800">
-                Please be aware that a service fee will be automatically
-                deducted from the price you set.
-              </p>
+            <Typography
+              variant="h6"
+              component="h3"
+              className="font-semibold mb-3"
+            >
+              Vehicle Daily Price
+            </Typography>
+            <div className="bg-blue-50 p-3 rounded-lg mb-4">
+              <Typography variant="body2" className="text-blue-800">
+                A service fee will be automatically deducted from the price you
+                set.
+              </Typography>
             </div>
-            <p className="text-gray-600 text-sm sm:text-base mb-3">
-              Set daily price for your car.
-            </p>
-            <div className="flex items-center border rounded-lg overflow-hidden">
-              <span className="px-3 font-semibold text-gray-700 text-xs sm:text-sm bg-gray-50 py-2.5">
-                ETB
-              </span>
-              <input
-                type="number"
-                min="0"
-                className="w-full p-2 text-xs sm:text-sm outline-none"
-                placeholder="Set Daily car rent price"
-                value={
-                  vehicleData.price === null || vehicleData.price === undefined
-                    ? ""
-                    : vehicleData.price
-                }
-                onChange={(e) => {
-                  const val = e.target.value;
-                  updateVehicleData({
-                    price: val === "" ? "" : parseFloat(val),
-                  });
-                }}
-              />
-            </div>
-            {!isPriceFilled && (
-              <p className="text-red-500 text-xs mt-1">
-                Please enter a valid price.
-              </p>
-            )}
+            <TextField
+              label="Daily Rental Price"
+              type="number"
+              size="small"
+              fullWidth
+              required
+              value={vehicleData.price || ""}
+              onChange={(e) => updateVehicleData({ price: e.target.value })}
+              error={!isPriceFilled}
+              helperText={!isPriceFilled ? "A valid price is required." : ""}
+              InputProps={{
+                startAdornment: <span className="text-gray-600 pr-2">ETB</span>,
+              }}
+            />
           </div>
         </section>
 
         {/* Navigation Buttons */}
-        <div className="flex flex-col sm:flex-row mt-4 gap-4 justify-between">
+        <div className="flex flex-col sm:flex-row mt-8 gap-4 justify-between">
           <button
             onClick={prevStep}
-            className="px-6 sm:px-8 py-3 border border-gray-300 rounded-full text-xs sm:text-sm hover:bg-gray-50"
+            className="w-full md:w-auto text-black font-semibold rounded-full px-8 py-3 transition bg-gray-200 hover:bg-gray-300"
           >
             Back
           </button>
@@ -795,11 +848,14 @@ const Step3 = ({ nextStep, prevStep }) => {
       </div>
 
       {/* Side Panel */}
-      <div className="p-4 sm:p-8 lg:w-1/4 md:flex hidden text-xs sm:text-sm bg-blue-100 py-6 h-fit rounded-lg shadow-sm">
-        Ensure all availability (unavailable dates) and pricing details are
-        accurate. If no dates are marked as unavailable, your car will be
-        considered available for booking at any time, subject to your advance
-        notice period.
+      <div className="p-6 w-full lg:w-1/4 bg-blue-100 rounded-lg md:flex hidden flex-col h-fit">
+        <Typography variant="h6" className="font-semibold mb-2">
+          Configuration
+        </Typography>
+        <Typography variant="body2" className="text-gray-700">
+          Define the vehicle's features, pricing, and availability. If offering
+          a driver, ensure all driver-related fields are completed accurately.
+        </Typography>
       </div>
     </div>
   );
