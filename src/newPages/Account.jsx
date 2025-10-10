@@ -4,12 +4,13 @@ import {
   IoChatboxOutline,
   IoLocationOutline,
   IoPersonOutline,
+  IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import { MdOutlineLocalPhone, MdOutlineMail } from "react-icons/md";
 import image from "./avatar.png"; // Static fallback image
-import { getDownloadUrl } from "../api"; // Assuming your api.js exports getDownloadUrl
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import UserEditForm from "./UserEditForm"; // Import the new component
+import { getDownloadUrl } from "../api";
+import { useNavigate } from "react-router-dom";
+import UserEditForm from "./UserEditForm";
 
 import {
   Typography,
@@ -24,31 +25,25 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  TextField, // Import TextField for the dialog input
-  Alert, // Import Alert for feedback messages
+  TextField,
+  Alert,
 } from "@mui/material";
+// FIX: Corrected the import path for the CloseIcon
 import CloseIcon from "@mui/icons-material/Close";
-import { FaSpinner } from "react-icons/fa"; // Import Spinner icon
+import { FaSpinner } from "react-icons/fa";
 
-// Add API_BASE_URL here (or ensure it's available globally)
 const API_BASE_URL =
   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod";
 
-// --- CONSTANT DECLARATIONS - SHOULD BE OUTSIDE THE COMPONENT FUNCTION ---
 const placeholderProfileImage = "https://via.placeholder.com/150";
-const placeholderVehicleImage = "https://via.placeholder.com/300";
-// --- END CONSTANT DECLARATIONS ---
 
-// Helper function to format dates from API (assuming ISO string) to DD/MM/YYYY
 const formatDate = (dateString) => {
-  if (!dateString || dateString === "NA") return "NA";
+  if (!dateString || dateString === "NA" || dateString === "NONE") return "N/A";
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return "Invalid Date";
-    }
+    if (isNaN(date.getTime())) return "Invalid Date";
     const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
   } catch (error) {
@@ -57,7 +52,6 @@ const formatDate = (dateString) => {
   }
 };
 
-// Helper function to safely extract and format names
 const formatUserName = (userObject) => {
   if (!userObject) return "N/A";
   const firstName = userObject.given_name || "";
@@ -65,11 +59,9 @@ const formatUserName = (userObject) => {
   return `${firstName} ${lastName}`.trim() || "N/A";
 };
 
-// Helper function to generate initials from a full name string
 const getInitials = (fullName) => {
-  if (!fullName || typeof fullName !== "string" || fullName.trim() === "") {
+  if (!fullName || typeof fullName !== "string" || fullName.trim() === "")
     return null;
-  }
   const nameParts = fullName.trim().split(/\s+/).filter(Boolean);
   if (nameParts.length === 0) return null;
   if (nameParts.length === 1) return nameParts[0].charAt(0).toUpperCase();
@@ -78,11 +70,9 @@ const getInitials = (fullName) => {
   ).toUpperCase();
 };
 
-// Account Component - Displays user profile and rental history
 const Account = ({ selectedUser, adminToken }) => {
   const navigate = useNavigate();
 
-  // --- STATE DECLARATIONS ---
   const [rentals, setRentals] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState(null);
@@ -91,17 +81,17 @@ const Account = ({ selectedUser, adminToken }) => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [profileFetchError, setProfileFetchError] = useState(null);
 
-  const [profileImageUrl, setProfileImageUrl] = useState(
-    placeholderProfileImage
-  );
-  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [imageUrls, setImageUrls] = useState({
+    profile: { url: null, loading: true },
+    selfie: { url: null, loading: true },
+    idFront: { url: null, loading: true },
+    idBack: { url: null, loading: true },
+  });
 
   const [sortConfig, setSortConfig] = useState({
     key: "startDate",
     direction: "descending",
   });
-
-  // --- STATE for APPROVAL/DENIAL ---
   const [isVerifyDialogOpen, setIsVerifyDialogOpen] = useState(false);
   const [isDenyDialogOpen, setIsDenyDialogOpen] = useState(false);
   const [expDate, setExpDate] = useState("");
@@ -110,12 +100,9 @@ const Account = ({ selectedUser, adminToken }) => {
     type: "",
     message: "",
   });
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // To trigger re-fetch
-
-  // --- NEW STATE for Edit User Dialog ---
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  // --- Status Colors ---
   const statusColors = {
     Completed: "bg-blue-950 text-white",
     Active: "bg-green-100 text-green-700",
@@ -124,9 +111,6 @@ const Account = ({ selectedUser, adminToken }) => {
     Inactive: "bg-[#FEE2E2] text-[#991B1B] font-bold",
     CONFIRMED: "bg-[#A0E6BA] text-[#136C34] font-bold",
     UNCONFIRMED: "bg-[#F6DE95] text-[#816204] font-bold",
-    VERIFIED: "bg-[#A0E6BA] text-[#136C34] font-bold",
-    PENDING_VERIFICATION: "bg-[#F6DE95] text-[#816204] font-bold",
-    REJECTED_VERIFICATION: "bg-red-100 text-red-600",
   };
 
   const admin = JSON.parse(localStorage.getItem("admin"));
@@ -149,7 +133,6 @@ const Account = ({ selectedUser, adminToken }) => {
     [navigate, adminId]
   );
 
-  // --- Functions to fetch data (unchanged) ---
   const fetchRenteeHistory = useCallback(async (AccessToken, userId) => {
     if (!AccessToken || !userId)
       throw new Error("Access token or User ID is missing");
@@ -188,87 +171,111 @@ const Account = ({ selectedUser, adminToken }) => {
       );
     }
     const data = await response.json();
-    if (data && typeof data === "object" && data.id === userId) return data;
+    if (
+      data &&
+      typeof data === "object" &&
+      (data.id === userId || data.username === userId)
+    )
+      return data;
     throw new Error("Invalid user profile data received.");
   }, []);
 
-  const transformBookingToRental = (booking) => {
-    return {
-      startDate: formatDate(booking.startTime),
-      endDate: formatDate(booking.endTime),
-      carName: booking.car?.name || "N/A",
-      carOwner: formatUserName(booking.owner),
-      phone: booking.owner?.phone_number || "N/A",
-      status: booking.status || "N/A",
-      bookingId:
-        booking.bookingId ||
-        booking.id ||
-        `fallback-${Math.random().toString(36).substring(7)}`,
-    };
-  };
+  const transformBookingToRental = (booking) => ({
+    startDate: formatDate(booking.startTime),
+    endDate: formatDate(booking.endTime),
+    carName: booking.car?.name || "N/A",
+    carOwner: formatUserName(booking.owner),
+    phone: booking.owner?.phone_number || "N/A",
+    status: booking.status || "N/A",
+    bookingId:
+      booking.bookingId ||
+      booking.id ||
+      `fallback-${Math.random().toString(36).substring(7)}`,
+  });
 
-  // --- Main Data Fetching Effect ---
   useEffect(() => {
     const loadUserData = async () => {
-      // Reset states
       setIsLoadingProfile(true);
       setIsLoadingHistory(true);
       setProfileFetchError(null);
       setHistoryError(null);
       setFullUserProfile(null);
       setRentals([]);
-      setProfileImageUrl(placeholderProfileImage);
-      setIsImageLoading(true);
-      setActionFeedback({ type: "", message: "" }); // Clear feedback on new user select
+      setActionFeedback({ type: "", message: "" });
+      setImageUrls({
+        profile: { url: null, loading: true },
+        selfie: { url: null, loading: true },
+        idFront: { url: null, loading: true },
+        idBack: { url: null, loading: true },
+      });
 
-      const adminData = JSON.parse(localStorage.getItem("admin"));
-      const currentAdminToken = adminToken || adminData?.AccessToken;
-      const userId = selectedUser?.sub;
+      const currentAdminToken =
+        adminToken || JSON.parse(localStorage.getItem("admin"))?.AccessToken;
+      const userId = selectedUser?.username || selectedUser?.sub;
 
       if (!currentAdminToken || !userId) {
         setProfileFetchError("Authentication required or user not selected.");
         setIsLoadingProfile(false);
         setIsLoadingHistory(false);
-        setIsImageLoading(false);
         return;
       }
 
-      try {
-        const [profileResult, historyResult] = await Promise.allSettled([
-          fetchUserProfile(currentAdminToken, userId),
-          fetchRenteeHistory(currentAdminToken, userId),
-        ]);
-
-        // Handle Profile Result
+      Promise.allSettled([
+        fetchUserProfile(currentAdminToken, userId),
+        fetchRenteeHistory(currentAdminToken, userId),
+      ]).then(([profileResult, historyResult]) => {
         if (profileResult.status === "fulfilled") {
           const profileData = profileResult.value;
           setFullUserProfile(profileData);
-          const profilePictureKey = profileData?.["custom:profile_picture_key"];
-          if (profilePictureKey) {
-            try {
-              const imageUrlResult = await getDownloadUrl(profilePictureKey);
-              const imageUrl = imageUrlResult?.body;
-              setProfileImageUrl(
-                imageUrl && typeof imageUrl === "string"
-                  ? imageUrl
-                  : placeholderProfileImage
-              );
-            } catch (imgUrlErr) {
-              console.error("Error fetching profile image URL:", imgUrlErr);
-            } finally {
-              setIsImageLoading(false);
+
+          const imageKeys = {
+            profile: profileData?.["custom:profile_picture_key"],
+            selfie: profileData?.["custom:selfie_key"],
+            idFront: profileData?.["custom:id_front_key"],
+            idBack: profileData?.["custom:id_back_key"],
+          };
+
+          Object.keys(imageKeys).forEach((key) => {
+            if (imageKeys[key]) {
+              getDownloadUrl(imageKeys[key])
+                .then((urlResult) => {
+                  const imageUrl = urlResult?.body;
+                  if (imageUrl && typeof imageUrl === "string") {
+                    setImageUrls((prev) => ({
+                      ...prev,
+                      [key]: { url: imageUrl, loading: false },
+                    }));
+                  } else {
+                    throw new Error("Invalid image URL received");
+                  }
+                })
+                .catch((err) => {
+                  console.error(`Error fetching ${key} image URL:`, err);
+                  setImageUrls((prev) => ({
+                    ...prev,
+                    [key]: { url: null, loading: false },
+                  }));
+                });
+            } else {
+              setImageUrls((prev) => ({
+                ...prev,
+                [key]: { url: null, loading: false },
+              }));
             }
-          } else {
-            setIsImageLoading(false);
-          }
+          });
         } else {
           setProfileFetchError(
             profileResult.reason?.message || "Failed to load profile."
           );
-          setIsImageLoading(false);
+          setImageUrls({
+            profile: { url: null, loading: false },
+            selfie: { url: null, loading: false },
+            idFront: { url: null, loading: false },
+            idBack: { url: null, loading: false },
+          });
         }
+        setIsLoadingProfile(false);
 
-        // Handle History Result
         if (historyResult.status === "fulfilled") {
           const transformedHistory = historyResult.value.map(
             transformBookingToRental
@@ -279,27 +286,15 @@ const Account = ({ selectedUser, adminToken }) => {
             historyResult.reason?.message || "Failed to load history."
           );
         }
-      } catch (err) {
-        console.error("Unexpected error during data fetching:", err);
-        setProfileFetchError("An unexpected error occurred.");
-      } finally {
-        setIsLoadingProfile(false);
         setIsLoadingHistory(false);
-      }
+      });
     };
 
-    if (selectedUser?.sub) {
+    if (selectedUser?.username || selectedUser?.sub) {
       loadUserData();
     } else {
-      // Clear all states if no user is selected
-      setRentals([]);
-      setHistoryError(null);
-      setIsLoadingHistory(false);
-      setFullUserProfile(null);
-      setProfileFetchError(null);
       setIsLoadingProfile(false);
-      setProfileImageUrl(placeholderProfileImage);
-      setIsImageLoading(false);
+      setIsLoadingHistory(false);
     }
   }, [
     selectedUser,
@@ -307,27 +302,22 @@ const Account = ({ selectedUser, adminToken }) => {
     refreshTrigger,
     fetchRenteeHistory,
     fetchUserProfile,
-    getDownloadUrl,
   ]);
-
-  // --- Handlers for Approval/Denial ---
 
   const handleOpenVerifyDialog = () => setIsVerifyDialogOpen(true);
   const handleCloseVerifyDialog = () => {
     setIsVerifyDialogOpen(false);
-    setExpDate(""); // Reset date on close
+    setExpDate("");
   };
 
   const handleOpenDenyDialog = () => setIsDenyDialogOpen(true);
   const handleCloseDenyDialog = () => setIsDenyDialogOpen(false);
 
-  // --- NEW: Handlers for Edit User Dialog ---
   const handleOpenEditDialog = () => setIsEditDialogOpen(true);
   const handleCloseEditDialog = () => setIsEditDialogOpen(false);
 
   const handleUserUpdated = () => {
     handleCloseEditDialog();
-    // Set a success message and trigger a data refresh
     setActionFeedback({
       type: "success",
       message: "User updated successfully!",
@@ -336,7 +326,7 @@ const Account = ({ selectedUser, adminToken }) => {
   };
 
   const handleConfirmApprove = async () => {
-    const userId = fullUserProfile?.id;
+    const userId = fullUserProfile?.username;
     const adminToken = JSON.parse(localStorage.getItem("admin"))?.AccessToken;
     if (!adminToken || !userId || !expDate) {
       setActionFeedback({
@@ -349,7 +339,6 @@ const Account = ({ selectedUser, adminToken }) => {
 
     setIsSubmitting(true);
     setActionFeedback({ type: "", message: "" });
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/v1/account/verify_account/${userId}`,
@@ -362,24 +351,14 @@ const Account = ({ selectedUser, adminToken }) => {
           body: JSON.stringify({ expDate }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "An unknown error occurred." }));
-        throw new Error(
-          errorData.message || `HTTP error! Status: ${response.status}`
-        );
-      }
-
+      if (!response.ok) throw new Error("Verification failed");
       setActionFeedback({
         type: "success",
         message: "Account verified successfully!",
       });
-      setRefreshTrigger((t) => t + 1); // Trigger data re-fetch
+      setRefreshTrigger((t) => t + 1);
       handleCloseVerifyDialog();
     } catch (error) {
-      console.error("Error approving user:", error);
       setActionFeedback({
         type: "error",
         message: `Failed to approve user: ${error.message}`,
@@ -390,46 +369,34 @@ const Account = ({ selectedUser, adminToken }) => {
   };
 
   const handleConfirmDeny = async () => {
-    const userId = fullUserProfile?.id;
+    const userId = fullUserProfile?.username;
+    const adminToken = JSON.parse(localStorage.getItem("admin"))?.AccessToken;
     if (!adminToken || !userId) {
       setActionFeedback({
         type: "error",
-        message: "Missing required information (Token or User ID).",
+        message: "Missing required information.",
       });
       return;
     }
 
     setIsSubmitting(true);
     setActionFeedback({ type: "", message: "" });
-
     try {
       const response = await fetch(
         `${API_BASE_URL}/v1/account/deny_account/${userId}`,
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
+          headers: { Authorization: `Bearer ${adminToken}` },
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response
-          .json()
-          .catch(() => ({ message: "An unknown error occurred." }));
-        throw new Error(
-          errorData.message || `HTTP error! Status: ${response.status}`
-        );
-      }
-
+      if (!response.ok) throw new Error("Denial failed");
       setActionFeedback({
         type: "success",
         message: "Account denied successfully.",
       });
-      setRefreshTrigger((t) => t + 1); // Trigger data re-fetch
+      setRefreshTrigger((t) => t + 1);
       handleCloseDenyDialog();
     } catch (error) {
-      console.error("Error denying user:", error);
       setActionFeedback({
         type: "error",
         message: `Failed to deny user: ${error.message}`,
@@ -439,47 +406,34 @@ const Account = ({ selectedUser, adminToken }) => {
     }
   };
 
-  // --- Sorting Logic (unchanged) ---
   const sortedRentals = [...rentals].sort((a, b) => {
     if (!sortConfig.key) return 0;
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
     if (sortConfig.key === "startDate" || sortConfig.key === "endDate") {
       const parseDate = (dateStr) => {
-        if (
-          !dateStr ||
-          typeof dateStr !== "string" ||
-          ["NA", "Error", "Invalid Date"].includes(dateStr)
-        )
+        if (!dateStr || ["NA", "Error", "Invalid Date"].includes(dateStr))
           return new Date(0);
         const [day, month, year] = dateStr.split("/").map(Number);
-        const date = new Date(year, month - 1, day);
-        return isNaN(date.getTime()) ? new Date(0) : date;
+        return new Date(year, month - 1, day);
       };
-      const dateA = parseDate(aValue);
-      const dateB = parseDate(bValue);
       return sortConfig.direction === "ascending"
-        ? dateA.getTime() - dateB.getTime()
-        : dateB.getTime() - dateA.getTime();
-    } else if (typeof aValue === "string" && typeof bValue === "string") {
-      const valA = aValue === "N/A" ? "" : aValue.toLowerCase();
-      const valB = bValue === "N/A" ? "" : bValue.toLowerCase();
-      return sortConfig.direction === "ascending"
-        ? valA.localeCompare(valB)
-        : valB.localeCompare(valA);
+        ? parseDate(aValue) - parseDate(bValue)
+        : parseDate(bValue) - parseDate(aValue);
     }
     return 0;
   });
 
   const handleSort = (key) => {
-    let direction = "ascending";
-    if (sortConfig.key === key && sortConfig.direction === "ascending") {
-      direction = "descending";
-    }
-    setSortConfig({ key, direction });
+    setSortConfig((prev) => ({
+      key,
+      direction:
+        prev.key === key && prev.direction === "ascending"
+          ? "descending"
+          : "ascending",
+    }));
   };
 
-  // --- JSX Render ---
   if (!selectedUser) {
     return (
       <div className="text-center py-8 text-gray-600">
@@ -494,20 +448,9 @@ const Account = ({ selectedUser, adminToken }) => {
       userToDisplay.family_name || ""
     }`.trim() || "N/A";
   const initials = getInitials(userName);
-  const userPhoneNumber = userToDisplay.phone_number || "N/A";
-  const userEmail = userToDisplay.email || "N/A";
-  const userAddress = userToDisplay.address || "N/A";
-  const userStatus = userToDisplay.status || userToDisplay.UserStatus || "N/A";
-  const userRegistrationDate = userToDisplay.UserCreateDate
-    ? new Date(userToDisplay.UserCreateDate).toLocaleString()
-    : userToDisplay.created
-    ? new Date(userToDisplay.created).toLocaleString()
-    : "N/A";
-  const userRole = userToDisplay["custom:role"] || "N/A";
 
   return (
     <div className="flex flex-col">
-      {/* --- Feedback Alert --- */}
       {actionFeedback.message && (
         <Alert
           severity={actionFeedback.type}
@@ -518,19 +461,16 @@ const Account = ({ selectedUser, adminToken }) => {
         </Alert>
       )}
 
-      {/* --- User Details & Account Details Sections --- */}
       <div className="flex flex-wrap gap-6 mb-8">
         <section className="flex-grow bg-white p-6 space-y-6 min-w-[300px] rounded-xl drop-shadow-sm shadow-sm">
           <div className="items-center flex flex-wrap gap-8">
-            {/* Profile Picture Logic */}
-            {isImageLoading ? (
+            {imageUrls.profile.loading ? (
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                 <FaSpinner className="animate-spin text-2xl text-gray-400" />
               </div>
-            ) : profileImageUrl &&
-              profileImageUrl !== placeholderProfileImage ? (
+            ) : imageUrls.profile.url ? (
               <img
-                src={profileImageUrl}
+                src={imageUrls.profile.url}
                 alt={`${userName}'s Profile`}
                 className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover flex-shrink-0"
               />
@@ -546,15 +486,10 @@ const Account = ({ selectedUser, adminToken }) => {
               />
             )}
 
-            {isLoadingProfile && !fullUserProfile ? (
-              <Box display="flex" justifyContent="center" alignItems="center">
-                <CircularProgress size={20} />
-                <Typography sx={{ ml: 1 }}>Loading Profile...</Typography>
-              </Box>
+            {isLoadingProfile ? (
+              <CircularProgress />
             ) : profileFetchError ? (
-              <div className="text-red-600 text-sm mt-2">
-                Error: {profileFetchError}
-              </div>
+              <div className="text-red-600">{profileFetchError}</div>
             ) : (
               <div className="flex flex-col gap-2 flex-grow">
                 <h2 className="text-lg font-semibold text-[#00113D] mb-2">
@@ -565,35 +500,29 @@ const Account = ({ selectedUser, adminToken }) => {
                 </h3>
                 <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
                   <MdOutlineLocalPhone size={18} />
-                  <p>{userPhoneNumber}</p>
+                  <p>{userToDisplay.phone_number || "N/A"}</p>
                 </div>
                 <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
                   <MdOutlineMail size={18} />
-                  <p className="break-all">{userEmail}</p>
+                  <p className="break-all">{userToDisplay.email || "N/A"}</p>
                 </div>
-                {userAddress !== "N/A" && (
-                  <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
-                    <IoLocationOutline size={18} />
-                    <p>{userAddress}</p>
-                  </div>
-                )}
-                <div className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm border rounded-full border-[#00113D] text-[#00113D] bg-white w-full sm:w-auto">
-                  <IoChatboxOutline size={16} />
-                  <button
-                    onClick={() =>
-                      handleChatWithUser(
-                        userToDisplay.id || userToDisplay.sub,
-                        userToDisplay.given_name,
-                        userToDisplay.family_name
-                      )
-                    }
-                    disabled={
-                      !adminId || (!userToDisplay.id && !userToDisplay.sub)
-                    }
-                  >
-                    Chat With User
-                  </button>
+                <div className="flex items-center gap-4 text-sm text-[#38393D] mt-1">
+                  <IoLocationOutline size={18} />
+                  <p>{userToDisplay.address || "N/A"}</p>
                 </div>
+                <button
+                  onClick={() =>
+                    handleChatWithUser(
+                      userToDisplay.username,
+                      userToDisplay.given_name,
+                      userToDisplay.family_name
+                    )
+                  }
+                  disabled={!adminId || !userToDisplay.username}
+                  className="flex items-center justify-center gap-2 mt-4 px-4 py-2 text-sm border rounded-full border-[#00113D] text-[#00113D] bg-white w-full sm:w-auto hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <IoChatboxOutline size={16} /> Chat With User
+                </button>
               </div>
             )}
           </div>
@@ -608,29 +537,33 @@ const Account = ({ selectedUser, adminToken }) => {
               <span className="w-32 flex-shrink-0">Status</span>
               <span
                 className={`px-3 py-1 rounded font-semibold ${
-                  statusColors[userStatus] || "text-gray-700 bg-gray-200"
+                  statusColors[userToDisplay.status] ||
+                  "text-gray-700 bg-gray-200"
                 }`}
               >
-                {userStatus}
+                {userToDisplay.status}
               </span>
             </p>
             <p className="flex items-center">
               <span className="w-32 flex-shrink-0">Registered</span>
               <span className="font-semibold text-sky-950">
-                {userRegistrationDate}
+                {formatDate(userToDisplay.created)}
               </span>
             </p>
-            {userRole !== "N/A" && (
-              <p className="flex items-center">
-                <span className="w-32 flex-shrink-0">Role</span>
-                <span className="font-semibold text-sky-950">{userRole}</span>
-              </p>
-            )}
+            <p className="flex items-center">
+              <span className="w-32 flex-shrink-0">Role</span>
+              <span className="font-semibold text-sky-950 capitalize">
+                {userToDisplay["custom:role"] || "N/A"}
+              </span>
+            </p>
+            <p className="flex items-center">
+              <span className="w-32 flex-shrink-0">User Type</span>
+              <span className="font-semibold text-sky-950 capitalize">
+                {userToDisplay["custom:user_type"] || "N/A"}
+              </span>
+            </p>
           </div>
-
-          {/* --- ACTION BUTTONS --- */}
           <div className="flex flex-wrap gap-2 mt-6">
-            {/* NEW: Edit User Button */}
             <Button
               variant="outlined"
               onClick={handleOpenEditDialog}
@@ -638,114 +571,165 @@ const Account = ({ selectedUser, adminToken }) => {
             >
               Edit User
             </Button>
-
-            {/* Existing Approval/Denial Buttons */}
-            {userStatus === "UNCONFIRMED" && fullUserProfile && (
-              <>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={handleOpenVerifyDialog}
-                  disabled={isSubmitting}
-                >
-                  Approve
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={handleOpenDenyDialog}
-                  disabled={isSubmitting}
-                >
-                  Deny
-                </Button>
-              </>
-            )}
+            {userToDisplay.status === "UNCONFIRMED" &&
+              userToDisplay["custom:veri_submitted"] === "true" && (
+                <>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleOpenVerifyDialog}
+                    disabled={isSubmitting}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={handleOpenDenyDialog}
+                    disabled={isSubmitting}
+                  >
+                    Deny
+                  </Button>
+                </>
+              )}
           </div>
         </section>
       </div>
 
-      {/* --- Rental History Table --- */}
-      <div className=" bg-white mt-8 w-full drop-shadow-sm shadow-sm rounded-lg">
-        <div className="p-4 md:p-6 rounded-lg ">
+      <section className="bg-white p-6 rounded-xl drop-shadow-sm shadow-sm mb-8">
+        <h2 className="text-lg font-semibold text-[#00113D] mb-4">
+          User Verification Details
+        </h2>
+        {isLoadingProfile ? (
+          <CircularProgress />
+        ) : !fullUserProfile ? (
+          <Typography>No verification data available.</Typography>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm mb-6">
+              <div className="flex items-center gap-3">
+                <IoShieldCheckmarkOutline size={20} className="text-gray-500" />
+                <div>
+                  <span className="text-gray-600 block">
+                    Verification Status
+                  </span>
+                  <span className="font-semibold">
+                    {fullUserProfile["custom:id_verified"] === "1"
+                      ? "Verified"
+                      : fullUserProfile["custom:id_verified"] === "2"
+                      ? "Rejected"
+                      : "Pending"}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-600 block">Fayda / ID Number</span>
+                <span className="font-semibold">
+                  {fullUserProfile["custom:idNumber"] || "Not Provided"}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600 block">ID Expiration</span>
+                <span className="font-semibold">
+                  {formatDate(fullUserProfile["custom:id_exp"])}
+                </span>
+              </div>
+            </div>
+            <Divider sx={{ my: 2 }} />
+            <h3 className="text-md font-semibold text-gray-800 mb-3">
+              Submitted Documents
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {Object.entries(imageUrls).map(([key, { url, loading }]) => (
+                <div key={key} className="text-center group">
+                  {loading ? (
+                    <div className="w-28 h-28 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <CircularProgress size={24} />
+                    </div>
+                  ) : url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={url}
+                        alt={key}
+                        className="w-28 h-28 rounded-lg object-cover border-2 border-transparent group-hover:border-blue-500 transition"
+                      />
+                    </a>
+                  ) : (
+                    <div className="w-28 h-28 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                      Not Submitted
+                    </div>
+                  )}
+                  <span className="text-xs text-gray-600 mt-1 block capitalize">
+                    {key.replace("id", "ID ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <div className="bg-white w-full drop-shadow-sm shadow-sm rounded-lg">
+        <div className="p-4 md:p-6 rounded-lg">
           <h2 className="text-lg font-semibold pl-2 my-4 md:my-6">
             Rental History (Cars Rented)
           </h2>
           {isLoadingHistory ? (
-            <div className="text-center py-8 text-gray-600 flex items-center justify-center">
-              Loading rental history...
-              <CircularProgress size={20} sx={{ ml: 1 }} />
+            <div className="text-center py-8">
+              <CircularProgress />
             </div>
           ) : historyError ? (
-            <div className="text-center py-8 text-red-600 px-4">
-              Error loading history: {historyError}
-            </div>
+            <div className="text-center py-8 text-red-600">{historyError}</div>
           ) : sortedRentals.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No rental history found for this user.
+              No rental history found.
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border-collapse">
+              <table className="min-w-full bg-white">
                 <thead>
-                  <tr className="bg-gray-50 font-semibold border-b border-gray-200">
-                    <th
-                      className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("startDate")}
-                    >
-                      Rent Start <HiMiniArrowsUpDown className="inline ml-1" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("endDate")}
-                    >
-                      Rent End <HiMiniArrowsUpDown className="inline ml-1" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("carName")}
-                    >
-                      Car Name <HiMiniArrowsUpDown className="inline ml-1" />
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("carOwner")}
-                    >
-                      Car Owner <HiMiniArrowsUpDown className="inline ml-1" />
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider">
-                      Owner Phone
-                    </th>
-                    <th
-                      className="px-4 py-3 text-left text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wider cursor-pointer"
-                      onClick={() => handleSort("status")}
-                    >
-                      Status <HiMiniArrowsUpDown className="inline ml-1" />
-                    </th>
+                  <tr className="bg-gray-50 font-semibold border-b">
+                    {[
+                      "Rent Start",
+                      "Rent End",
+                      "Car Name",
+                      "Car Owner",
+                      "Owner Phone",
+                      "Status",
+                    ].map((head) => (
+                      <th
+                        key={head}
+                        className="px-4 py-3 text-left text-sm font-semibold text-gray-600 cursor-pointer"
+                        onClick={() =>
+                          handleSort(head.toLowerCase().replace(/ /g, ""))
+                        }
+                      >
+                        {head} <HiMiniArrowsUpDown className="inline ml-1" />
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {sortedRentals.map((rental) => (
-                    <tr key={rental.bookingId} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                    <tr
+                      key={rental.bookingId}
+                      className="hover:bg-gray-50 border-b"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-700">
                         {rental.startDate}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-gray-700">
                         {rental.endDate}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                      <td className="px-4 py-3 text-sm font-medium">
                         {rental.carName}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {rental.carOwner}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
-                        {rental.phone}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm">{rental.carOwner}</td>
+                      <td className="px-4 py-3 text-sm">{rental.phone}</td>
+                      <td className="px-4 py-3">
                         <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            statusColors[rental.status] ||
-                            "bg-gray-200 text-gray-800"
+                          className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                            statusColors[rental.status] || "bg-gray-200"
                           }`}
                         >
                           {rental.status}
@@ -760,7 +744,6 @@ const Account = ({ selectedUser, adminToken }) => {
         </div>
       </div>
 
-      {/* --- APPROVAL DIALOG --- */}
       <Dialog
         open={isVerifyDialogOpen}
         onClose={handleCloseVerifyDialog}
@@ -770,7 +753,7 @@ const Account = ({ selectedUser, adminToken }) => {
         <DialogTitle>Approve User Account</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            Please enter the expiration date for the user's verification.
+            Enter the expiration date for the user's verification.
           </Typography>
           <TextField
             autoFocus
@@ -783,8 +766,6 @@ const Account = ({ selectedUser, adminToken }) => {
             value={expDate}
             onChange={(e) => setExpDate(e.target.value)}
             InputLabelProps={{ shrink: true }}
-            error={!expDate && isSubmitting} // Example validation
-            helperText={!expDate && isSubmitting ? "Date is required." : ""}
           />
         </DialogContent>
         <DialogActions>
@@ -794,15 +775,12 @@ const Account = ({ selectedUser, adminToken }) => {
           <Button
             onClick={handleConfirmApprove}
             variant="contained"
-            color="primary"
             disabled={isSubmitting || !expDate}
           >
             {isSubmitting ? <CircularProgress size={24} /> : "Confirm Approval"}
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* --- DENIAL CONFIRMATION DIALOG --- */}
       <Dialog
         open={isDenyDialogOpen}
         onClose={handleCloseDenyDialog}
@@ -812,8 +790,7 @@ const Account = ({ selectedUser, adminToken }) => {
         <DialogTitle>Confirm Account Denial</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to deny this user's account? This action
-            cannot be undone.
+            Are you sure you want to deny this user's account?
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -830,8 +807,6 @@ const Account = ({ selectedUser, adminToken }) => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* --- NEW: EDIT USER DIALOG --- */}
       {fullUserProfile && (
         <UserEditForm
           user={fullUserProfile}
