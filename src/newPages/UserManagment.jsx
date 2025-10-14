@@ -74,10 +74,18 @@ const UserManagment = () => {
     RESET_REQUIRED: "bg-orange-200 text-orange-800",
   };
 
-  const getUsers = async (accessToken) => {
+  // Updated function to fetch a single page of users
+  const getUsers = async (accessToken, limit = 60, paginationToken) => {
     if (!accessToken) throw new Error("Authentication required.");
+
+    const url = new URL(`${API_BASE_URL}/v1/user`);
+    url.searchParams.append("limit", String(limit));
+    if (paginationToken) {
+      url.searchParams.append("paginationToken", paginationToken);
+    }
+
     try {
-      const response = await fetch(`${API_BASE_URL}/v1/user`, {
+      const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!response.ok) {
@@ -86,10 +94,9 @@ const UserManagment = () => {
           `Failed to fetch users: ${errorData.message || response.statusText}`
         );
       }
-      const data = await response.json();
-      return data?.users && Array.isArray(data.users) ? data.users : [];
+      return await response.json();
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching a page of users:", error);
       throw error;
     }
   };
@@ -116,21 +123,34 @@ const UserManagment = () => {
     }
   };
 
-  const refetchUsers = useCallback(async () => {
-    if (adminToken && !showAccount) {
-      setLoadingUsers(true);
-      setErrorUsers(null);
-      try {
-        const fetchedUsers = await getUsers(adminToken);
-        setUsers(fetchedUsers);
-      } catch (error) {
-        setErrorUsers(error.message || "Failed to refresh users.");
-        setUsers([]);
-      } finally {
-        setLoadingUsers(false);
+  // New function to fetch all users by iterating through paginated results
+  const fetchAllUsers = useCallback(async () => {
+    if (!adminToken) return;
+
+    setLoadingUsers(true);
+    setErrorUsers(null);
+    let accumulatedUsers = [];
+    let currentToken = null;
+    let hasMorePages = true;
+
+    try {
+      while (hasMorePages) {
+        const data = await getUsers(adminToken, 60, currentToken);
+        const fetchedUsers =
+          data?.users && Array.isArray(data.users) ? data.users : [];
+        accumulatedUsers = [...accumulatedUsers, ...fetchedUsers];
+
+        hasMorePages = data?.pagination?.hasMore || false;
+        currentToken = data?.pagination?.nextToken || null;
       }
+      setUsers(accumulatedUsers);
+    } catch (error) {
+      setErrorUsers(error.message || "Failed to fetch all users.");
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
     }
-  }, [adminToken, showAccount]);
+  }, [adminToken]);
 
   useEffect(() => {
     const storedAdminJson = localStorage.getItem("admin");
@@ -155,9 +175,9 @@ const UserManagment = () => {
 
   useEffect(() => {
     if (adminToken && !showAccount) {
-      refetchUsers();
+      fetchAllUsers();
     }
-  }, [adminToken, refetchUsers, showAccount]);
+  }, [adminToken, showAccount, fetchAllUsers]);
 
   const handleRowClick = async (user) => {
     const userId = user.username;
@@ -181,7 +201,7 @@ const UserManagment = () => {
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => {
     setOpenModal(false);
-    refetchUsers();
+    fetchAllUsers(); // Refetch all users after adding a new one
   };
 
   const handleFilterChange = (e) => {
@@ -214,14 +234,12 @@ const UserManagment = () => {
     );
   });
 
-  // FIX: Made the sorting logic more robust to prevent crashes
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     if (!sortConfig.key) return 0;
 
     let aValue;
     let bValue;
 
-    // Handle special case for sorting by full name
     if (sortConfig.key === "given_name") {
       aValue = `${a.given_name || ""} ${a.family_name || ""}`.trim();
       bValue = `${b.given_name || ""} ${b.family_name || ""}`.trim();
@@ -230,12 +248,10 @@ const UserManagment = () => {
       bValue = b[sortConfig.key];
     }
 
-    // Safety check before calling toLowerCase()
     if (typeof aValue === "string" && typeof bValue === "string") {
       aValue = aValue.toLowerCase();
       bValue = bValue.toLowerCase();
     } else {
-      // Handle non-string or null/undefined values by treating them as "lesser"
       aValue = aValue ?? "";
       bValue = bValue ?? "";
     }
@@ -391,7 +407,7 @@ const UserManagment = () => {
                 open={openModal}
                 handleClose={handleCloseModal}
                 adminToken={adminToken}
-                onUserAdded={refetchUsers}
+                onUserAdded={fetchAllUsers} // Pass fetchAllUsers to the modal
               />
             </div>
 
@@ -407,7 +423,6 @@ const UserManagment = () => {
                   <table className="min-w-full bg-white">
                     <thead>
                       <tr className="bg-gray-50 font-semibold">
-                        {/* FIX: Mapped headers to the correct API data keys for sorting */}
                         {[
                           { label: "Name", key: "given_name" },
                           { label: "User Type", key: "custom:user_type" },
