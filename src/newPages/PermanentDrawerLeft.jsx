@@ -33,6 +33,8 @@ import FinancialDashboard from "./FinancialDashboard";
 import ChatApp from "./chat";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate } from "react-router-dom";
+import ReferralStatistics from "./ReferralStatistics";
+import PromoCodeAnalytics from "./PromoCodeAnalytics";
 const drawerWidth = 300;
 
 const PermanentDrawerLeft = () => {
@@ -71,6 +73,11 @@ const PermanentDrawerLeft = () => {
         return <UserSettings />;
       case "Chat":
         return <ChatApp />;
+      case "Referral Statistics":
+        return <ReferralStatistics />;
+      case "PromoCode Analytics":
+        return <PromoCodeAnalytics />;
+
 
       default:
         return <Box p={2}>Select an item to view details</Box>;
@@ -190,7 +197,7 @@ const PermanentDrawerLeft = () => {
             </ListItemButton>
           </li>
 
-          <li className="border-b border-gray-300 pb-2">
+          <li className="">
             <ListItemButton
               className=" gap-4"
               onClick={() => handleMenuClick("Vehicle Management")}
@@ -217,6 +224,63 @@ const PermanentDrawerLeft = () => {
               />
             </ListItemButton>
           </li>
+          <li className="">
+            <ListItemButton
+              className="gap-4"
+              onClick={() => handleMenuClick("Referral Statistics")}
+              style={{
+                backgroundColor:
+                  activeItem === "Referral Statistics" ? "#2260A8" : "",
+                borderRadius: "40px",
+                padding: "5px",
+                marginInline: "0px",
+                color: activeItem === "Referral Statistics" ? "white" : "",
+              }}
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  color: activeItem === "Referral Statistics" ? "white" : "",
+                }}
+              >
+                <PeopleIcon style={{ height: "14px" }} />
+              </div>
+
+              <ListItemText
+                primary="Referral Statistics"
+                primaryTypographyProps={{ fontSize: "12px" }}
+              />
+            </ListItemButton>
+          </li>
+          <li className="border-b border-gray-300 pb-2">
+            <ListItemButton
+              className="gap-4"
+              onClick={() => handleMenuClick("PromoCode Analytics")}
+              style={{
+                backgroundColor:
+                  activeItem === "PromoCode Analytics" ? "#2260A8" : "",
+                borderRadius: "40px",
+                padding: "5px",
+                marginInline: "0px",
+                color: activeItem === "PromoCode Analytics" ? "white" : "",
+              }}
+            >
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  color: activeItem === "PromoCode Analytics" ? "white" : "",
+                }}
+              >
+                <PeopleIcon style={{ height: "14px" }} />
+              </div>
+
+              <ListItemText
+                primary="PromoCode Analytics"
+                primaryTypographyProps={{ fontSize: "12px" }}
+              />
+            </ListItemButton>
+          </li>
+
           <Box p={1}>
             <span className="">Listing Approvals</span>
           </Box>
