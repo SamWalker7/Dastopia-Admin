@@ -26,7 +26,7 @@ export default function ReferralStatistics() {
             }
 
             const response = await fetch(
-                `https://your-api-gateway-url.execute-api.us-east-1.amazonaws.com/dev/v1/referrals/stats`,
+                `https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/referrals/stats`,
                 {
                     method: "GET",
                     headers: {
