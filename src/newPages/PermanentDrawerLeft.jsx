@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
 import Drawer from "@mui/material/Drawer";
 import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
@@ -34,11 +31,32 @@ import ChatApp from "./chat";
 import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate } from "react-router-dom";
 import ReferralStatistics from "./ReferralStatistics";
-import PromoCodeAnalytics from "./PromoCodeAnalytics";
+import PromoAnalytics from "./PromoAnalytics";
 const drawerWidth = 300;
+
+function getUserRole() {
+  const adminData = localStorage.getItem('admin');
+
+  if (!adminData) {
+    return null;
+  }
+
+  try {
+    const parsedData = JSON.parse(adminData);
+
+    const roleAttribute = parsedData.userAttributes.find(attr => attr.Name === 'custom:role');
+
+    return roleAttribute ? roleAttribute.Value : null;
+  } catch (error) {
+    console.error('Error parsing admin data from localStorage:', error);
+    return null;
+  }
+}
+
 
 const PermanentDrawerLeft = () => {
   const [activeItem, setActiveItem] = useState("Dashboard");
+  const role = getUserRole();
 
   const handleMenuClick = (item) => {
     setActiveItem(item);
@@ -76,7 +94,7 @@ const PermanentDrawerLeft = () => {
       case "Referral Statistics":
         return <ReferralStatistics />;
       case "PromoCode Analytics":
-        return <PromoCodeAnalytics />;
+        return <PromoAnalytics />;
 
 
       default:
@@ -224,7 +242,7 @@ const PermanentDrawerLeft = () => {
               />
             </ListItemButton>
           </li>
-          <li className="">
+          {role === "admin" && <li className="">
             <ListItemButton
               className="gap-4"
               onClick={() => handleMenuClick("Referral Statistics")}
@@ -251,8 +269,8 @@ const PermanentDrawerLeft = () => {
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>
-          </li>
-          <li className="border-b border-gray-300 pb-2">
+          </li>}
+          {role === "admin" && <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className="gap-4"
               onClick={() => handleMenuClick("PromoCode Analytics")}
@@ -279,7 +297,7 @@ const PermanentDrawerLeft = () => {
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>
-          </li>
+          </li>}
 
           <Box p={1}>
             <span className="">Listing Approvals</span>
