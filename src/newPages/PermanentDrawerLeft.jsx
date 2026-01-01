@@ -17,21 +17,8 @@ import InboxIcon from "@mui/icons-material/Inbox";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import StarBorder from "@mui/icons-material/StarBorder";
-import Dashboard from "./Dashboard";
-import UserManagment from "./UserManagment";
-import VehicleManagment from "./VehicleManagment";
-import NewCarListing from "./NewCarListing";
-import CarListingApproval from "./CarListingApproval";
-import MyApprovalListing from "./MyApprovalListing";
-import BookingApproval from "./BookingApproval";
-import RoleSettings from "./RoleSettings";
-import UserSettings from "./UserSettings";
-import FinancialDashboard from "./FinancialDashboard";
-import ChatApp from "./chat";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { useNavigate } from "react-router-dom";
-import ReferralStatistics from "./ReferralStatistics";
-import PromoAnalytics from "./PromoAnalytics";
+import { Outlet, useNavigate } from "react-router-dom";
 const drawerWidth = 300;
 
 function getUserRole() {
@@ -56,52 +43,19 @@ function getUserRole() {
 
 const PermanentDrawerLeft = () => {
   const [activeItem, setActiveItem] = useState("Dashboard");
-  const role = getUserRole();
-
-  const handleMenuClick = (item) => {
-    setActiveItem(item);
-  };
   const [open, setOpen] = useState(false);
+  // const role = getUserRole();
+
+  const navigate = useNavigate();
+
+  const handleMenuClick = (path, itemName) => {
+    setActiveItem(itemName);
+    navigate(`${path}`);
+  };
 
   const handleClick = () => {
     setOpen(!open);
   };
-
-  const renderContent = () => {
-    switch (activeItem) {
-      case "Dashboard":
-        return <Dashboard />;
-      case "Financial Dashboard":
-        return <FinancialDashboard />;
-      case "User Management":
-        return <UserManagment />;
-      case "Vehicle Management":
-        return <VehicleManagment />;
-      case "New Car Listings":
-        return <NewCarListing />;
-      case "Car Listing Approval":
-        return <CarListingApproval />;
-      case "My Approval Listing":
-        return <MyApprovalListing />;
-      case "Booking Approval":
-        return <BookingApproval />;
-      case "Role Settings":
-        return <RoleSettings />;
-      case "User Settings":
-        return <UserSettings />;
-      case "Chat":
-        return <ChatApp />;
-      case "Referral Statistics":
-        return <ReferralStatistics />;
-      case "PromoCode Analytics":
-        return <PromoAnalytics />;
-
-
-      default:
-        return <Box p={2}>Select an item to view details</Box>;
-    }
-  };
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("admin");
@@ -131,7 +85,7 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("Dashboard")}
+              onClick={() => handleMenuClick("", "Dashboard")}
               style={{
                 backgroundColor: activeItem === "Dashboard" ? "#2260A8" : "",
                 borderRadius: "40px",
@@ -158,7 +112,7 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("Financial Dashboard")}
+              onClick={() => handleMenuClick("financial-dashboard", "Financial Dashboard")}
               style={{
                 backgroundColor:
                   activeItem === "Financial Dashboard" ? "#2260A8" : "",
@@ -190,7 +144,7 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("User Management")}
+              onClick={() => handleMenuClick("user-management", "User Management")}
               style={{
                 backgroundColor:
                   activeItem === "User Management" ? "#2260A8" : "",
@@ -218,7 +172,7 @@ const PermanentDrawerLeft = () => {
           <li className="">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("Vehicle Management")}
+              onClick={() => handleMenuClick("vehicle-management", "Vehicle Management")}
               style={{
                 backgroundColor:
                   activeItem === "Vehicle Management" ? "#2260A8" : "",
@@ -245,7 +199,7 @@ const PermanentDrawerLeft = () => {
           <li className="">
             <ListItemButton
               className="gap-4"
-              onClick={() => handleMenuClick("Referral Statistics")}
+              onClick={() => handleMenuClick("referral-statistics", "Referral Statistics")}
               style={{
                 backgroundColor:
                   activeItem === "Referral Statistics" ? "#2260A8" : "",
@@ -273,7 +227,7 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className="gap-4"
-              onClick={() => handleMenuClick("PromoCode Analytics")}
+              onClick={() => handleMenuClick("promocode-analytics", "PromoCode Analytics")}
               style={{
                 backgroundColor:
                   activeItem === "PromoCode Analytics" ? "#2260A8" : "",
@@ -305,7 +259,7 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("New Car Listings")}
+              onClick={() => handleMenuClick("new-car-listings", "New Car Listings")}
               style={{
                 backgroundColor:
                   activeItem === "New Car Listings" ? "#2260A8" : "",
@@ -360,7 +314,7 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("My Approval Listing")}
+              onClick={() => handleMenuClick("my-approval-listing", "My Approval Listing")}
               style={{
                 backgroundColor:
                   activeItem === "My Approval Listing" ? "#2260A8" : "",
@@ -391,7 +345,7 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("Booking Approval")}
+              onClick={() => handleMenuClick("booking-approval", "Booking Approval")}
               style={{
                 backgroundColor:
                   activeItem === "Booking Approval" ? "#2260A8" : "",
@@ -458,7 +412,7 @@ const PermanentDrawerLeft = () => {
             <List component="div" disablePadding>
               <ListItemButton
                 sx={{ py: 1 }}
-                onClick={() => handleMenuClick("Role Settings")}
+                onClick={() => handleMenuClick("role-settings", "Role Settings")}
                 style={{
                   backgroundColor:
                     activeItem === "Role Settings" ? "#2260A8" : "",
@@ -482,7 +436,7 @@ const PermanentDrawerLeft = () => {
                 />
               </ListItemButton>
               <ListItemButton
-                onClick={() => handleMenuClick("User Settings")}
+                onClick={() => handleMenuClick("user-settings", "User Settings")}
                 style={{
                   backgroundColor:
                     activeItem === "User Settings" ? "#2260A8" : "",
@@ -544,7 +498,7 @@ const PermanentDrawerLeft = () => {
           color="white"
         >
           <ListItemButton
-            onClick={() => handleMenuClick("Chat")}
+            onClick={() => navigate("Chat")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -562,7 +516,8 @@ const PermanentDrawerLeft = () => {
 
       {/* Content Area */}
       <Box flex={1} p={4}>
-        {renderContent()}
+        {/* {renderContent()} */}
+        <Outlet />
       </Box>
     </Box>
   );
