@@ -115,8 +115,14 @@ export default function PromoCodeAnalytics() {
             <CreatePromoCodeDialog
                 open={openCreate}
                 onClose={() => setOpenCreate(false)}
-                onSuccess={() => loadPromoCodes(rowsPerPage, page)}
+                onSuccess={() => {
+                    setOpenCreate(false);          // ✅ close dialog
+                    setPage(0);                    // ✅ reset to first page
+                    setPageKeys({ 0: null });      // ✅ reset pagination cursor
+                    loadPromoCodes(rowsPerPage, 0); // ✅ refresh table
+                }}
             />
+
 
             <EditPromoExpiryDialog
                 promo={selectedPromo}

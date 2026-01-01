@@ -16,7 +16,7 @@ import { createPromoCodeApi } from "./promoCode.api";
 export default function CreatePromoCodeDialog({ open, onClose, onSuccess }) {
     const [form, setForm] = useState({
         code: "",
-        discountPercentage: "",
+        discountPercentage: 0,
         startDateTime: dayjs(),
         endDateTime: null,
         globalMaxUses: 1000,
@@ -35,10 +35,9 @@ export default function CreatePromoCodeDialog({ open, onClose, onSuccess }) {
                 startDateTime: startIso,
                 endDateTime: endIso,
              });
-            res = JSON.parse(res);
-            
-            onClose();
+
             onSuccess();
+
         } catch (error) {
             // Check if the error response exists and contains the forbidden message
             const message =
@@ -75,7 +74,13 @@ export default function CreatePromoCodeDialog({ open, onClose, onSuccess }) {
                         fullWidth
                         size="small"
                         value={form.discountPercentage}
-                        onChange={(e) => setForm({ ...form, discountPercentage: e.target.value })}
+                        onChange={(e) => {
+                            let value = Number(e.target.value);
+                            if (value < 0) value = 0;
+                            if (value > 100) value = 100;
+
+                            setForm({ ...form, discountPercentage: value });
+                        }}
                     />
 
                     <LocalizationProvider dateAdapter={AdapterDayjs}>

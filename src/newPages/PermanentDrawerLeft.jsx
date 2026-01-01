@@ -242,7 +242,7 @@ const PermanentDrawerLeft = () => {
               />
             </ListItemButton>
           </li>
-          {role === "admin" && <li className="">
+          <li className="">
             <ListItemButton
               className="gap-4"
               onClick={() => handleMenuClick("Referral Statistics")}
@@ -269,8 +269,8 @@ const PermanentDrawerLeft = () => {
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>
-          </li>}
-          {role === "admin" && <li className="border-b border-gray-300 pb-2">
+          </li>
+          <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className="gap-4"
               onClick={() => handleMenuClick("PromoCode Analytics")}
@@ -297,7 +297,7 @@ const PermanentDrawerLeft = () => {
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>
-          </li>}
+          </li>
 
           <Box p={1}>
             <span className="">Listing Approvals</span>
