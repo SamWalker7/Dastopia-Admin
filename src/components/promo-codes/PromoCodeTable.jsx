@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
     Paper,
     Table,
@@ -8,18 +9,22 @@ import {
     TableRow,
     TablePagination,
     Typography,
+    IconButton,
 } from "@mui/material";
+import { DeleteIcon, EditIcon } from "lucide-react";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function PromoCodeTable({
-    promoCodes = [], // default to empty array
+    promoCodes = [],
     page,
     rowsPerPage,
     totalCount,
     onPageChange,
     onRowsPerPageChange,
-    onEditEndDate, 
+    onEditPromo,
+    onDeletePromo
 }) {
-
+    const [promoToDelete, setPromoToDelete] = useState(null);
 
     if (promoCodes.length === 0) {
         return (
@@ -30,72 +35,99 @@ export default function PromoCodeTable({
     }
 
     return (
-        <Paper sx={{ width: "100%", overflow: "hidden", mt: 2 }}>
-            <TableContainer sx={{ maxHeight: 600 }}>
-                <Table stickyHeader>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Code</TableCell>
-                            <TableCell>Discount (%)</TableCell>
-                            <TableCell>Per User Max Uses</TableCell>
-                            <TableCell>Global Max Uses</TableCell>
-                            <TableCell>Current Uses</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Start Date</TableCell>
-                            <TableCell>End Date</TableCell>
-                        </TableRow>
-                    </TableHead>
-
-                    <TableBody>
-                        {promoCodes.map((promo) => (
-                            <TableRow key={promo.id} hover>
-                                <TableCell>{promo.code}</TableCell>
-                                <TableCell>{promo.discountPercentage}%</TableCell>
-                                <TableCell>{promo.perUserMaxUses ?? "∞"}</TableCell>
-                                <TableCell>{promo.globalMaxUses ?? "∞"}</TableCell>
-                                <TableCell>{promo.currentGlobalUses ?? 0}</TableCell>
-                                <TableCell
-                                    sx={{
-                                        color:
-                                            promo.isActive && promo.isExpired !== "true"
-                                                ? "#10B981"
-                                                : "#EF4444",
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    {promo.isActive && promo.isExpired !== "true"
-                                        ? "Active"
-                                        : "Inactive"}
-                                </TableCell>
-                                <TableCell>
-                                    {new Date(promo.startDateTime).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell
-                                    sx={{
-                                        cursor: onEditEndDate ? "pointer" : "default",
-                                        color: onEditEndDate ? "#2563EB" : "inherit",
-                                    }}
-                                    onClick={() => onEditEndDate?.(promo)}
-                                >
-                                    {new Date(promo.endDateTime).toLocaleDateString()}
-                                </TableCell>
+        <>
+            <Paper sx={{ width: "100%", overflow: "hidden", mt: 2 }}>
+                <TableContainer sx={{ maxHeight: 600 }}>
+                    <Table stickyHeader>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Code</TableCell>
+                                <TableCell>Discount (%)</TableCell>
+                                <TableCell>Per User Max Uses</TableCell>
+                                <TableCell>Global Max Uses</TableCell>
+                                <TableCell>Current Uses</TableCell>
+                                <TableCell>Status</TableCell>
+                                <TableCell>Start Date</TableCell>
+                                <TableCell>End Date</TableCell>
+                                <TableCell>Actions</TableCell>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        </TableHead>
 
-            <TablePagination
-                rowsPerPageOptions={[5, 10, 25, 50]}
-                component="div"
-                count={totalCount}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={(e, newPage) => onPageChange(newPage)}
-                onRowsPerPageChange={(e) =>
-                    onRowsPerPageChange(parseInt(e.target.value, 10))
-                }
+                        <TableBody>
+                            {promoCodes.map((promo) => (
+                                <TableRow
+                                    key={promo.id}
+                                    hover
+                                    sx={{ cursor: "pointer" }}
+                                    onClick={() => onEditPromo?.(promo)}
+                                >
+                                    <TableCell>{promo.code}</TableCell>
+                                    <TableCell>{promo.discountPercentage}%</TableCell>
+                                    <TableCell>{promo.perUserMaxUses ?? "∞"}</TableCell>
+                                    <TableCell>{promo.globalMaxUses ?? "∞"}</TableCell>
+                                    <TableCell>{promo.currentGlobalUses ?? 0}</TableCell>
+                                    <TableCell
+                                        sx={{
+                                            color: promo.isActive && promo.isExpired !== "true" ? "#10B981" : "#EF4444",
+                                            fontWeight: 500,
+                                        }}
+                                    >
+                                        {promo.isActive && promo.isExpired !== "true" ? "Active" : "Inactive"}
+                                    </TableCell>
+                                    <TableCell>{new Date(promo.startDateTime).toLocaleDateString()}</TableCell>
+                                    <TableCell>{new Date(promo.endDateTime).toLocaleDateString()}</TableCell>
+
+                                    {/* Action Buttons */}
+                                    <TableCell>
+                                        <IconButton
+                                            color="error"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // STOP row click from firing
+                                                setPromoToDelete(promo); // OPEN dialog
+                                            }}
+                                        >
+                                            <DeleteIcon />
+                                        </IconButton>
+
+                                        <IconButton
+                                            color="primary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onEditPromo?.(promo);
+                                            }}
+                                        >
+                                            <EditIcon />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    component="div"
+                    count={totalCount}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={(e, newPage) => onPageChange(newPage)}
+                    onRowsPerPageChange={(e) =>
+                        onRowsPerPageChange(parseInt(e.target.value, 10))
+                    }
+                />
+            </Paper>
+
+            {/* Confirm Delete Dialog */}
+            <ConfirmDeleteDialog
+                open={!!promoToDelete} // make sure dialog uses open prop
+                promo={promoToDelete}
+                onClose={() => setPromoToDelete(null)}
+                onDeleted={() => {
+                    onDeletePromo?.(promoToDelete);
+                    setPromoToDelete(null);
+                }}
             />
-        </Paper>
+        </>
     );
 }
