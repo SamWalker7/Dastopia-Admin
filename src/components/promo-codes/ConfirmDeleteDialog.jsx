@@ -81,18 +81,20 @@ function ConfirmDeleteDialog({ open, onClose, promo, onDeleted }) {
                 )}
             </DialogContent>
 
-            <DialogActions>
-                <Button onClick={handleClose} disabled={loading}>
-                    Cancel
-                </Button>
-                <Button
-                    onClick={handleDelete}
-                    color="error"
-                    disabled={loading}
-                >
-                    Delete
-                </Button>
-            </DialogActions>
+            {!loading && !error && !success && (
+                <DialogActions>
+                    <Button onClick={handleClose} disabled={loading}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={handleDelete}
+                        color="error"
+                        disabled={loading}
+                    >
+                        Delete
+                    </Button>
+                </DialogActions>
+            )}
         </Dialog>
     );
 }

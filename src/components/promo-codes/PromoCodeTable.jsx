@@ -11,7 +11,7 @@ import {
     Typography,
     IconButton,
 } from "@mui/material";
-import { DeleteIcon, EditIcon } from "lucide-react";
+import { Trash2, EditIcon } from "lucide-react";
 import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function PromoCodeTable({
@@ -86,7 +86,7 @@ export default function PromoCodeTable({
                                                 setPromoToDelete(promo); // OPEN dialog
                                             }}
                                         >
-                                            <DeleteIcon />
+                                            <Trash2 size={15}/>
                                         </IconButton>
 
                                         <IconButton
@@ -96,7 +96,7 @@ export default function PromoCodeTable({
                                                 onEditPromo?.(promo);
                                             }}
                                         >
-                                            <EditIcon />
+                                            <EditIcon size={15}/>
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>

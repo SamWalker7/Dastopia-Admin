@@ -33,34 +33,46 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
             });
             setErrors({});
             setApiError("");
+            console.log("promo code: ", promo);
+            
         }
     }, [promo]);
 
     if (!promo || !form) return null;
 
     const validate = () => {
+        const now = dayjs();
         const newErrors = {};
 
         if (form.discountPercentage < 0 || form.discountPercentage > 100) {
             newErrors.discountPercentage = "Discount must be between 0 and 100";
         }
 
+        // START DATE
         if (!form.startDateTime) {
             newErrors.startDateTime = "Start date is required";
+        } else if (dayjs(form.startDateTime).isBefore(now)) {
+            newErrors.startDateTime = "Start date cannot be in the past";
         }
 
+        // END DATE
         if (!form.endDateTime) {
             newErrors.endDateTime = "End date is required";
-        } else if (form.startDateTime && form.endDateTime.isBefore(form.startDateTime)) {
+        } else if (
+            form.startDateTime &&
+            dayjs(form.endDateTime).isSameOrBefore(dayjs(form.startDateTime))
+        ) {
             newErrors.endDateTime = "End date must be after start date";
         }
 
-        if (form.globalMaxUses <= 0) {
-            newErrors.globalMaxUses = "Global max uses must be greater than 0";
+        // GLOBAL MAX USES
+        if (!form.globalMaxUses || form.globalMaxUses < 1) {
+            newErrors.globalMaxUses = "Global max uses must be at least 1";
         }
 
-        if (form.perUserMaxUses <= 0) {
-            newErrors.perUserMaxUses = "Per user max uses must be greater than 0";
+        // PER USER MAX USES
+        if (!form.perUserMaxUses || form.perUserMaxUses < 1) {
+            newErrors.perUserMaxUses = "Per user max uses must be at least 1";
         } else if (form.perUserMaxUses > form.globalMaxUses) {
             newErrors.perUserMaxUses = "Per user max uses cannot exceed global max uses";
         }
@@ -69,8 +81,7 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSave = async () => {
         if (!validate()) return;
 
         setLoading(true);
@@ -121,7 +132,13 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                         label="Discount %"
                         type="number"
                         value={form.discountPercentage}
-                        onChange={(e) => setForm({ ...form, discountPercentage: Number(e.target.value) })}
+                        onChange={(e) => {
+                            let value = Number(e.target.value);
+                            if (value < 0) value = 0;
+                            if (value > 100) value = 100;
+
+                            setForm({ ...form, discountPercentage: value });
+                        }}
                         error={!!errors.discountPercentage}
                         helperText={errors.discountPercentage}
                         fullWidth
@@ -163,6 +180,7 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                         label="Global Max Uses"
                         type="number"
                         value={form.globalMaxUses}
+                        inputProps={{ min: 1 }}
                         onChange={(e) => setForm({ ...form, globalMaxUses: Number(e.target.value) })}
                         error={!!errors.globalMaxUses}
                         helperText={errors.globalMaxUses}
@@ -174,6 +192,7 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                         label="Per User Max Uses"
                         type="number"
                         value={form.perUserMaxUses}
+                        inputProps={{ min: 1 }}
                         onChange={(e) => setForm({ ...form, perUserMaxUses: Number(e.target.value) })}
                         error={!!errors.perUserMaxUses}
                         helperText={errors.perUserMaxUses}

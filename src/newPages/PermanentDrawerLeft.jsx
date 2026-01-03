@@ -293,7 +293,7 @@ const PermanentDrawerLeft = () => {
               </div>
 
               <ListItemText
-                primary="PromoCode Analytics"
+                primary="Promo Code Managment"
                 primaryTypographyProps={{ fontSize: "12px" }}
               />
             </ListItemButton>

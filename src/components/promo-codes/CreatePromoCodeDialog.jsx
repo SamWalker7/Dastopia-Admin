@@ -36,6 +36,10 @@ export default function CreatePromoCodeDialog({ open, onClose, onSuccess }) {
         const now = dayjs();
         const newErrors = {};
 
+        if (form.discountPercentage < 0 || form.discountPercentage > 100) {
+            newErrors.discountPercentage = "Discount must be between 0 and 100";
+        }
+
         // START DATE
         if (!form.startDateTime) {
             newErrors.startDateTime = "Start date is required";
@@ -75,6 +79,10 @@ export default function CreatePromoCodeDialog({ open, onClose, onSuccess }) {
     const handleCreate = async (e) => {
         e.preventDefault();
         if (!validate()) return;
+        if (form.code == ""){
+            setErrors({promoCode: "Promo Code can not be empty"});
+            return;
+        }
 
         let res;
         try {
