@@ -8,6 +8,10 @@ import {
     Box,
     Alert,
     CircularProgress,
+    Select,
+    MenuItem,
+    FormControl,
+    InputLabel,
 } from "@mui/material";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -30,11 +34,12 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                 endDateTime: promo.endDateTime ? dayjs(promo.endDateTime) : null,
                 globalMaxUses: promo.globalMaxUses,
                 perUserMaxUses: promo.perUserMaxUses,
+                isActive: promo.isActive,
             });
             setErrors({});
             setApiError("");
             console.log("promo code: ", promo);
-            
+
         }
     }, [promo]);
 
@@ -51,9 +56,7 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
         // START DATE
         if (!form.startDateTime) {
             newErrors.startDateTime = "Start date is required";
-        } else if (dayjs(form.startDateTime).isBefore(now)) {
-            newErrors.startDateTime = "Start date cannot be in the past";
-        }
+        } 
 
         // END DATE
         if (!form.endDateTime) {
@@ -94,6 +97,7 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                 endDateTime: form.endDateTime?.toISOString(),
                 globalMaxUses: form.globalMaxUses,
                 perUserMaxUses: form.perUserMaxUses,
+                isActive: form.isActive,
             });
 
             onClose();
@@ -175,6 +179,21 @@ export default function EditPromoDialog({ promo, onClose, onSuccess }) {
                             }}
                         />
                     </LocalizationProvider>
+
+                    <FormControl fullWidth size="small">
+                        <InputLabel id="status-label">Status</InputLabel>
+                        <Select
+                            labelId="status-label"
+                            label="Status"
+                            value={form.isActive}
+                            onChange={(e) =>
+                                setForm({ ...form, isActive: e.target.value })
+                            }
+                        >
+                            <MenuItem value={true}>Active</MenuItem>
+                            <MenuItem value={false}>Inactive</MenuItem>
+                        </Select>
+                    </FormControl>
 
                     <TextField
                         label="Global Max Uses"
