@@ -18,13 +18,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import StarBorder from "@mui/icons-material/StarBorder";
 import LogoutIcon from "@mui/icons-material/Logout";
-<<<<<<< HEAD
 import { Outlet, useNavigate } from "react-router-dom";
-=======
-import { useNavigate } from "react-router-dom";
-import ReferralStatistics from "./ReferralStatistics";
-import PromoAnalytics from "./PromoAnalytics";
->>>>>>> main
 const drawerWidth = 300;
 
 function getUserRole() {
