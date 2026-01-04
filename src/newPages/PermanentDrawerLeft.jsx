@@ -18,7 +18,7 @@ import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import StarBorder from "@mui/icons-material/StarBorder";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 const drawerWidth = 300;
 
 function getUserRole() {
@@ -42,7 +42,11 @@ function getUserRole() {
 
 
 const PermanentDrawerLeft = () => {
-  const [activeItem, setActiveItem] = useState("Dashboard");
+  const location = useLocation();
+  const param = location.pathname.split("/").pop();
+
+  const [activeItem, setActiveItem] = useState(param);
+
   const [open, setOpen] = useState(false);
   // const role = getUserRole();
 
@@ -85,19 +89,19 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("", "Dashboard")}
+              onClick={() => handleMenuClick("", "dashboard")}
               style={{
-                backgroundColor: activeItem === "Dashboard" ? "#2260A8" : "",
+                backgroundColor: activeItem === "dashboard" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "Dashboard" ? "white" : "",
+                color: activeItem === "dashboard" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "Dashboard" ? "white" : "",
+                  color: activeItem === "dashboard" ? "white" : "",
                 }}
               >
                 <DashboardIcon className="" style={{ height: "14px" }} />
@@ -112,21 +116,21 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("financial-dashboard", "Financial Dashboard")}
+              onClick={() => handleMenuClick("financial-dashboard", "financial-dashboard")}
               style={{
                 backgroundColor:
-                  activeItem === "Financial Dashboard" ? "#2260A8" : "",
+                  activeItem === "financial-dashboard" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
 
                 marginInline: "0px",
-                color: activeItem === "Financial Dashboard" ? "white" : "",
+                color: activeItem === "financial-dashboard" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "Financial Dashboard" ? "white" : "",
+                  color: activeItem === "financial-dashboard" ? "white" : "",
                 }}
               >
                 <AttachMoneyIcon className="" style={{ height: "16px" }} />
@@ -144,20 +148,20 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("user-management", "User Management")}
+              onClick={() => handleMenuClick("user-management", "user-management")}
               style={{
                 backgroundColor:
-                  activeItem === "User Management" ? "#2260A8" : "",
+                  activeItem === "user-management" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "User Management" ? "white" : "",
+                color: activeItem === "user-management" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "User Management" ? "white" : "",
+                  color: activeItem === "user-management" ? "white" : "",
                 }}
               >
                 <PeopleIcon className="" style={{ height: "14px" }} />
@@ -172,20 +176,20 @@ const PermanentDrawerLeft = () => {
           <li className="">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("vehicle-management", "Vehicle Management")}
+              onClick={() => handleMenuClick("vehicle-management", "vehicle-management")}
               style={{
                 backgroundColor:
-                  activeItem === "Vehicle Management" ? "#2260A8" : "",
+                  activeItem === "vehicle-management" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "Vehicle Management" ? "white" : "",
+                color: activeItem === "vehicle-management" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "Vehicle Management" ? "white" : "",
+                  color: activeItem === "vehicle-management" ? "white" : "",
                 }}
               >
                 <DirectionsCarIcon className="" style={{ height: "16px" }} />
@@ -199,20 +203,20 @@ const PermanentDrawerLeft = () => {
           <li className="">
             <ListItemButton
               className="gap-4"
-              onClick={() => handleMenuClick("referral-statistics", "Referral Statistics")}
+              onClick={() => handleMenuClick("referral-statistics", "referral-statistics")}
               style={{
                 backgroundColor:
-                  activeItem === "Referral Statistics" ? "#2260A8" : "",
+                  activeItem === "referral-statistics" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "Referral Statistics" ? "white" : "",
+                color: activeItem === "referral-statistics" ? "white" : "",
               }}
             >
               <div
                 className="flex items-center justify-center"
                 style={{
-                  color: activeItem === "Referral Statistics" ? "white" : "",
+                  color: activeItem === "referral-statistics" ? "white" : "",
                 }}
               >
                 <PeopleIcon style={{ height: "14px" }} />
@@ -227,20 +231,20 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className="gap-4"
-              onClick={() => handleMenuClick("promocode-analytics", "PromoCode Analytics")}
+              onClick={() => handleMenuClick("promocode-analytics", "promocode-analytics")}
               style={{
                 backgroundColor:
-                  activeItem === "PromoCode Analytics" ? "#2260A8" : "",
+                  activeItem === "promocode-analytics" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "PromoCode Analytics" ? "white" : "",
+                color: activeItem === "promocode-analytics" ? "white" : "",
               }}
             >
               <div
                 className="flex items-center justify-center"
                 style={{
-                  color: activeItem === "PromoCode Analytics" ? "white" : "",
+                  color: activeItem === "promocode-analytics" ? "white" : "",
                 }}
               >
                 <PeopleIcon style={{ height: "14px" }} />
@@ -259,20 +263,20 @@ const PermanentDrawerLeft = () => {
           <li className=" pb-0 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("new-car-listings", "New Car Listings")}
+              onClick={() => handleMenuClick("new-car-listings", "new-car-listings")}
               style={{
                 backgroundColor:
-                  activeItem === "New Car Listings" ? "#2260A8" : "",
+                  activeItem === "new-car-listings" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "New Car Listings" ? "white" : "",
+                color: activeItem === "new-car-listings" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "New Car Listings" ? "white" : "",
+                  color: activeItem === "new-car-listings" ? "white" : "",
                 }}
               >
                 <PeopleIcon className="" style={{ height: "14px" }} />
@@ -314,20 +318,20 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("my-approval-listing", "My Approval Listing")}
+              onClick={() => handleMenuClick("my-approval-listing", "my-approval-listing")}
               style={{
                 backgroundColor:
-                  activeItem === "My Approval Listing" ? "#2260A8" : "",
+                  activeItem === "my-approval-listing" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "My Approval Listing" ? "white" : "",
+                color: activeItem === "my-approval-listing" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "My Approval Listing" ? "white" : "",
+                  color: activeItem === "my-approval-listing" ? "white" : "",
                 }}
               >
                 <DirectionsCarIcon className="" style={{ height: "16px" }} />
@@ -345,20 +349,20 @@ const PermanentDrawerLeft = () => {
           <li className="border-b border-gray-300 pb-2 pt-0 ">
             <ListItemButton
               className=" gap-4"
-              onClick={() => handleMenuClick("booking-approval", "Booking Approval")}
+              onClick={() => handleMenuClick("booking-approval", "booking-approval")}
               style={{
                 backgroundColor:
-                  activeItem === "Booking Approval" ? "#2260A8" : "",
+                  activeItem === "booking-approval" ? "#2260A8" : "",
                 borderRadius: "40px",
                 padding: "5px",
                 marginInline: "0px",
-                color: activeItem === "Booking Approval" ? "white" : "",
+                color: activeItem === "booking-approval" ? "white" : "",
               }}
             >
               <div
                 className=" justify-center flex items-center "
                 style={{
-                  color: activeItem === "Booking Approval" ? "white" : "",
+                  color: activeItem === "booking-approval" ? "white" : "",
                 }}
               >
                 <PeopleIcon className="" style={{ height: "14px" }} />
@@ -412,20 +416,20 @@ const PermanentDrawerLeft = () => {
             <List component="div" disablePadding>
               <ListItemButton
                 sx={{ py: 1 }}
-                onClick={() => handleMenuClick("role-settings", "Role Settings")}
+                onClick={() => handleMenuClick("role-settings", "role-settings")}
                 style={{
                   backgroundColor:
-                    activeItem === "Role Settings" ? "#2260A8" : "",
+                    activeItem === "role-settings" ? "#2260A8" : "",
                   borderRadius: "40px",
                   padding: "5px",
                   marginInline: "0px",
-                  color: activeItem === "Role Settings" ? "white" : "",
+                  color: activeItem === "role-settings" ? "white" : "",
                 }}
               >
                 <div
                   className=" justify-center flex items-center "
                   style={{
-                    color: activeItem === "Role Settings" ? "white" : "",
+                    color: activeItem === "role-settings" ? "white" : "",
                   }}
                 >
                   <StarBorder style={{ height: "16px" }} />
@@ -436,21 +440,21 @@ const PermanentDrawerLeft = () => {
                 />
               </ListItemButton>
               <ListItemButton
-                onClick={() => handleMenuClick("user-settings", "User Settings")}
+                onClick={() => handleMenuClick("user-settings", "user-settings")}
                 style={{
                   backgroundColor:
-                    activeItem === "User Settings" ? "#2260A8" : "",
+                    activeItem === "user-settings" ? "#2260A8" : "",
                   borderRadius: "40px",
                   padding: "5px",
                   marginInline: "0px",
-                  color: activeItem === "User Settings" ? "white" : "",
+                  color: activeItem === "user-settings" ? "white" : "",
                 }}
                 sx={{ py: 1 }}
               >
                 <div
                   className=" justify-center flex items-center "
                   style={{
-                    color: activeItem === "User Settings" ? "white" : "",
+                    color: activeItem === "user-settings" ? "white" : "",
                   }}
                 >
                   <StarBorder style={{ height: "16px" }} />
