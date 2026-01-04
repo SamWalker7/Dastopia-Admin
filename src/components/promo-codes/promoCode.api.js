@@ -34,7 +34,8 @@ export const createPromoCodeApi = async (payload) => {
     return res;
 };
 
-export const updatePromoExpiryApi = async (id, endDateTime) => {
+
+export const updatePromoApi = async (id, payload) => {
     const token = getToken();
 
     const res = await fetch(`${BASE_URL}/${id}`, {
@@ -43,10 +44,40 @@ export const updatePromoExpiryApi = async (id, endDateTime) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-            endDateTime,
-        }),
+        body: JSON.stringify(payload),
     });
 
-    if (!res.ok) throw new Error("Failed to update expiry date");
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+        throw new Error(
+            data?.message || "Failed to update promo code"
+        );
+    }
+
+    return data;
+};
+
+export const handleConfirmDelete = async (id) => {
+    const token = getToken();
+
+    try {
+        const response = await fetch(
+            `${BASE_URL}/${id}`,
+            {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error("Failed to delete promo code");
+        }
+
+    } catch (err) {
+        console.error(err);
+        throw new Error("Failed to delete promo code");
+    }
 };

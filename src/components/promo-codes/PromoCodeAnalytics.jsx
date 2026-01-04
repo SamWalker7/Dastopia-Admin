@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Paper, CircularProgress, Button } from "@mui/material";
+import { Paper, CircularProgress, Button, Box } from "@mui/material";
 import PromoCodeTable from "./PromoCodeTable";
 import CreatePromoCodeDialog from "./CreatePromoCodeDialog";
-import EditPromoExpiryDialog from "./EditPromoExpiryDialog";
+import EditPromoDialog from "./EditPromoDialog";
 import { fetchPromoCodesApi } from "./promoCode.api";
+import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function PromoCodeAnalytics() {
     const [promoCodes, setPromoCodes] = useState([]);
@@ -13,15 +14,11 @@ export default function PromoCodeAnalytics() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
 
-    const [lastKey, setLastKey] = useState(null);
-    const [pageKeys, setPageKeys] = useState({ 0: null }); 
+    const [pageKeys, setPageKeys] = useState({ 0: null });
 
     const [openCreate, setOpenCreate] = useState(false);
     const [selectedPromo, setSelectedPromo] = useState(null);
-
-    // =========================
-    // FETCH PROMO CODES
-    // =========================
+    const [promoToDelete, setPromoToDelete] = useState(null);
 
     const loadPromoCodes = async (limit, pageIndex) => {
         setLoading(true);
@@ -31,14 +28,10 @@ export default function PromoCodeAnalytics() {
                 lastKey: pageKeys[pageIndex],
             });
 
-            
             setPromoCodes(res?.data?.promoCodes ?? []);
             setTotalCount(res?.data?.totalCount ?? 0);
-            setLastKey(res?.data?.lastKey ?? null);
 
-
-            // store next page key
-            if (res.data.lastKey) {
+            if (res?.data?.lastKey) {
                 setPageKeys((prev) => ({
                     ...prev,
                     [pageIndex + 1]: res.data.lastKey,
@@ -51,45 +44,17 @@ export default function PromoCodeAnalytics() {
         }
     };
 
-
-    // =========================
-    // INITIAL LOAD / PAGE SIZE CHANGE
-    // =========================
     useEffect(() => {
         setPage(0);
         setPageKeys({ 0: null });
         loadPromoCodes(rowsPerPage, 0);
     }, [rowsPerPage]);
 
-
-
-    // =========================
-    // HANDLERS
-    // =========================
     const handleChangePage = (_, newPage) => {
         setPage(newPage);
         loadPromoCodes(rowsPerPage, newPage);
     };
 
-    const handleChangeRowsPerPage = (newRows) => {
-        setRowsPerPage(newRows);
-    };
-
-    // =========================
-    // UI STATES
-    // =========================
-    if (loading) {
-        return (
-            <div className="flex justify-center h-64 items-center">
-                <CircularProgress />
-            </div>
-        );
-    }
-
-
-    // =========================
-    // RENDER
-    // =========================
     return (
         <>
             <Button
@@ -101,34 +66,48 @@ export default function PromoCodeAnalytics() {
             </Button>
 
             <Paper>
-                <PromoCodeTable
-                    promoCodes={promoCodes || []} 
-                    page={page}
-                    rowsPerPage={rowsPerPage}
-                    totalCount={totalCount}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    onEditEndDate={(promo) => setSelectedPromo(promo)}
-                />
+                {loading ? (
+                    <Box
+                        display="flex"
+                        justifyContent="center"
+                        alignItems="center"
+                        height={256}
+                    >
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <PromoCodeTable
+                        promoCodes={promoCodes}
+                        page={page}
+                        rowsPerPage={rowsPerPage}
+                        totalCount={totalCount}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={setRowsPerPage}
+                        onEditPromo={setSelectedPromo}
+                        onDeletePromo={() => loadPromoCodes(rowsPerPage, page)}
+                    />
+                )}
             </Paper>
+
 
             <CreatePromoCodeDialog
                 open={openCreate}
                 onClose={() => setOpenCreate(false)}
                 onSuccess={() => {
-                    setOpenCreate(false);          // ✅ close dialog
-                    setPage(0);                    // ✅ reset to first page
-                    setPageKeys({ 0: null });      // ✅ reset pagination cursor
-                    loadPromoCodes(rowsPerPage, 0); // ✅ refresh table
+                    setOpenCreate(false);
+                    setPage(0);
+                    setPageKeys({ 0: null });
+                    loadPromoCodes(rowsPerPage, 0);
                 }}
             />
 
-
-            <EditPromoExpiryDialog
+            <EditPromoDialog
                 promo={selectedPromo}
                 onClose={() => setSelectedPromo(null)}
                 onSuccess={() => loadPromoCodes(rowsPerPage, page)}
             />
+
+
         </>
     );
 }
