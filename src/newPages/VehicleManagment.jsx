@@ -25,17 +25,18 @@ import DirectionsCarFilledOutlinedIcon from "@mui/icons-material/DirectionsCarFi
 import CarCrashOutlinedIcon from "@mui/icons-material/CarCrashOutlined";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
 import { Search } from "@mui/icons-material";
+import { useQuery } from "@tanstack/react-query";
 
 // Correctly import your actual components
 import Account from "./Account1";
 import AddCarModal from "./AddCarModal";
 
 const VehicleManagment = () => {
-  const [rentals, setRentals] = useState([]);
+  // const [rentals, setRentals] = useState([]);
   const [deletedRentals, setDeletedRentals] = useState([]);
   const [viewMode, setViewMode] = useState("active");
   const [adminToken, setAdminToken] = useState(null);
-  const [isLoadingList, setIsLoadingList] = useState(true);
+  // const [isLoadingList, setIsLoadingList] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDuplicates, setShowDuplicates] = useState(false);
 
@@ -44,26 +45,77 @@ const VehicleManagment = () => {
   const deletedApiUrl =
     "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
 
-  const fetchAllRentals = useCallback(
-    async (token, key = null, accumulatedRentals = []) => {
-      if (!token) return [];
-      const url = new URL(activeApiUrl);
-      if (key) url.searchParams.append("lastEvaluatedKey", key);
-      const response = await fetch(url.toString(), {
+  const fetchAllRentals = async ({ queryKey }) => {
+    const [, { token, apiUrl }] = queryKey;
+    if (!token) return [];
+
+    const fetchPage = async (lastKey = null, accumulated = []) => {
+      const url = new URL(apiUrl);
+      if (lastKey) {
+        url.searchParams.append("lastEvaluatedKey", lastKey);
+      }
+
+      const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      const newRentals = data.body && Array.isArray(data.body) ? data.body : [];
-      const allSoFar = [...accumulatedRentals, ...newRentals];
-      if (data.lastEvaluatedKey) {
-        return await fetchAllRentals(token, data.lastEvaluatedKey, allSoFar);
+
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
-      return allSoFar;
-    },
-    [activeApiUrl]
-  );
+
+      const data = await res.json();
+      const items = Array.isArray(data.body) ? data.body : [];
+      const merged = [...accumulated, ...items];
+
+      return data.lastEvaluatedKey
+        ? fetchPage(data.lastEvaluatedKey, merged)
+        : merged;
+    };
+
+    return fetchPage();
+  };
+
+  const {
+    data: rentals = [],
+    isLoading: isLoadingList,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: [
+      "rentals",
+      {
+        token: adminToken,
+        apiUrl: activeApiUrl,
+      },
+    ],
+    queryFn: fetchAllRentals,
+    enabled: !!adminToken && viewMode === "active",
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
+
+    select: (allRentalsData) =>
+      allRentalsData.map((vehicle) => ({
+        carMake: vehicle.make,
+        vehicleID: vehicle.id,
+        vehicleNumber: vehicle.vehicleNumber || "N/A",
+        YearManufactured: vehicle.year,
+        carModel: vehicle.model,
+        status:
+          vehicle.isApproved === "approved"
+            ? "Active"
+            : vehicle.isApproved === "pending"
+              ? "Pending Approval"
+              : "Inactive",
+        carType: vehicle.category,
+        ownerId: vehicle.ownerId || vehicle.owenerId,
+        ownerFullName:
+          `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""}`.trim() ||
+          "N/A",
+        submissionDate: vehicle.createdAt || new Date().toISOString(),
+      })),
+  });
+
+
 
   const fetchDeletedRentals = useCallback(
     async (token) => {
@@ -83,77 +135,89 @@ const VehicleManagment = () => {
   );
 
   useEffect(() => {
-    const initiateFetch = async () => {
-      setIsLoadingList(true);
-      setRentals([]);
-      setDeletedRentals([]);
-      setCurrentPage(1);
+    const storedAdminJson = localStorage.getItem("admin");
+    if (!storedAdminJson) return;
 
-      const storedAdminJson = localStorage.getItem("admin");
-      let token = null;
+    try {
+      const adminData = JSON.parse(storedAdminJson);
+      setAdminToken(adminData?.AccessToken || null);
+    } catch (e) {
+      console.error("Failed to parse admin data", e);
+    }
+  }, []);
 
-      if (storedAdminJson) {
-        try {
-          const adminData = JSON.parse(storedAdminJson);
-          token = adminData?.AccessToken;
-          setAdminToken(token);
-        } catch (error) {
-          console.error("Failed to parse admin data:", error);
-        }
-      }
 
-      if (token) {
-        try {
-          if (viewMode === "active") {
-            const allRentalsData = await fetchAllRentals(token);
-            const formattedRentals = allRentalsData.map((vehicle) => ({
-              carMake: vehicle.make,
-              vehicleID: vehicle.id,
-              vehicleNumber: vehicle.vehicleNumber || "N/A",
-              YearManufactured: vehicle.year,
-              carModel: vehicle.model,
-              status:
-                vehicle.isApproved === "approved"
-                  ? "Active"
-                  : vehicle.isApproved === "pending"
-                  ? "Pending Approval"
-                  : "Inactive",
-              carType: vehicle.category,
-              ownerId: vehicle.ownerId || vehicle.owenerId,
-              ownerFullName:
-                `${vehicle.ownerGivenName || ""} ${
-                  vehicle.ownerSurName || ""
-                }`.trim() || "N/A",
-              submissionDate: vehicle.createdAt || new Date().toISOString(),
-            }));
-            setRentals(formattedRentals);
-          } else {
-            const deletedData = await fetchDeletedRentals(token);
-            const formattedDeleted = deletedData.map((v) => ({
-              vehicleID: v.id,
-              carMake: v.make,
-              carModel: v.model,
-              YearManufactured: v.year,
-              ownerEmail: v.ownerEmail || "N/A",
-              deletedAt: new Date(v.deletedAt).toLocaleDateString(),
-              daysUntilPermanentDeletion: v.daysUntilPermanentDeletion,
-            }));
-            setDeletedRentals(formattedDeleted);
-          }
-        } catch (error) {
-          console.error("Error during data fetch:", error);
-          setAdminToken(null);
-        } finally {
-          setIsLoadingList(false);
-        }
-      } else {
-        console.warn("No admin token found.");
-        setIsLoadingList(false);
-      }
-    };
+  // useEffect(() => {
+  //   const initiateFetch = async () => {
+  //     setIsLoadingList(true);
+  //     setRentals([]);
+  //     setDeletedRentals([]);
+  //     setCurrentPage(1);
 
-    initiateFetch();
-  }, [viewMode, fetchAllRentals, fetchDeletedRentals]);
+  //     const storedAdminJson = localStorage.getItem("admin");
+  //     let token = null;
+
+  //     if (storedAdminJson) {
+  //       try {
+  //         const adminData = JSON.parse(storedAdminJson);
+  //         token = adminData?.AccessToken;
+  //         setAdminToken(token);
+  //       } catch (error) {
+  //         console.error("Failed to parse admin data:", error);
+  //       }
+  //     }
+
+  //     if (token) {
+  //       try {
+  //         if (viewMode === "active") {
+  //           const allRentalsData = await fetchAllRentals(token);
+  //           const formattedRentals = allRentalsData.map((vehicle) => ({
+  //             carMake: vehicle.make,
+  //             vehicleID: vehicle.id,
+  //             vehicleNumber: vehicle.vehicleNumber || "N/A",
+  //             YearManufactured: vehicle.year,
+  //             carModel: vehicle.model,
+  //             status:
+  //               vehicle.isApproved === "approved"
+  //                 ? "Active"
+  //                 : vehicle.isApproved === "pending"
+  //                   ? "Pending Approval"
+  //                   : "Inactive",
+  //             carType: vehicle.category,
+  //             ownerId: vehicle.ownerId || vehicle.owenerId,
+  //             ownerFullName:
+  //               `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""
+  //                 }`.trim() || "N/A",
+  //             submissionDate: vehicle.createdAt || new Date().toISOString(),
+  //           }));
+  //           setRentals(formattedRentals);
+  //         } else {
+  //           const deletedData = await fetchDeletedRentals(token);
+  //           const formattedDeleted = deletedData.map((v) => ({
+  //             vehicleID: v.id,
+  //             carMake: v.make,
+  //             carModel: v.model,
+  //             YearManufactured: v.year,
+  //             ownerEmail: v.ownerEmail || "N/A",
+  //             deletedAt: new Date(v.deletedAt).toLocaleDateString(),
+  //             daysUntilPermanentDeletion: v.daysUntilPermanentDeletion,
+  //           }));
+  //           setDeletedRentals(formattedDeleted);
+  //         }
+  //       } catch (error) {
+  //         console.error("Error during data fetch:", error);
+  //         setAdminToken(null);
+  //       } finally {
+  //         setIsLoadingList(false);
+  //       }
+  //     } else {
+  //       console.warn("No admin token found.");
+  //       setIsLoadingList(false);
+  //     }
+  //   };
+
+  //   initiateFetch();
+  // }, [viewMode, fetchAllRentals, fetchDeletedRentals]);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -299,30 +363,30 @@ const VehicleManagment = () => {
 
   const breadcrumbs = showAccount
     ? [
-        <Link underline="hover" key="1" color="inherit" href="/">
-          <HomeOutlinedIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-          Home
-        </Link>,
-        <button
-          key="2"
-          className="cursor-pointer hover:text-blue-800 text-inherit"
-          onClick={() => setShowAccount(false)}
-        >
-          Vehicle Management
-        </button>,
-        <Typography key="3" sx={{ color: "text.primary" }}>
-          Account
-        </Typography>,
-      ]
+      <Link underline="hover" key="1" color="inherit" href="/">
+        <HomeOutlinedIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+        Home
+      </Link>,
+      <button
+        key="2"
+        className="cursor-pointer hover:text-blue-800 text-inherit"
+        onClick={() => setShowAccount(false)}
+      >
+        Vehicle Management
+      </button>,
+      <Typography key="3" sx={{ color: "text.primary" }}>
+        Account
+      </Typography>,
+    ]
     : [
-        <Link underline="hover" key="1" color="inherit" href="/">
-          <HomeOutlinedIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-          Home
-        </Link>,
-        <Typography key="2" sx={{ color: "text.primary" }}>
-          Vehicle Management
-        </Typography>,
-      ];
+      <Link underline="hover" key="1" color="inherit" href="/">
+        <HomeOutlinedIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+        Home
+      </Link>,
+      <Typography key="2" sx={{ color: "text.primary" }}>
+        Vehicle Management
+      </Typography>,
+    ];
 
   const handleOpenAddCarModal = () => setOpenAddCarModal(true);
   const handleCloseAddCarModal = () => {
@@ -410,8 +474,8 @@ const VehicleManagment = () => {
                     {showDuplicates
                       ? "Duplicate License Plates"
                       : viewMode === "active"
-                      ? "Car List"
-                      : "Deleted Cars List"}
+                          ? "Car List"
+                          : "Deleted Cars List"}
                   </h2>
                   <ButtonGroup size="small">
                     <Button
@@ -563,11 +627,10 @@ const VehicleManagment = () => {
                           >
                             Owner Name{" "}
                             <HiMiniArrowsUpDown
-                              className={`inline ml-1 ${
-                                sortConfig.key === "ownerFullName"
-                                  ? ""
-                                  : "text-gray-400"
-                              }`}
+                                        className={`inline ml-1 ${sortConfig.key === "ownerFullName"
+                                          ? ""
+                                          : "text-gray-400"
+                                          }`}
                             />
                           </th>
                           <th
@@ -576,11 +639,10 @@ const VehicleManagment = () => {
                           >
                             Vehicle{" "}
                             <HiMiniArrowsUpDown
-                              className={`inline ml-1 ${
-                                sortConfig.key === "carMake"
-                                  ? ""
-                                  : "text-gray-400"
-                              }`}
+                                        className={`inline ml-1 ${sortConfig.key === "carMake"
+                                          ? ""
+                                          : "text-gray-400"
+                                          }`}
                             />
                           </th>
                           <th
@@ -589,11 +651,10 @@ const VehicleManagment = () => {
                           >
                             License Plate{" "}
                             <HiMiniArrowsUpDown
-                              className={`inline ml-1 ${
-                                sortConfig.key === "vehicleNumber"
-                                  ? ""
-                                  : "text-gray-400"
-                              }`}
+                                        className={`inline ml-1 ${sortConfig.key === "vehicleNumber"
+                                          ? ""
+                                          : "text-gray-400"
+                                          }`}
                             />
                           </th>
                           <th
@@ -602,11 +663,10 @@ const VehicleManagment = () => {
                           >
                             Submission Date{" "}
                             <HiMiniArrowsUpDown
-                              className={`inline ml-1 ${
-                                sortConfig.key === "submissionDate"
-                                  ? ""
-                                  : "text-gray-400"
-                              }`}
+                                        className={`inline ml-1 ${sortConfig.key === "submissionDate"
+                                          ? ""
+                                          : "text-gray-400"
+                                          }`}
                             />
                           </th>
                           <th className="px-6 text-left text-sm font-semibold py-4 text-gray-600">
@@ -649,11 +709,10 @@ const VehicleManagment = () => {
                         return (
                           <tr
                             key={item.vehicleID}
-                            className={`border-t border-gray-200 hover:bg-gray-50 cursor-pointer ${
-                              isFirstInGroup && showDuplicates
-                                ? "border-t-2 border-t-blue-300 bg-blue-50"
-                                : ""
-                            }`}
+                            className={`border-t border-gray-200 hover:bg-gray-50 cursor-pointer ${isFirstInGroup && showDuplicates
+                              ? "border-t-2 border-t-blue-300 bg-blue-50"
+                              : ""
+                              }`}
                             onClick={() => handleRowClick(item)}
                           >
                             {viewMode === "active" ? (
@@ -677,10 +736,9 @@ const VehicleManagment = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                   <span
-                                    className={`px-3 py-2 rounded-xl text-xs ${
-                                      statusColors[item.status] ||
+                                    className={`px-3 py-2 rounded-xl text-xs ${statusColors[item.status] ||
                                       "bg-gray-200 text-gray-800"
-                                    }`}
+                                      }`}
                                   >
                                     {item.status}
                                   </span>
