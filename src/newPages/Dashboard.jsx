@@ -20,6 +20,8 @@ import { LineChart } from "@mui/x-charts/LineChart";
 import TextField from "@mui/material/TextField"; // Keep if needed for filtering later
 import Button from "@mui/material/Button";
 import dayjs from "dayjs";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAllRentals } from "../api";
 
 // Define the API URL
 const API_URL =
@@ -117,15 +119,15 @@ const staticUserDemographicsData = [
 // We'll replace the User Growth Line Chart data with Vehicle Creation data
 
 const Dashboard = () => {
-  const [date, setDate] = useState(dayjs()); // State for date filtering (logic not implemented with API yet)
+  // const [date, setDate] = useState(dayjs()); // State for date filtering (logic not implemented with API yet)
   const [activeButton, setActiveButton] = useState("All Time"); // Changed default button
   const [adminToken, setAdminToken] = useState(null); // State to hold the admin token
 
   // State for fetched and processed data
-  const [allVehicles, setAllVehicles] = useState([]); // To hold all vehicles fetched across all pages
-  const [totalVehiclesCount, setTotalVehiclesCount] = useState(0); // To hold the total count from the API
-  const [isLoading, setIsLoading] = useState(true); // Loading state for the overall fetch process
-  const [error, setError] = useState(null); // Error state for fetch errors
+  // const [allVehicles, setAllVehicles] = useState([]); // To hold all vehicles fetched across all pages
+  // const [totalVehiclesCount, setTotalVehiclesCount] = useState(0); // To hold the total count from the API
+  // const [isLoading, setIsLoading] = useState(true); // Loading state for the overall fetch process
+  // const [error, setError] = useState(null); // Error state for fetch errors
   const [showAllMakes, setShowAllMakes] = useState(false);
 
   // State for processed data derived from allVehicles (filtered or all)
@@ -141,134 +143,168 @@ const Dashboard = () => {
     []
   );
 
-  // Function to fetch all pages of vehicles recursively
-  const fetchAllVehicles = useCallback(
-    async (token, key = null, accumulatedData = []) => {
-      // Defensive check: if somehow called without a token
-      if (!token) {
-        console.log("Admin token not available during fetch attempt.");
-        setIsLoading(false); // Stop loading if fetch wasn't possible
-        setAllVehicles([]); // Clear any previous data
-        setTotalVehiclesCount(0); // Reset total count
-        return;
-      }
-
-      try {
-        const url = new URL(API_URL);
-        // Add lastEvaluatedKey parameter if a key is provided
-        if (key) {
-          url.searchParams.append("lastEvaluatedKey", key);
-        }
-        // console.log(`Fetching vehicles with token and key=${key || "null"}:`, url.toString()); // Log less for cleaner console
-
-        const response = await fetch(url.toString(), {
-          headers: {
-            Authorization: `Bearer ${token}`, // Include the Bearer token
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            console.error(
-              "Authentication failed. Token might be expired or invalid. Clearing token."
-            );
-            setAdminToken(null); // Clear token state on auth failure
-            // Stop loading and clear data if auth fails
-            setIsLoading(false);
-            setAllVehicles([]);
-            setTotalVehiclesCount(0);
-          }
-          // Throw error to be caught by the outer try/catch or the catch block below
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        // console.log("Fetched vehicle data:", data); // Log less
-
-        if (data && Array.isArray(data.body)) {
-          const newAccumulatedData = [...accumulatedData, ...data.body];
-
-          // Update the total count from the first response (assuming it's consistent)
-          if (key === null && data.totalCount !== undefined) {
-            setTotalVehiclesCount(data.totalCount);
-          }
-
-          // Check if there is a next page
-          if (data.lastEvaluatedKey) {
-            // Recursively call fetchAllVehicles with the new key and accumulated data
-            fetchAllVehicles(token, data.lastEvaluatedKey, newAccumulatedData);
-          } else {
-            // No more pages, all data fetched
-            setAllVehicles(newAccumulatedData); // Set the complete list
-            setIsLoading(false); // Stop overall loading
-          }
-        } else {
-          console.warn(
-            "API response did not contain an array body or expected structure:",
-            data
-          );
-          // Stop loading and clear data if response format is bad after first page
-          if (key === null) {
-            setAllVehicles([]);
-            setTotalVehiclesCount(0);
-            setIsLoading(false);
-          } // If subsequent pages have bad format, the loading indicator might stay on
-          // which is acceptable behavior - indicates a problem fetching all data.
-        }
-      } catch (fetchError) {
-        console.error("Error fetching vehicles:", fetchError);
-        setError(fetchError); // Set the error state
-        setIsLoading(false); // Stop loading on error
-        // Keep partially fetched data if any, or clear if it was an initial error
-        if (key === null) {
-          setAllVehicles([]);
-          setTotalVehiclesCount(0);
-        }
-      }
-    },
-    []
-  ); // useCallback dependencies: none needed if API_URL and state setters are stable
-
-  // Effect to get admin token from localStorage AND trigger the initial fetch
   useEffect(() => {
-    setIsLoading(true); // Start loading when component mounts
-
     const storedAdminJson = localStorage.getItem("admin");
-    let token = null;
+    if (!storedAdminJson) return;
 
-    if (storedAdminJson) {
       try {
         const adminData = JSON.parse(storedAdminJson);
-        if (adminData && adminData.AccessToken) {
-          token = adminData.AccessToken;
-          setAdminToken(token); // Update state
-        } else {
-          console.warn(
-            "localStorage 'admin' found, but AccessToken property is missing."
-          );
-        }
-      } catch (error) {
-        console.error("Failed to parse admin data from localStorage:", error);
+        setAdminToken(adminData?.AccessToken || null);
+      } catch (e) {
+        console.error("Failed to parse admin data", e);
       }
-    } else {
-      console.warn("No 'admin' data found in localStorage.");
-    }
+    }, []);
 
-    // Now, if we successfully found a token, trigger the initial data fetch (first page)
-    if (token) {
-      console.log("Admin token found, initiating full vehicle data fetch...");
-      fetchAllVehicles(token, null, []); // Start fetching from the beginning with an empty accumulator
-    } else {
-      // If no token was found, we can't fetch. Stop loading and reflect empty state.
-      console.log("No admin token found, cannot fetch vehicle data.");
-      setIsLoading(false); // Stop loading
-      setAllVehicles([]); // Ensure list is empty
-      setTotalVehiclesCount(0); // Ensure total count is 0
-      setError(new Error("Authentication token not found.")); // Set an authentication error
-    }
+  const {
+    data,
+    isLoading,
+    // isError,
+    error,
+  } = useQuery({
+    queryKey: [
+      "allVehicles",
+      {
+        token: adminToken,
+      },
+    ],
+    queryFn: fetchAllRentals,
+    enabled: !!adminToken,
+    staleTime: 30 * 60 * 1000,
+    cacheTime: 30 * 60 * 1000,
 
-    // This effect should run only once on mount. Its dependency array needs fetchAllVehicles.
-  }, [fetchAllVehicles]); // Dependency on fetchAllVehicles
+  });
+
+  const { vehicles: allVehicles = [], totalCount: totalVehiclesCount = 0 } = data ?? {};
+
+
+  // Function to fetch all pages of vehicles recursively
+  // const fetchAllVehicles = useCallback(
+  //   async (token, key = null, accumulatedData = []) => {
+  //     // Defensive check: if somehow called without a token
+  //     if (!token) {
+  //       console.log("Admin token not available during fetch attempt.");
+  //       setIsLoading(false); // Stop loading if fetch wasn't possible
+  //       setAllVehicles([]); // Clear any previous data
+  //       setTotalVehiclesCount(0); // Reset total count
+  //       return;
+  //     }
+
+  //     try {
+  //       const url = new URL(API_URL);
+  //       // Add lastEvaluatedKey parameter if a key is provided
+  //       if (key) {
+  //         url.searchParams.append("lastEvaluatedKey", key);
+  //       }
+  //       // console.log(`Fetching vehicles with token and key=${key || "null"}:`, url.toString()); // Log less for cleaner console
+
+  //       const response = await fetch(url.toString(), {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`, // Include the Bearer token
+  //         },
+  //       });
+
+  //       if (!response.ok) {
+  //         if (response.status === 401) {
+  //           console.error(
+  //             "Authentication failed. Token might be expired or invalid. Clearing token."
+  //           );
+  //           setAdminToken(null); // Clear token state on auth failure
+  //           // Stop loading and clear data if auth fails
+  //           setIsLoading(false);
+  //           setAllVehicles([]);
+  //           setTotalVehiclesCount(0);
+  //         }
+  //         // Throw error to be caught by the outer try/catch or the catch block below
+  //         throw new Error(`HTTP error! status: ${response.status}`);
+  //       }
+
+  //       const data = await response.json();
+  //       // console.log("Fetched vehicle data:", data); // Log less
+
+  //       if (data && Array.isArray(data.body)) {
+  //         const newAccumulatedData = [...accumulatedData, ...data.body];
+
+  //         // Update the total count from the first response (assuming it's consistent)
+  //         if (key === null && data.totalCount !== undefined) {
+  //           setTotalVehiclesCount(data.totalCount);
+  //         }
+
+  //         // Check if there is a next page
+  //         if (data.lastEvaluatedKey) {
+  //           // Recursively call fetchAllVehicles with the new key and accumulated data
+  //           fetchAllVehicles(token, data.lastEvaluatedKey, newAccumulatedData);
+  //         } else {
+  //           // No more pages, all data fetched
+  //           setAllVehicles(newAccumulatedData); // Set the complete list
+  //           setIsLoading(false); // Stop overall loading
+  //         }
+  //       } else {
+  //         console.warn(
+  //           "API response did not contain an array body or expected structure:",
+  //           data
+  //         );
+  //         // Stop loading and clear data if response format is bad after first page
+  //         if (key === null) {
+  //           setAllVehicles([]);
+  //           setTotalVehiclesCount(0);
+  //           setIsLoading(false);
+  //         } // If subsequent pages have bad format, the loading indicator might stay on
+  //         // which is acceptable behavior - indicates a problem fetching all data.
+  //       }
+  //     } catch (fetchError) {
+  //       console.error("Error fetching vehicles:", fetchError);
+  //       setError(fetchError); // Set the error state
+  //       setIsLoading(false); // Stop loading on error
+  //       // Keep partially fetched data if any, or clear if it was an initial error
+  //       if (key === null) {
+  //         setAllVehicles([]);
+  //         setTotalVehiclesCount(0);
+  //       }
+  //     }
+  //   },
+  //   []
+  // ); // useCallback dependencies: none needed if API_URL and state setters are stable
+
+  // Effect to get admin token from localStorage AND trigger the initial fetch
+  // useEffect(() => {
+  //   setIsLoading(true); // Start loading when component mounts
+
+  //   const storedAdminJson = localStorage.getItem("admin");
+  //   let token = null;
+
+  //   if (storedAdminJson) {
+  //     try {
+  //       const adminData = JSON.parse(storedAdminJson);
+  //       if (adminData && adminData.AccessToken) {
+  //         token = adminData.AccessToken;
+  //         setAdminToken(token); // Update state
+  //       } else {
+  //         console.warn(
+  //           "localStorage 'admin' found, but AccessToken property is missing."
+  //         );
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to parse admin data from localStorage:", error);
+  //     }
+  //   } else {
+  //     console.warn("No 'admin' data found in localStorage.");
+  //   }
+
+  //   // Now, if we successfully found a token, trigger the initial data fetch (first page)
+  //   if (token) {
+  //     console.log("Admin token found, initiating full vehicle data fetch...");
+  //     fetchAllVehicles(token, null, []); // Start fetching from the beginning with an empty accumulator
+  //   } else {
+  //     // If no token was found, we can't fetch. Stop loading and reflect empty state.
+  //     console.log("No admin token found, cannot fetch vehicle data.");
+  //     setIsLoading(false); // Stop loading
+  //     setAllVehicles([]); // Ensure list is empty
+  //     setTotalVehiclesCount(0); // Ensure total count is 0
+  //     setError(new Error("Authentication token not found.")); // Set an authentication error
+  //   }
+
+  //   // This effect should run only once on mount. Its dependency array needs fetchAllVehicles.
+  // }, [fetchAllVehicles]); // Dependency on fetchAllVehicles
 
   // Effect to filter vehicles based on the selected date range button
   useEffect(() => {
@@ -392,8 +428,8 @@ const Dashboard = () => {
       const transmissionCounts = displayedVehicles.reduce((acc, vehicle) => {
         const transmission =
           vehicle.transmission &&
-          vehicle.transmission !== "string" &&
-          vehicle.transmission !== "Unkown"
+            vehicle.transmission !== "string" &&
+            vehicle.transmission !== "Unkown"
             ? vehicle.transmission
             : "Unknown Transmission";
         acc[transmission] = (acc[transmission] || 0) + 1;

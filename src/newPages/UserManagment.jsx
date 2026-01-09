@@ -1,25 +1,23 @@
 import { HiMiniArrowsUpDown } from "react-icons/hi2";
-import React, { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+// import { useNavigate } from "react-router-dom";
 import {
   TextField,
   Select,
   MenuItem,
-  Button,
   Pagination,
   Box,
   FormControl,
   InputLabel,
-  IconButton,
   Typography,
 } from "@mui/material";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
 import Link from "@mui/material/Link";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import CloseIcon from "@mui/icons-material/Close";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import Account from "./Account";
 import AddOwnerModal from "./AddOwner";
+import { useQuery } from "@tanstack/react-query";
 
 const API_BASE_URL =
   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod";
@@ -43,10 +41,18 @@ const getVerificationStatus = (user) => {
 
 const UserManagment = () => {
   const [adminToken, setAdminToken] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [errorUsers, setErrorUsers] = useState(null);
-  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedAdminJson = localStorage.getItem("admin");
+    if (!storedAdminJson) return;
+
+    try {
+      const adminData = JSON.parse(storedAdminJson);
+      setAdminToken(adminData?.AccessToken || null);
+    } catch (e) {
+      console.error("Failed to parse admin data", e);
+    }
+  }, []);
 
   const [sortConfig, setSortConfig] = useState({
     key: "created",
@@ -111,8 +117,7 @@ const UserManagment = () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          `Failed to fetch user details: ${
-            errorData.message || response.statusText
+          `Failed to fetch user details: ${errorData.message || response.statusText
           }`
         );
       }
@@ -124,11 +129,9 @@ const UserManagment = () => {
   };
 
   // New function to fetch all users by iterating through paginated results
-  const fetchAllUsers = useCallback(async () => {
+  const fetchAllUsers = async () => {
     if (!adminToken) return;
 
-    setLoadingUsers(true);
-    setErrorUsers(null);
     let accumulatedUsers = [];
     let currentToken = null;
     let hasMorePages = true;
@@ -143,41 +146,22 @@ const UserManagment = () => {
         hasMorePages = data?.pagination?.hasMore || false;
         currentToken = data?.pagination?.nextToken || null;
       }
-      setUsers(accumulatedUsers);
+      return accumulatedUsers;
     } catch (error) {
-      setErrorUsers(error.message || "Failed to fetch all users.");
-      setUsers([]);
-    } finally {
-      setLoadingUsers(false);
+      return [];
     }
-  }, [adminToken]);
+  }
 
-  useEffect(() => {
-    const storedAdminJson = localStorage.getItem("admin");
-    if (storedAdminJson) {
-      try {
-        const adminData = JSON.parse(storedAdminJson);
-        if (adminData?.AccessToken) {
-          setAdminToken(adminData.AccessToken);
-        } else {
-          setErrorUsers("Authentication token not found. Please log in.");
-          setLoadingUsers(false);
-        }
-      } catch (error) {
-        setErrorUsers("Failed to load authentication data.");
-        setLoadingUsers(false);
-      }
-    } else {
-      setErrorUsers("Authentication data not found. Please log in.");
-      setLoadingUsers(false);
-    }
-  }, []);
+  const {
+    data: users = [],
+    error: errorUsers,
+    isLoading: loadingUsers } = useQuery({
+      queryKey: ['allUsers', adminToken],
+      queryFn: () => fetchAllUsers(),
+      enabled: !!adminToken,
+      staleTime: 5 * 60 * 1000,
+    });
 
-  useEffect(() => {
-    if (adminToken && !showAccount) {
-      fetchAllUsers();
-    }
-  }, [adminToken, showAccount, fetchAllUsers]);
 
   const handleRowClick = async (user) => {
     const userId = user.username;
@@ -194,7 +178,7 @@ const UserManagment = () => {
         setLoadingUserDetail(false);
       }
     } else {
-      setErrorUsers("Cannot fetch details: missing user ID or auth token.");
+      console.error("Cannot fetch details: missing user ID or auth token.");
     }
   };
 
@@ -454,9 +438,8 @@ const UserManagment = () => {
                             className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
                             onClick={() => handleRowClick(user)}
                           >
-                            <td className="px-6 py-4 text-sm text-gray-700">{`${
-                              user.given_name || ""
-                            } ${user.family_name || ""}`}</td>
+                            <td className="px-6 py-4 text-sm text-gray-700">{`${user.given_name || ""
+                              } ${user.family_name || ""}`}</td>
                             <td className="px-6 py-4 text-sm text-gray-700 capitalize">
                               {user["custom:user_type"] || "N/A"}
                             </td>
@@ -468,10 +451,9 @@ const UserManagment = () => {
                             </td>
                             <td className="px-6 py-4">
                               <span
-                                className={`px-3 py-2 rounded-xl text-xs ${
-                                  accountStatusColors[user.status] ||
+                                className={`px-3 py-2 rounded-xl text-xs ${accountStatusColors[user.status] ||
                                   "text-gray-700 bg-gray-100"
-                                }`}
+                                  }`}
                               >
                                 {user.status || "N/A"}
                               </span>

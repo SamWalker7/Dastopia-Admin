@@ -68,7 +68,7 @@ export const getPreSignedURL = async (id, fileType, filename) => {
         const response = await axios.post(url('add_vehicle'), {
             "operation": "getPresignedUrl",
             'vehicleId': id,
-			"contentType": fileType,
+            "contentType": fileType,
             filename
         });
         return response.data;
@@ -82,7 +82,7 @@ export const getPreSignedURLAdmin = async (id, fileType, filename) => {
         const response = await axios.post(url('add_vehicle'), {
             "operation": "getPresignedUrlAdmin",
             'vehicleId': id,
-			"contentType": fileType,
+            "contentType": fileType,
             filename
         });
         return response.data;
@@ -103,7 +103,7 @@ export const getDownloadUrl = async (key) => {
     }
 }
 
-export const uplaodVehicleImagesToS3 = async(url, image) => {
+export const uplaodVehicleImagesToS3 = async (url, image) => {
     try {
         const response = await axios.put(url, image);
         return response;
@@ -147,3 +147,68 @@ export const deleteVehicleById = async (id, imageKeys) => {
         console.error(err);
     }
 }
+
+const activeApiUrl =
+    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
+
+export const fetchAllRentals = async ({ queryKey }) => {
+    const [, { token }] = queryKey;
+    if (!token) {
+        return { vehicles: [], totalCount: 0 };
+    }
+
+    let allVehicles = [];
+    let lastKey = null;
+    let totalCount = 0;
+
+    do {
+        const url = new URL(activeApiUrl);
+        if (lastKey) {
+            url.searchParams.append("lastEvaluatedKey", lastKey);
+        }
+
+        const res = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const data = await res.json();
+
+        const vehicles = Array.isArray(data.body) ? data.body : [];
+        allVehicles = allVehicles.concat(vehicles);
+
+        // save totalCount once (usually same for all pages)
+        if (typeof data.totalCount === "number") {
+            totalCount = data.totalCount;
+        }
+
+        lastKey = data.lastEvaluatedKey || null;
+    } while (lastKey);
+
+    return {
+        vehicles: allVehicles,
+        totalCount,
+    };
+};
+
+
+const deletedApiUrl =
+    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
+
+export const fetchDeletedRentals =
+    async (token) => {
+        if (!token) return [];
+        const response = await fetch(deletedApiUrl, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) {
+            throw new Error(
+                `HTTP error fetching deleted vehicles: ${response.status}`
+            );
+        }
+        const data = await response.json();
+        return data.body?.vehicles || [];
+    }
