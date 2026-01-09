@@ -38,8 +38,8 @@ const VehicleManagment = () => {
 
   const activeApiUrl =
     "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
-  const deletedApiUrl =
-    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
+  // const deletedApiUrl =
+  //   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
 
   useEffect(() => {
     const storedAdminJson = localStorage.getItem("admin");
@@ -83,27 +83,27 @@ const VehicleManagment = () => {
     return fetchPage();
   };
 
-  const fetchDeletedRentals =
-    async (token) => {
-      if (!token) return [];
-      const response = await fetch(deletedApiUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `HTTP error fetching deleted vehicles: ${response.status}`
-        );
-      }
-      const data = await response.json();
-      return data.body?.vehicles || [];
-    }
+  // const fetchDeletedRentals =
+  //   async (token) => {
+  //     if (!token) return [];
+  //     const response = await fetch(deletedApiUrl, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     if (!response.ok) {
+  //       throw new Error(
+  //         `HTTP error fetching deleted vehicles: ${response.status}`
+  //       );
+  //     }
+  //     const data = await response.json();
+  //     return data.body?.vehicles || [];
+  //   }
 
 
   const {
     data: rentals = [],
     isLoading: isLoadingList,
-    isError,
-    error,
+    // isError,
+    // error,
   } = useQuery({
     queryKey: [
       "rentals",
@@ -140,37 +140,37 @@ const VehicleManagment = () => {
   });
 
 
-  const {
-    data: deletedRentals = [],
-    error: deletedError,
-    isLoading } = useQuery({
-      queryKey: ['deletedRentals', adminToken],
-      queryFn: () => fetchDeletedRentals(adminToken),
-      enabled: !!adminToken,
-      staleTime: 5 * 60 * 1000,
-      cacheTime: 30 * 60 * 1000,
+  // const {
+  //   data: deletedRentals = [],
+  //   error: deletedError,
+  //   isLoading } = useQuery({
+  //     queryKey: ['deletedRentals', adminToken],
+  //     queryFn: () => fetchDeletedRentals(adminToken),
+  //     enabled: !!adminToken,
+  //     staleTime: 5 * 60 * 1000,
+  //     cacheTime: 30 * 60 * 1000,
 
-      select: (deletedData) =>
-        deletedData.map((vehicle) => ({
-          carMake: vehicle.make,
-          vehicleID: vehicle.id,
-          vehicleNumber: vehicle.vehicleNumber || "N/A",
-          YearManufactured: vehicle.year,
-          carModel: vehicle.model,
-          status:
-            vehicle.isApproved === "approved"
-              ? "Active"
-              : vehicle.isApproved === "pending"
-                ? "Pending Approval"
-                : "Inactive",
-          carType: vehicle.category,
-          ownerId: vehicle.ownerId || vehicle.owenerId,
-          ownerFullName:
-            `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""}`.trim() ||
-            "N/A",
-          submissionDate: vehicle.createdAt || new Date().toISOString(),
-        })),
-    });
+  //     select: (deletedData) =>
+  //       deletedData.map((vehicle) => ({
+  //         carMake: vehicle.make,
+  //         vehicleID: vehicle.id,
+  //         vehicleNumber: vehicle.vehicleNumber || "N/A",
+  //         YearManufactured: vehicle.year,
+  //         carModel: vehicle.model,
+  //         status:
+  //           vehicle.isApproved === "approved"
+  //             ? "Active"
+  //             : vehicle.isApproved === "pending"
+  //               ? "Pending Approval"
+  //               : "Inactive",
+  //         carType: vehicle.category,
+  //         ownerId: vehicle.ownerId || vehicle.owenerId,
+  //         ownerFullName:
+  //           `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""}`.trim() ||
+  //           "N/A",
+  //         submissionDate: vehicle.createdAt || new Date().toISOString(),
+  //       })),
+  //   });
 
 
   const [filters, setFilters] = useState({

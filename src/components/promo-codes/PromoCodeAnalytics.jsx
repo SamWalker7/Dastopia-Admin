@@ -4,7 +4,6 @@ import PromoCodeTable from "./PromoCodeTable";
 import CreatePromoCodeDialog from "./CreatePromoCodeDialog";
 import EditPromoDialog from "./EditPromoDialog";
 import { fetchPromoCodesApi } from "./promoCode.api";
-import ConfirmDeleteDialog from "./ConfirmDeleteDialog";
 
 export default function PromoCodeAnalytics() {
     const [promoCodes, setPromoCodes] = useState([]);
@@ -18,7 +17,6 @@ export default function PromoCodeAnalytics() {
 
     const [openCreate, setOpenCreate] = useState(false);
     const [selectedPromo, setSelectedPromo] = useState(null);
-    const [promoToDelete, setPromoToDelete] = useState(null);
 
     const loadPromoCodes = async (limit, pageIndex) => {
         setLoading(true);
