@@ -1,6 +1,6 @@
 // VehicleManagment.js (or VehicleManagment.jsx)
 import { HiMiniArrowsUpDown } from "react-icons/hi2";
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   TextField,
   Select,
@@ -27,23 +27,31 @@ import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
 import { Search } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 
-// Correctly import your actual components
 import Account from "./Account1";
 import AddCarModal from "./AddCarModal";
 
 const VehicleManagment = () => {
-  // const [rentals, setRentals] = useState([]);
-  const [deletedRentals, setDeletedRentals] = useState([]);
   const [viewMode, setViewMode] = useState("active");
   const [adminToken, setAdminToken] = useState(null);
-  // const [isLoadingList, setIsLoadingList] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDuplicates, setShowDuplicates] = useState(false);
 
   const activeApiUrl =
     "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
-  const deletedApiUrl =
-    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
+  // const deletedApiUrl =
+  //   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
+
+  useEffect(() => {
+    const storedAdminJson = localStorage.getItem("admin");
+    if (!storedAdminJson) return;
+
+    try {
+      const adminData = JSON.parse(storedAdminJson);
+      setAdminToken(adminData?.AccessToken || null);
+    } catch (e) {
+      console.error("Failed to parse admin data", e);
+    }
+  }, []);
 
   const fetchAllRentals = async ({ queryKey }) => {
     const [, { token, apiUrl }] = queryKey;
@@ -74,6 +82,22 @@ const VehicleManagment = () => {
 
     return fetchPage();
   };
+
+  // const fetchDeletedRentals =
+  //   async (token) => {
+  //     if (!token) return [];
+  //     const response = await fetch(deletedApiUrl, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+  //     if (!response.ok) {
+  //       throw new Error(
+  //         `HTTP error fetching deleted vehicles: ${response.status}`
+  //       );
+  //     }
+  //     const data = await response.json();
+  //     return data.body?.vehicles || [];
+  //   }
+
 
   const {
     data: rentals = [],
@@ -116,108 +140,37 @@ const VehicleManagment = () => {
   });
 
 
+  // const {
+  //   data: deletedRentals = [],
+  //   error: deletedError,
+  //   isLoading } = useQuery({
+  //     queryKey: ['deletedRentals', adminToken],
+  //     queryFn: () => fetchDeletedRentals(adminToken),
+  //     enabled: !!adminToken,
+  //     staleTime: 5 * 60 * 1000,
 
-  const fetchDeletedRentals = useCallback(
-    async (token) => {
-      if (!token) return [];
-      const response = await fetch(deletedApiUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        throw new Error(
-          `HTTP error fetching deleted vehicles: ${response.status}`
-        );
-      }
-      const data = await response.json();
-      return data.body?.vehicles || [];
-    },
-    [deletedApiUrl]
-  );
+  //     select: (deletedData) =>
+  //       deletedData.map((vehicle) => ({
+  //         carMake: vehicle.make,
+  //         vehicleID: vehicle.id,
+  //         vehicleNumber: vehicle.vehicleNumber || "N/A",
+  //         YearManufactured: vehicle.year,
+  //         carModel: vehicle.model,
+  //         status:
+  //           vehicle.isApproved === "approved"
+  //             ? "Active"
+  //             : vehicle.isApproved === "pending"
+  //               ? "Pending Approval"
+  //               : "Inactive",
+  //         carType: vehicle.category,
+  //         ownerId: vehicle.ownerId || vehicle.owenerId,
+  //         ownerFullName:
+  //           `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""}`.trim() ||
+  //           "N/A",
+  //         submissionDate: vehicle.createdAt || new Date().toISOString(),
+  //       })),
+  //   });
 
-  useEffect(() => {
-    const storedAdminJson = localStorage.getItem("admin");
-    if (!storedAdminJson) return;
-
-    try {
-      const adminData = JSON.parse(storedAdminJson);
-      setAdminToken(adminData?.AccessToken || null);
-    } catch (e) {
-      console.error("Failed to parse admin data", e);
-    }
-  }, []);
-
-
-  // useEffect(() => {
-  //   const initiateFetch = async () => {
-  //     setIsLoadingList(true);
-  //     setRentals([]);
-  //     setDeletedRentals([]);
-  //     setCurrentPage(1);
-
-  //     const storedAdminJson = localStorage.getItem("admin");
-  //     let token = null;
-
-  //     if (storedAdminJson) {
-  //       try {
-  //         const adminData = JSON.parse(storedAdminJson);
-  //         token = adminData?.AccessToken;
-  //         setAdminToken(token);
-  //       } catch (error) {
-  //         console.error("Failed to parse admin data:", error);
-  //       }
-  //     }
-
-  //     if (token) {
-  //       try {
-  //         if (viewMode === "active") {
-  //           const allRentalsData = await fetchAllRentals(token);
-  //           const formattedRentals = allRentalsData.map((vehicle) => ({
-  //             carMake: vehicle.make,
-  //             vehicleID: vehicle.id,
-  //             vehicleNumber: vehicle.vehicleNumber || "N/A",
-  //             YearManufactured: vehicle.year,
-  //             carModel: vehicle.model,
-  //             status:
-  //               vehicle.isApproved === "approved"
-  //                 ? "Active"
-  //                 : vehicle.isApproved === "pending"
-  //                   ? "Pending Approval"
-  //                   : "Inactive",
-  //             carType: vehicle.category,
-  //             ownerId: vehicle.ownerId || vehicle.owenerId,
-  //             ownerFullName:
-  //               `${vehicle.ownerGivenName || ""} ${vehicle.ownerSurName || ""
-  //                 }`.trim() || "N/A",
-  //             submissionDate: vehicle.createdAt || new Date().toISOString(),
-  //           }));
-  //           setRentals(formattedRentals);
-  //         } else {
-  //           const deletedData = await fetchDeletedRentals(token);
-  //           const formattedDeleted = deletedData.map((v) => ({
-  //             vehicleID: v.id,
-  //             carMake: v.make,
-  //             carModel: v.model,
-  //             YearManufactured: v.year,
-  //             ownerEmail: v.ownerEmail || "N/A",
-  //             deletedAt: new Date(v.deletedAt).toLocaleDateString(),
-  //             daysUntilPermanentDeletion: v.daysUntilPermanentDeletion,
-  //           }));
-  //           setDeletedRentals(formattedDeleted);
-  //         }
-  //       } catch (error) {
-  //         console.error("Error during data fetch:", error);
-  //         setAdminToken(null);
-  //       } finally {
-  //         setIsLoadingList(false);
-  //       }
-  //     } else {
-  //       console.warn("No admin token found.");
-  //       setIsLoadingList(false);
-  //     }
-  //   };
-
-  //   initiateFetch();
-  // }, [viewMode, fetchAllRentals, fetchDeletedRentals]);
 
   const [filters, setFilters] = useState({
     search: "",
@@ -265,7 +218,7 @@ const VehicleManagment = () => {
       ? showDuplicates
         ? duplicateRentals
         : rentals
-      : deletedRentals;
+      : [];
 
   const filteredDataSource = activeDataSource.filter((item) => {
     if (showDuplicates) return true;
