@@ -29,17 +29,13 @@ import { useQuery } from "@tanstack/react-query";
 
 import Account from "./Account1";
 import AddCarModal from "./AddCarModal";
+import { fetchAllRentals } from "../api";
 
 const VehicleManagment = () => {
   const [viewMode, setViewMode] = useState("active");
   const [adminToken, setAdminToken] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showDuplicates, setShowDuplicates] = useState(false);
-
-  const activeApiUrl =
-    "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/vehicles";
-  // const deletedApiUrl =
-  //   "https://oy0bs62jx8.execute-api.us-east-1.amazonaws.com/Prod/v1/admin/deleted_vehicles";
 
   useEffect(() => {
     const storedAdminJson = localStorage.getItem("admin");
@@ -53,63 +49,17 @@ const VehicleManagment = () => {
     }
   }, []);
 
-  const fetchAllRentals = async ({ queryKey }) => {
-    const [, { token, apiUrl }] = queryKey;
-    if (!token) return [];
-
-    const fetchPage = async (lastKey = null, accumulated = []) => {
-      const url = new URL(apiUrl);
-      if (lastKey) {
-        url.searchParams.append("lastEvaluatedKey", lastKey);
-      }
-
-      const res = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-      const items = Array.isArray(data.body) ? data.body : [];
-      const merged = [...accumulated, ...items];
-
-      return data.lastEvaluatedKey
-        ? fetchPage(data.lastEvaluatedKey, merged)
-        : merged;
-    };
-
-    return fetchPage();
-  };
-
-  // const fetchDeletedRentals =
-  //   async (token) => {
-  //     if (!token) return [];
-  //     const response = await fetch(deletedApiUrl, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-  //     if (!response.ok) {
-  //       throw new Error(
-  //         `HTTP error fetching deleted vehicles: ${response.status}`
-  //       );
-  //     }
-  //     const data = await response.json();
-  //     return data.body?.vehicles || [];
-  //   }
-
-
   const {
-    data: rentals = [],
+    data,
     isLoading: isLoadingList,
     // isError,
     // error,
   } = useQuery({
     queryKey: [
-      "rentals",
+      "allVehicles",
       {
         token: adminToken,
-        apiUrl: activeApiUrl,
+        // apiUrl: activeApiUrl,
       },
     ],
     queryFn: fetchAllRentals,
@@ -117,8 +67,8 @@ const VehicleManagment = () => {
     staleTime: 30 * 60 * 1000,
     cacheTime: 30 * 60 * 1000,
 
-    select: (allRentalsData) =>
-      allRentalsData.map((vehicle) => ({
+    select: (allRentalsData) => ({
+      vehicles: allRentalsData.vehicles.map((vehicle) => ({
         carMake: vehicle.make,
         vehicleID: vehicle.id,
         vehicleNumber: vehicle.vehicleNumber || "N/A",
@@ -137,7 +87,12 @@ const VehicleManagment = () => {
           "N/A",
         submissionDate: vehicle.createdAt || new Date().toISOString(),
       })),
+      totalCount: allRentalsData.totalCount,
+    })
+
   });
+
+  const { vehicles: rentals = [] } = data ?? {};
 
 
   // const {
